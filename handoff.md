@@ -149,3 +149,30 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 - Exact length thresholds (short/medium/long) for the recommender.
 - Whether to use AI for character- vs. plot-driven and for photo reading.
 - Aesthetic revisions to the mockups (owner has changes planned).
+
+## 15. Decisions made during the build
+
+**Accounts and hosting (2026-10-26)**
+- Code lives in the public repo `alltherightpills/home-library` (personal GitHub account, not the work account `dpl-zrh`). This project's git config uses `gh` credentials so pushes go out as `alltherightpills`.
+- Live at https://alltherightpills.github.io/home-library/, deployed by GitHub Actions on every push to `main`.
+- Supabase project `fafbtvvrhopkhnlmekeu` (East US, Ohio). Free tier pauses after 7 days of no use; data is kept.
+- No personal data ever goes in the repo. The `data/` folder (LibraryThing exports, backups) is git-ignored.
+
+**Sign-in**
+- **Email + password**, saved by iPhone Keychain. Sign in with Apple needs a paid Apple Developer account. Emailed links open in Safari, not the home-screen app. Emailed codes need editable email templates, which Supabase only allows with custom SMTP.
+- New sign-ups are turned off in Supabase. Turn back on briefly if a family member joins.
+- Not built yet: "Forgot password."
+
+**Scanning**
+- Barcode scanning works in Safari and the home-screen app (tested on the owner's iPhone). Uses the `barcode-detector` polyfill with the zxing engine bundled locally for offline use.
+- iOS asks for camera permission on each launch of the home-screen app. Accepted for now; a Capacitor wrapper would fix it.
+- To add in "Scan to add": a typed-ISBN box accepting ISBN-10 and ISBN-13, and a hint when a UPC (store) barcode is scanned. Older mass-market paperbacks often have only a UPC on the back, with the ISBN barcode inside the front cover or the ISBN printed on the copyright page.
+
+**LibraryThing export findings**
+- Use the **JSON** export. The MARC export is almost entirely LibraryThing "basic" records (1,399 of 1,403) with no subject fields; the TSV lacks subject headings.
+- 1,403 books, 935 distinct primary authors. ISBN on 1,360. LC call number 97%, Dewey 97%, LT genre 75%, subject headings 47% (split into heading + subdivisions, no MARC subfield codes). Page count 84%.
+- 97.5% of books have at least one category signal (subject, LT genre, or LC class); 35 have none.
+- The `date` field is the **edition** year, not first publication. First publication must come from Open Library during enrichment.
+- LibraryThing's work ID links 22 works with 2+ copies (44 books).
+- Acquired, From Where, Date Read, Tags, Ratings, and Lending are all empty.
+- The catalog is **physical books only**. 19 "Ebook" and 5 "Digital audiobook" records (plus *Shakespeare's Stratford*, "Other") are errors, usually from picking a Kindle/Audible listing when a UPC wouldn't scan; 20 of them have no ISBN. Import them as physical and flag them "Needs checking" so the owner can rescan or fix them. "Paper Book" is just another print label, not an error.
