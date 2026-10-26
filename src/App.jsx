@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Scanner from './Scanner.jsx'
 
 // The four tabs in the bottom bar (handoff section 4).
 const TABS = [
@@ -17,7 +18,7 @@ function App() {
     <div className="app">
       <main className="screen">
         <h1>{current.label}</h1>
-        <p className="placeholder">Coming soon.</p>
+        {tab === 'scan' ? <Scanner /> : <p className="placeholder">Coming soon.</p>}
       </main>
 
       <nav className="tab-bar">
