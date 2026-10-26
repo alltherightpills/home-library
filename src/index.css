@@ -97,6 +97,104 @@ body {
   font-weight: normal;
 }
 
+.total {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.search {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.controls select {
+  font: inherit;
+}
+
+.chip {
+  padding: 6px 12px;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+  background: #fff;
+  font: inherit;
+}
+
+.chip.active {
+  border-color: var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.book-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.book-list button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 0;
+  border: none;
+  border-bottom: 1px solid #e2ddd2;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.book-title {
+  font-weight: 600;
+}
+
+.book-meta {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.flag,
+.review-note {
+  color: #a35b00;
+}
+
+.book-detail dl div {
+  display: grid;
+  grid-template-columns: 9em 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #e2ddd2;
+  font-size: 14px;
+}
+
+.book-detail dt {
+  color: var(--muted);
+}
+
+.book-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.subjects {
+  padding-left: 20px;
+  font-size: 14px;
+}
+
 .link {
   padding: 0;
   border: none;

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import Library from './Library.jsx'
 import Scanner from './Scanner.jsx'
 import SignIn from './SignIn.jsx'
 import { supabase } from './supabase.js'
+import { useCatalog } from './useCatalog.js'
 
 // The four tabs in the bottom bar (handoff section 4).
 const TABS = [
@@ -14,9 +16,6 @@ const TABS = [
 function App() {
   // Who is signed in: undefined while checking, null if nobody.
   const [session, setSession] = useState(undefined)
-  // Which tab is showing right now.
-  const [tab, setTab] = useState('library')
-  const current = TABS.find((t) => t.id === tab)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -27,12 +26,22 @@ function App() {
 
   if (session === undefined) return null
   if (session === null) return <SignIn />
+  return <SignedInApp session={session} />
+}
+
+function SignedInApp({ session }) {
+  // Which tab is showing right now.
+  const [tab, setTab] = useState('library')
+  const current = TABS.find((t) => t.id === tab)
+  const { copies, error } = useCatalog()
 
   return (
     <div className="app">
       <main className="screen">
         <h1>{current.label}</h1>
-        {tab === 'scan' ? <Scanner /> : <p className="placeholder">Coming soon.</p>}
+        {tab === 'library' && <Library copies={copies} error={error} />}
+        {tab === 'scan' && <Scanner />}
+        {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && (
           <p className="diagnostic">
             Signed in as {session.user.email} ·{' '}
