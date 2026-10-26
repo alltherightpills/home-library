@@ -6,7 +6,8 @@ import { supabase } from './supabase.js'
 const COLUMNS = `
   id, title, isbn13, isbn10, publisher, edition_year, pages, binding, languages,
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
-  work:works ( id, title, first_published_year, original_language,
+  cover_id, lc_call_number, lc_subjects,
+  work:works ( id, title, first_published_year, first_published_source, original_language,
     contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ) )
 `
 
@@ -60,6 +61,11 @@ function withDisplayFields(copy) {
     authorSort: shown[0]?.author.sort_name ?? '',
     searchText: normalize(`${copy.title} ${people.map((p) => `${p.author.display_name} ${p.author.sort_name}`).join(' ')}`),
   }
+}
+
+// Open Library cover image for a copy (size S, M, or L), or null.
+export function coverUrl(copy, size) {
+  return copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}-${size}.jpg` : null
 }
 
 // Lowercase and strip accents, so "pokemon" matches "Pokémon".

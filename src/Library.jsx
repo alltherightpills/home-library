@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
-import { normalize } from './useCatalog.js'
+import { coverUrl, normalize } from './useCatalog.js'
 
 const SORTS = {
   author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.title.localeCompare(b.title),
@@ -68,6 +68,9 @@ function Library({ copies, error }) {
         {shown.map((c) => (
           <li key={c.id}>
             <button onClick={() => setOpenId(c.id)}>
+              <span className="thumb">
+                {c.cover_id && <img src={coverUrl(c, 'S')} alt="" loading="lazy" />}
+              </span>
               <span className="book-title">
                 {c.needs_review && <span className="flag">⚠︎ </span>}
                 {c.title}
