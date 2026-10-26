@@ -144,10 +144,13 @@ body {
   padding: 0;
 }
 
+/* Row layout: small cover on the left, title and byline stacked beside it. */
 .book-list button {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: 36px 1fr;
+  column-gap: 12px;
+  row-gap: 2px;
+  align-items: start;
   width: 100%;
   padding: 10px 0;
   border: none;
@@ -156,6 +159,29 @@ body {
   font: inherit;
   color: inherit;
   text-align: left;
+}
+
+.thumb {
+  grid-row: span 2;
+  width: 36px;
+  height: 54px;
+  border-radius: 3px;
+  background: #e2ddd2;
+  overflow: hidden;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover {
+  display: block;
+  max-width: 160px;
+  margin: 12px 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .book-title {

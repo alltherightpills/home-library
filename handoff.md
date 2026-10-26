@@ -180,4 +180,11 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 - The `date` field is the **edition** year, not first publication. First publication must come from Open Library during enrichment.
 - LibraryThing's work ID links 22 works with 2+ copies (44 books).
 - Acquired, From Where, Date Read, Tags, Ratings, and Lending are all empty.
+- Imported 2026-10-26 with `npm run import:lt` (1,403 copies, 1,381 works, 1,075 people).
+
+**Enrichment (2026-10-26)** (`npm run enrich`, rerunnable; fills blanks only)
+- Sources: Open Library search API (no key; 1 request/second) and the LC catalog via SRU at `lx2.loc.gov:210/lcdb` (MARCXML; ISBN-10 first, then ISBN-13; 1 request every 2 seconds). Every answer is stored in `lookups`. Google Books not used yet; revisit only if Step 6 shows a gap it would fill.
+- Results: Open Library found 1,301 of 1,355 ISBNs; LC found 710. Filled first-published year for 1,269 works, covers for 1,192 books, LC subject headings (with subfields) for 632, LC call numbers for 700.
+- First-published year = the earliest of Open Library's `first_publish_year` and LC 008's original date for reprints (type `r`), ignoring years later than the edition. Stored with its source.
+- Covers use Open Library cover IDs (work-level, so sometimes another edition's cover). ISBN-based cover lookups are rate-limited (100 per 5 minutes), so not used for browsing.
 - The catalog is **physical books only**. 19 "Ebook" and 5 "Digital audiobook" records (plus *Shakespeare's Stratford*, "Other") are errors, usually from picking a Kindle/Audible listing when a UPC wouldn't scan; 20 of them have no ISBN. Import them as physical and flag them "Needs checking" so the owner can rescan or fix them. "Paper Book" is just another print label, not an error.
