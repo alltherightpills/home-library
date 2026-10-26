@@ -180,8 +180,10 @@ function ask(question, hidden = false) {
           return
         } else if (ch === '\u0003') {
           process.exit(1) // Ctrl-C
-        } else if (ch === '\u007f') {
-          answer = answer.slice(0, -1) // Backspace
+        } else if (ch === '\u007f' || ch === '\b') {
+          // Backspace: remove the last character, and erase it on screen too.
+          if (answer && !hidden) process.stdout.write('\b \b')
+          answer = answer.slice(0, -1)
         } else {
           answer += ch
           if (!hidden) process.stdout.write(ch)
