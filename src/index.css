@@ -1,0 +1,59 @@
+/* Basic layout only. Visual design comes later (handoff section 1). */
+
+:root {
+  --green: #2f5d50;
+  --paper: #f4efe4;
+  --ink: #1f2421;
+  --muted: #6b716d;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* env(safe-area-inset-*) keeps content clear of the iPhone notch and home bar. */
+.screen {
+  flex: 1;
+  padding: calc(env(safe-area-inset-top) + 16px) 16px 16px;
+}
+
+.placeholder {
+  color: var(--muted);
+}
+
+.tab-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #ddd;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  flex: 1;
+  padding: 14px 4px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.tab.active {
+  color: var(--green);
+  font-weight: 600;
+}
