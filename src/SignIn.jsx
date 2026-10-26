@@ -1,81 +1,89 @@
 import { useState } from 'react'
 import { supabase } from './supabase.js'
 
-// Sign in with an emailed code (not a link: on iPhone, a link opens in Safari
-// instead of the home-screen app, so the app would never see the sign-in).
+// Sign in with email + password. The autoComplete attributes let iPhone
+// Keychain suggest, save, and fill the password.
 function SignIn() {
+  const [mode, setMode] = useState('signIn') // signIn | signUp
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
-  const [step, setStep] = useState('email') // email | code
+  const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
 
-  async function sendCode(e) {
+  const signingUp = mode === 'signUp'
+
+  async function submit(e) {
     e.preventDefault()
     setBusy(true)
     setError('')
-    const { error } = await supabase.auth.signInWithOtp({ email: email.trim() })
-    setBusy(false)
-    if (error) setError(error.message)
-    else setStep('code')
-  }
+    setMessage('')
+    const credentials = { email: email.trim(), password }
 
-  async function checkCode(e) {
-    e.preventDefault()
-    setBusy(true)
-    setError('')
-    const { error } = await supabase.auth.verifyOtp({
-      email: email.trim(),
-      token: code.trim(),
-      type: 'email',
-    })
+    if (signingUp) {
+      const { data, error } = await supabase.auth.signUp({
+        ...credentials,
+        options: { emailRedirectTo: 'https://alltherightpills.github.io/home-library/' },
+      })
+      if (error) setError(error.message)
+      // No session yet means Supabase wants the email address confirmed first.
+      else if (!data.session) {
+        setMessage(
+          'Check your email and tap the confirmation link. Then come back here and sign in.',
+        )
+        setMode('signIn')
+      }
+    } else {
+      // On success, App notices the new session and shows the library.
+      const { error } = await supabase.auth.signInWithPassword(credentials)
+      if (error) setError(error.message)
+    }
     setBusy(false)
-    // On success, App notices the new session and shows the library.
-    if (error) setError(error.message)
   }
 
   return (
     <main className="screen sign-in">
       <h1>Home Library</h1>
 
-      {step === 'email' ? (
-        <form onSubmit={sendCode}>
-          <label>
-            Email
-            <input
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </label>
-          <button className="primary" disabled={busy}>
-            {busy ? 'Sending…' : 'Send code'}
-          </button>
-        </form>
-      ) : (
-        <form onSubmit={checkCode}>
-          <p>We emailed a code to {email}. Enter it below.</p>
-          <label>
-            Code
-            <input
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-          </label>
-          <button className="primary" disabled={busy}>
-            {busy ? 'Checking…' : 'Sign in'}
-          </button>
-          <button type="button" className="link" onClick={() => setStep('email')}>
-            Use a different email
-          </button>
-        </form>
-      )}
+      <form onSubmit={submit}>
+        <label>
+          Email
+          <input
+            type="email"
+            autoComplete="username"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </label>
+        <label>
+          Password
+          <input
+            type="password"
+            autoComplete={signingUp ? 'new-password' : 'current-password'}
+            minLength={8}
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </label>
+        <button className="primary" disabled={busy}>
+          {busy ? 'One moment…' : signingUp ? 'Create account' : 'Sign in'}
+        </button>
+        <button
+          type="button"
+          className="link"
+          onClick={() => {
+            setMode(signingUp ? 'signIn' : 'signUp')
+            setError('')
+            setMessage('')
+          }}
+        >
+          {signingUp ? 'I already have an account' : 'First time? Create an account'}
+        </button>
+      </form>
 
+      {message && <p>{message}</p>}
       {error && <p className="error">{error}</p>}
     </main>
   )
