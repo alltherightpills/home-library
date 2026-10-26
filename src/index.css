@@ -73,6 +73,39 @@ body {
   font-weight: 600;
 }
 
+.sign-in form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 400px;
+}
+
+.sign-in label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}
+
+/* 16px text stops iPhone Safari from zooming in when the field is tapped. */
+.sign-in input {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--green);
+  text-decoration: underline;
+}
+
 .error {
   color: #a3261b;
 }
