@@ -161,6 +161,11 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 **Sign-in**
 - **Email + password**, saved by iPhone Keychain. Sign in with Apple needs a paid Apple Developer account. Emailed links open in Safari, not the home-screen app. Emailed codes need editable email templates, which Supabase only allows with custom SMTP.
 - New sign-ups are turned off in Supabase. Turn back on briefly if a family member joins.
+
+**Sharing (database design)**
+- One **shared household library**. Books, works, and authors belong to a library, not a person; `library_members` says who can use it, and every member can do everything. Reading history (Phase 2) will be per person within the library.
+- `my_library()` returns the signed-in person's library, creating "Home Library" if they have none. To add a family member: they create an account, an admin adds a `library_members` row for them, and only *then* do they open the app (otherwise they get their own empty library).
+- Database changes live in `supabase/migrations/`, run by pasting into Supabase's SQL Editor.
 - Not built yet: "Forgot password."
 
 **Scanning**
