@@ -226,8 +226,9 @@ async function upload({ works, authors, links, copies }) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: { persistSession: false },
   })
-  const email = await ask('Email: ')
+  const email = (await ask('Email: ')).trim()
   const password = await ask('Password (hidden): ', true)
+  console.log(`(Received a ${password.length}-character password.)`)
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
   if (signInError) throw new Error(`Sign-in failed: ${signInError.message}`)
 
