@@ -12,6 +12,10 @@ export default defineConfig({
       // Check for a new version each time the app opens, and switch to it automatically.
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'icon-180.png'],
+      // Store the app's files on the phone, including the barcode engine (.wasm), for offline use.
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,wasm,webmanifest}'],
+      },
       manifest: {
         name: 'Home Library',
         short_name: 'Library',

@@ -34,6 +34,64 @@ body {
   color: var(--muted);
 }
 
+.viewfinder {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.viewfinder video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A guide showing where to hold the barcode. */
+.aim-box {
+  position: absolute;
+  width: 70%;
+  height: 35%;
+  border: 3px solid rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+}
+
+.primary {
+  position: relative;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+}
+
+.error {
+  color: #a3261b;
+}
+
+.scan-list {
+  padding-left: 24px;
+}
+
+.scan-list li {
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.scan-list span,
+.diagnostic {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .tab-bar {
   position: sticky;
   bottom: 0;
