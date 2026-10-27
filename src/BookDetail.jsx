@@ -7,6 +7,12 @@ function formatMarcField({ tag, ind1, ind2, sub }) {
   return `${tag} ${ind} ${text}`
 }
 
+const COVER_SOURCES = {
+  openlibrary_edition: 'Open Library (this edition)',
+  openlibrary_work: 'Open Library (another edition)',
+  hand: 'picked by hand',
+}
+
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
 function BookDetail({ copy, onBack }) {
@@ -28,6 +34,7 @@ function BookDetail({ copy, onBack }) {
     ['Dewey', [copy.dewey, copy.dewey_wording.join('; ')].filter(Boolean).join(' — ')],
     ['LibraryThing genres', copy.lt_genres.join(', ')],
     ['Date cataloged', copy.added_on],
+    ['Cover from', COVER_SOURCES[copy.cover_source] ?? copy.cover_source],
   ]
 
   return (

@@ -7,7 +7,8 @@
 //   npm run enrich                       (sign in; process everything)
 //
 // Safe to stop and rerun: books already looked up are skipped, and only empty
-// fields are ever filled, so hand edits are never overwritten.
+// fields are ever filled, so hand edits are never overwritten. (Covers are the one
+// exception: a cover from enrichment is upgraded to this edition's own when found.)
 
 import { fetchAll, signIn } from './lib/session.mjs'
 
@@ -59,6 +60,17 @@ const OL_FIELDS = 'key,title,author_name,first_publish_year,cover_i,number_of_pa
 async function lookUpOpenLibrary(isbn) {
   const url = `https://openlibrary.org/search.json?q=isbn:${isbn}&fields=${OL_FIELDS}&limit=1`
   return JSON.parse(await fetchOpenLibrary(url)).docs?.[0] ?? null
+}
+
+// Returns Open Library's record for this exact edition, or null. Its cover is
+// this ISBN's own, unlike the work record's, which can come from any edition.
+async function lookUpOpenLibraryEdition(isbn) {
+  try {
+    return JSON.parse(await fetchOpenLibrary(`https://openlibrary.org/isbn/${isbn}.json`))
+  } catch (err) {
+    if (err.message === 'HTTP 404') return null
+    throw err
+  }
 }
 
 // Returns the LC catalog's MARC record for this book, or null. LC's catalog
@@ -139,10 +151,20 @@ export function firstYearCandidates(copy, ol, lc) {
     .sort((a, b) => a.year - b.year)
 }
 
-// The blank fields of this copy that the lookups can fill.
-export function copyChanges(copy, ol, lc) {
+// The best cover from the lookups: this edition's own, else the work's.
+function bestCover(ol, edition) {
+  const own = edition?.covers?.find((id) => id > 0)
+  if (own) return { cover_id: own, cover_source: 'openlibrary_edition' }
+  if (ol?.cover_i) return { cover_id: ol.cover_i, cover_source: 'openlibrary_work' }
+  return null
+}
+
+// The fields of this copy that the lookups can fill: blanks only, except that
+// a cover from enrichment can be upgraded (a cover picked by hand never is).
+export function copyChanges(copy, ol, lc, edition) {
   const changes = {}
-  if (copy.cover_id == null && ol?.cover_i) changes.cover_id = ol.cover_i
+  const cover = copy.cover_source !== 'hand' && bestCover(ol, edition)
+  if (cover && cover.cover_id !== copy.cover_id) Object.assign(changes, cover)
   if (lc) {
     const subjects = lc.fields
       .filter((f) => SUBJECT_TAGS.includes(f.tag))
@@ -169,11 +191,14 @@ if (flag('--try') !== null) {
   // Look up one ISBN and show what would be filled in. No sign-in, saves nothing.
   const isbn = flag('--try').replace(/[^\dX]/gi, '')
   const copy = { isbn13: isbn.length === 13 ? isbn : null, isbn10: isbn.length === 10 ? isbn : null }
-  const [ol, lc] = await Promise.all([lookUpOpenLibrary(isbn), lookUpLoc(copy.isbn10, copy.isbn13)])
+  const [ol, lc, edition] = await Promise.all([
+    lookUpOpenLibrary(isbn), lookUpLoc(copy.isbn10, copy.isbn13), lookUpOpenLibraryEdition(isbn),
+  ])
   console.log('Open Library:', ol ? `${ol.title} (${ol.key})` : 'not found')
+  console.log('OL edition:  ', edition ? `${edition.title} (${edition.key})` : 'not found')
   console.log('LC catalog:  ', lc ? lc.fields.find((f) => f.tag === '245')?.sub.map(([, v]) => v).join(' ') : 'not found')
   console.log('First-published candidates:', firstYearCandidates(copy, ol, lc))
-  console.log('Would fill:', JSON.stringify(copyChanges(copy, ol, lc), null, 1))
+  console.log('Would fill:', JSON.stringify(copyChanges(copy, ol, lc, edition), null, 1))
   process.exit(0)
 }
 
@@ -185,7 +210,7 @@ async function run(limit) {
 
   const copies = await fetchAll(
     supabase, 'copies',
-    'id, work_id, title, isbn13, isbn10, edition_year, pages, cover_id, lc_call_number, lc_subjects',
+    'id, work_id, title, isbn13, isbn10, edition_year, pages, cover_id, cover_source, lc_call_number, lc_subjects',
     libraryId,
   )
   const works = await fetchAll(supabase, 'works', 'id, first_published_year', libraryId)
@@ -193,6 +218,8 @@ async function run(limit) {
   const lookups = new Map(saved.map((l) => [`${l.source}|${l.isbn}`, l]))
 
   // --- Phase 1: look up every ISBN not already looked up --------------------
+  const SOURCES = ['openlibrary', 'openlibrary_edition', 'loc']
+  const LABELS = { openlibrary: 'OL', openlibrary_edition: 'OL edition', loc: 'LC' }
   const keyOf = (c) => c.isbn13 ?? c.isbn10
   const todo = []
   const seen = new Set()
@@ -200,7 +227,7 @@ async function run(limit) {
     const key = keyOf(c)
     if (!key || seen.has(key)) continue
     seen.add(key)
-    if (!lookups.has(`openlibrary|${key}`) || !lookups.has(`loc|${key}`)) todo.push(c)
+    if (SOURCES.some((source) => !lookups.has(`${source}|${key}`))) todo.push(c)
   }
   const batch = todo.slice(0, limit)
   console.log(`${seen.size} distinct ISBNs; ${todo.length} still to look up` +
@@ -212,6 +239,7 @@ async function run(limit) {
     const key = keyOf(c)
     const jobs = []
     if (!lookups.has(`openlibrary|${key}`)) jobs.push(['openlibrary', () => lookUpOpenLibrary(key)])
+    if (!lookups.has(`openlibrary_edition|${key}`)) jobs.push(['openlibrary_edition', () => lookUpOpenLibraryEdition(key)])
     if (!lookups.has(`loc|${key}`)) jobs.push(['loc', () => lookUpLoc(c.isbn10, c.isbn13)])
 
     const results = await Promise.all(
@@ -222,10 +250,10 @@ async function run(limit) {
           const { error } = await supabase.from('lookups').upsert(row)
           if (error) throw new Error(error.message)
           lookups.set(`${source}|${key}`, row)
-          return `${source === 'loc' ? 'LC' : 'OL'} ${data ? '✓' : '–'}`
+          return `${LABELS[source]} ${data ? '✓' : '–'}`
         } catch (err) {
           failures++
-          return `${source === 'loc' ? 'LC' : 'OL'} error (${err.message}; will retry next run)`
+          return `${LABELS[source]} error (${err.message}; will retry next run)`
         }
       }),
     )
@@ -242,15 +270,16 @@ async function run(limit) {
     const l = lookups.get(`${source}|${keyOf(c)}`)
     return l?.found ? l.data : null
   }
-  const stats = { covers: 0, lc_subjects: 0, lc_call_number: 0, pages: 0, first_published_year: 0 }
+  const stats = { covers: 0, edition_covers: 0, lc_subjects: 0, lc_call_number: 0, pages: 0, first_published_year: 0 }
 
   for (const c of copies) {
     if (!keyOf(c)) continue
-    const changes = copyChanges(c, found('openlibrary', c), found('loc', c))
+    const changes = copyChanges(c, found('openlibrary', c), found('loc', c), found('openlibrary_edition', c))
     if (!Object.keys(changes).length) continue
     const { error } = await supabase.from('copies').update(changes).eq('id', c.id)
     if (error) throw new Error(`copies: ${error.message}`)
     if (changes.cover_id) stats.covers++
+    if (changes.cover_source === 'openlibrary_edition') stats.edition_covers++
     for (const k of ['lc_subjects', 'lc_call_number', 'pages']) if (changes[k]) stats[k]++
   }
 
@@ -274,10 +303,10 @@ async function run(limit) {
   const count = (source) => [...seen].filter((k) => lookups.get(`${source}|${k}`)?.found).length
   const lookedUp = (source) => [...seen].filter((k) => lookups.has(`${source}|${k}`)).length
   console.log(`
-Looked up so far:  Open Library found ${count('openlibrary')} of ${lookedUp('openlibrary')}, LC found ${count('loc')} of ${lookedUp('loc')}
+Looked up so far:  Open Library found ${count('openlibrary')} of ${lookedUp('openlibrary')}, its edition records ${count('openlibrary_edition')} of ${lookedUp('openlibrary_edition')}, LC found ${count('loc')} of ${lookedUp('loc')}
 Filled in this run:
   first-published year  ${stats.first_published_year} works
-  cover                 ${stats.covers} books
+  cover (new or better) ${stats.covers} books (${stats.edition_covers} of them this edition's own)
   LC subject headings   ${stats.lc_subjects} books
   LC call number        ${stats.lc_call_number} books
   page count            ${stats.pages} books
