@@ -9,7 +9,7 @@ const SORTS = {
   added: (a, b) => b.added_on.localeCompare(a.added_on) || a.titleSort.localeCompare(b.titleSort),
 }
 
-function Library({ copies, error }) {
+function Library({ copies, error, updateCopy }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('author')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
@@ -57,7 +57,13 @@ function Library({ copies, error }) {
   // has to be rebuilt when coming back.
   return (
     <>
-      {open && <BookDetail copy={open} onBack={() => history.back()} />}
+      {open && (
+        <BookDetail
+          copy={open}
+          onBack={() => history.back()}
+          onCoverChange={(changes) => updateCopy(open.id, changes)}
+        />
+      )}
       <div className="library" hidden={!!open}>
         <p className="total">
           <strong>{copies.length.toLocaleString()}</strong> books
@@ -91,7 +97,7 @@ function Library({ copies, error }) {
             <li key={c.id}>
               <button onClick={() => openBook(c.id)}>
                 <span className="thumb">
-                  {c.cover_id && <img src={coverUrl(c, 'S')} alt="" loading="lazy" />}
+                  {coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" loading="lazy" />}
                 </span>
                 <span className="book-title">
                   {c.needs_review && <span className="flag">⚠︎ </span>}

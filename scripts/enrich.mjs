@@ -160,10 +160,12 @@ function bestCover(ol, edition) {
 }
 
 // The fields of this copy that the lookups can fill: blanks only, except that
-// a cover from enrichment can be upgraded (a cover picked by hand never is).
+// a cover from enrichment can be upgraded. A cover picked in the app or a photo
+// (any source not starting with 'openlibrary_') is never replaced.
 export function copyChanges(copy, ol, lc, edition) {
   const changes = {}
-  const cover = copy.cover_source !== 'hand' && bestCover(ol, edition)
+  const automatic = !copy.cover_source || copy.cover_source.startsWith('openlibrary_')
+  const cover = automatic && bestCover(ol, edition)
   if (cover && (cover.cover_id !== copy.cover_id || cover.cover_source !== copy.cover_source)) {
     Object.assign(changes, cover)
   }

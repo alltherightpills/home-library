@@ -33,13 +33,13 @@ function SignedInApp({ session }) {
   // Which tab is showing right now.
   const [tab, setTab] = useState('library')
   const current = TABS.find((t) => t.id === tab)
-  const { copies, error } = useCatalog()
+  const { copies, error, updateCopy } = useCatalog()
 
   return (
     <div className="app">
       <main className="screen">
         <h1>{current.label}</h1>
-        {tab === 'library' && <Library copies={copies} error={error} />}
+        {tab === 'library' && <Library copies={copies} error={error} updateCopy={updateCopy} />}
         {tab === 'scan' && <Scanner />}
         {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && (
