@@ -6,7 +6,7 @@ import { supabase } from './supabase.js'
 const COLUMNS = `
   id, title, isbn13, isbn10, publisher, edition_year, pages, binding, languages,
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
-  cover_id, lc_call_number, lc_subjects,
+  cover_id, cover_source, lc_call_number, lc_subjects,
   work:works ( id, title, first_published_year, first_published_source, original_language,
     contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ) )
 `
