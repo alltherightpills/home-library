@@ -164,7 +164,9 @@ function bestCover(ol, edition) {
 export function copyChanges(copy, ol, lc, edition) {
   const changes = {}
   const cover = copy.cover_source !== 'hand' && bestCover(ol, edition)
-  if (cover && cover.cover_id !== copy.cover_id) Object.assign(changes, cover)
+  if (cover && (cover.cover_id !== copy.cover_id || cover.cover_source !== copy.cover_source)) {
+    Object.assign(changes, cover)
+  }
   if (lc) {
     const subjects = lc.fields
       .filter((f) => SUBJECT_TAGS.includes(f.tag))
@@ -270,7 +272,7 @@ async function run(limit) {
     const l = lookups.get(`${source}|${keyOf(c)}`)
     return l?.found ? l.data : null
   }
-  const stats = { covers: 0, edition_covers: 0, lc_subjects: 0, lc_call_number: 0, pages: 0, first_published_year: 0 }
+  const stats = { covers: 0, edition_covers: 0, relabeled: 0, lc_subjects: 0, lc_call_number: 0, pages: 0, first_published_year: 0 }
 
   for (const c of copies) {
     if (!keyOf(c)) continue
@@ -278,8 +280,11 @@ async function run(limit) {
     if (!Object.keys(changes).length) continue
     const { error } = await supabase.from('copies').update(changes).eq('id', c.id)
     if (error) throw new Error(`copies: ${error.message}`)
-    if (changes.cover_id) stats.covers++
-    if (changes.cover_source === 'openlibrary_edition') stats.edition_covers++
+    if (changes.cover_id && changes.cover_id !== c.cover_id) {
+      stats.covers++
+      if (changes.cover_source === 'openlibrary_edition') stats.edition_covers++
+    }
+    if (changes.cover_source && changes.cover_id === c.cover_id) stats.relabeled++
     for (const k of ['lc_subjects', 'lc_call_number', 'pages']) if (changes[k]) stats[k]++
   }
 
@@ -307,6 +312,7 @@ Looked up so far:  Open Library found ${count('openlibrary')} of ${lookedUp('ope
 Filled in this run:
   first-published year  ${stats.first_published_year} works
   cover (new or better) ${stats.covers} books (${stats.edition_covers} of them this edition's own)
+  cover source label    ${stats.relabeled} books (same cover, source corrected)
   LC subject headings   ${stats.lc_subjects} books
   LC call number        ${stats.lc_call_number} books
   page count            ${stats.pages} books
