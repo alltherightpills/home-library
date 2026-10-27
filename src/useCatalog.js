@@ -4,9 +4,9 @@ import { supabase } from './supabase.js'
 // The columns the app needs for each copy, plus its work and the people on it.
 // (Leaves out lt_record, the large original LibraryThing data.)
 const COLUMNS = `
-  id, title, isbn13, isbn10, publisher, edition_year, pages, binding, languages,
+  id, library_id, title, isbn13, isbn10, publisher, edition_year, pages, binding, languages,
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
-  cover_id, cover_source, lc_call_number, lc_subjects,
+  cover_id, cover_url, cover_source, lc_call_number, lc_subjects,
   work:works ( id, title, first_published_year, first_published_source, original_language,
     contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ) )
 `
@@ -43,7 +43,12 @@ export function useCatalog() {
     }
   }, [])
 
-  return { copies, error }
+  // Show a change that was just saved, without reloading the whole catalog.
+  function updateCopy(id, changes) {
+    setCopies((all) => all.map((c) => (c.id === id ? withDisplayFields({ ...c, ...changes }) : c)))
+  }
+
+  return { copies, error, updateCopy }
 }
 
 // Main roles shown as "by ..." on a book; others (Editor, Illustrator...) show on the book page.
@@ -107,8 +112,10 @@ function titleSortKey(title, languages) {
   return key
 }
 
-// Open Library cover image for a copy (size S, M, or L), or null.
+// The cover image for a copy, or null. A picked cover or photo (cover_url) wins;
+// otherwise the Open Library cover in size S, M, or L.
 export function coverUrl(copy, size) {
+  if (copy.cover_url) return copy.cover_url
   return copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}-${size}.jpg` : null
 }
 

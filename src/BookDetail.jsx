@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+import CoverPicker from './CoverPicker.jsx'
 import { coverUrl } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
@@ -10,12 +12,42 @@ function formatMarcField({ tag, ind1, ind2, sub }) {
 const COVER_SOURCES = {
   openlibrary_edition: 'Open Library (this edition)',
   openlibrary_work: 'Open Library (another edition)',
-  hand: 'picked by hand',
+  picked_openlibrary: 'Open Library (picked by hand)',
+  picked_google: 'Google Books (picked by hand)',
+  photo: 'your photo',
 }
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, onBack }) {
+function BookDetail({ copy, onBack, onCoverChange }) {
+  // The cover picker is a step in the browser history too, so swiping back closes it.
+  const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
+
+  useEffect(() => {
+    const onPop = (e) => setPicking(Boolean(e.state?.cover))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function pickCover() {
+    history.pushState({ ...history.state, cover: true }, '')
+    setPicking(true)
+    window.scrollTo(0, 0)
+  }
+
+  if (picking) {
+    return (
+      <CoverPicker
+        copy={copy}
+        onCancel={() => history.back()}
+        onPicked={(changes) => {
+          onCoverChange(changes)
+          history.back()
+        }}
+      />
+    )
+  }
+
   const firstPublished = copy.work?.first_published_year
   const rows = [
     ['Contributors', copy.people.map((p) => `${p.author.display_name} (${p.role})`).join('; ')],
@@ -42,7 +74,10 @@ function BookDetail({ copy, onBack }) {
       <button className="link" onClick={onBack}>
         ‹ Back
       </button>
-      {copy.cover_id && <img className="cover" src={coverUrl(copy, 'M')} alt="" />}
+      {coverUrl(copy, 'L') && <img className="cover" src={coverUrl(copy, 'L')} alt="" />}
+      <button className="link" onClick={pickCover}>
+        Change cover
+      </button>
       <h2>{copy.title}</h2>
       <p className="book-meta">{copy.byline}</p>
 
