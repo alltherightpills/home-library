@@ -74,10 +74,12 @@ function BookDetail({ copy, onBack, onCoverChange }) {
       <button className="link" onClick={onBack}>
         ‹ Back
       </button>
-      {coverUrl(copy, 'L') && <img className="cover" src={coverUrl(copy, 'L')} alt="" />}
-      <button className="link" onClick={pickCover}>
-        Change cover
-      </button>
+      <div className="cover-area">
+        {coverUrl(copy, 'L') && <img className="cover" src={coverUrl(copy, 'L')} alt="" />}
+        <button className="link" onClick={pickCover}>
+          {coverUrl(copy, 'L') ? 'Change cover' : 'Add a cover'}
+        </button>
+      </div>
       <h2>{copy.title}</h2>
       <p className="book-meta">{copy.byline}</p>
 

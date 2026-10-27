@@ -93,6 +93,10 @@ function CoverPicker({ copy, onPicked, onCancel }) {
       const changes = await getChanges()
       const { error } = await supabase.from('copies').update(changes).eq('id', copy.id)
       if (error) throw new Error(error.message)
+      // A replaced photo is no longer used anywhere, so remove its file.
+      // (If that fails, the new cover is still saved; the old file just stays.)
+      const oldPhoto = copy.cover_source === 'photo' && copy.cover_url?.split('/object/public/covers/')[1]
+      if (oldPhoto) await supabase.storage.from('covers').remove([oldPhoto])
       onPicked(changes)
     } catch (err) {
       setError(`Couldn't save the cover: ${err.message}`)

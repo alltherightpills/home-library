@@ -237,10 +237,15 @@ body {
   object-fit: cover;
 }
 
+/* Cover with its Change cover link underneath, on their own lines below Back. */
+.cover-area {
+  margin: 12px 0;
+}
+
 .cover {
   display: block;
   max-width: 160px;
-  margin: 12px 0;
+  margin-bottom: 8px;
   border-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
