@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
 import { coverUrl, normalize } from './useCatalog.js'
 
@@ -11,7 +11,29 @@ function Library({ copies, error }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('author')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
-  const [openId, setOpenId] = useState(null)
+  // The open book lives in the browser history, so swiping back (or the
+  // Back button) returns to the list.
+  const [openId, setOpenId] = useState(() => history.state?.book ?? null)
+  const listScroll = useRef(0)
+
+  useEffect(() => {
+    history.scrollRestoration = 'manual'
+    const onPop = (e) => setOpenId(e.state?.book ?? null)
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  // Back on the list: return to where it was scrolled before the book opened.
+  useLayoutEffect(() => {
+    if (openId === null) window.scrollTo(0, listScroll.current)
+  }, [openId])
+
+  function openBook(id) {
+    listScroll.current = window.scrollY
+    history.pushState({ book: id }, '')
+    setOpenId(id)
+    window.scrollTo(0, 0)
+  }
 
   const flaggedCount = copies?.filter((c) => c.needs_review).length ?? 0
 
@@ -28,62 +50,66 @@ function Library({ copies, error }) {
   if (!copies) return <p className="placeholder">Loading your books…</p>
 
   const open = copies.find((c) => c.id === openId)
-  if (open) return <BookDetail copy={open} onBack={() => setOpenId(null)} />
 
+  // The list stays on the page (hidden) while a book is open, so nothing
+  // has to be rebuilt when coming back.
   return (
-    <div className="library">
-      <p className="total">
-        <strong>{copies.length.toLocaleString()}</strong> books
-      </p>
+    <>
+      {open && <BookDetail copy={open} onBack={() => history.back()} />}
+      <div className="library" hidden={!!open}>
+        <p className="total">
+          <strong>{copies.length.toLocaleString()}</strong> books
+        </p>
 
-      <input
-        className="search"
-        type="search"
-        placeholder="Search title or author"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+        <input
+          className="search"
+          type="search"
+          placeholder="Search title or author"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
 
-      <div className="controls">
-        <label>
-          Sort{' '}
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            <option value="author">Author A–Z</option>
-            <option value="added">Date added</option>
-          </select>
-        </label>
-        {flaggedCount > 0 && (
-          <button
-            className={onlyFlagged ? 'chip active' : 'chip'}
-            onClick={() => setOnlyFlagged(!onlyFlagged)}
-          >
-            Needs checking ({flaggedCount})
-          </button>
-        )}
-      </div>
-
-      {(query || onlyFlagged) && <p className="diagnostic">{shown.length} matching</p>}
-
-      <ul className="book-list">
-        {shown.map((c) => (
-          <li key={c.id}>
-            <button onClick={() => setOpenId(c.id)}>
-              <span className="thumb">
-                {c.cover_id && <img src={coverUrl(c, 'S')} alt="" loading="lazy" />}
-              </span>
-              <span className="book-title">
-                {c.needs_review && <span className="flag">⚠︎ </span>}
-                {c.title}
-              </span>
-              <span className="book-meta">
-                {c.byline}
-                {c.edition_year ? ` · ${c.edition_year}` : ''}
-              </span>
+        <div className="controls">
+          <label>
+            Sort{' '}
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="author">Author A–Z</option>
+              <option value="added">Date added</option>
+            </select>
+          </label>
+          {flaggedCount > 0 && (
+            <button
+              className={onlyFlagged ? 'chip active' : 'chip'}
+              onClick={() => setOnlyFlagged(!onlyFlagged)}
+            >
+              Needs checking ({flaggedCount})
             </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+          )}
+        </div>
+
+        {(query || onlyFlagged) && <p className="diagnostic">{shown.length} matching</p>}
+
+        <ul className="book-list">
+          {shown.map((c) => (
+            <li key={c.id}>
+              <button onClick={() => openBook(c.id)}>
+                <span className="thumb">
+                  {c.cover_id && <img src={coverUrl(c, 'S')} alt="" loading="lazy" />}
+                </span>
+                <span className="book-title">
+                  {c.needs_review && <span className="flag">⚠︎ </span>}
+                  {c.title}
+                </span>
+                <span className="book-meta">
+                  {c.byline}
+                  {c.edition_year ? ` · ${c.edition_year}` : ''}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </>
   )
 }
 
