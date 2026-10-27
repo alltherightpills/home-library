@@ -59,8 +59,29 @@ function withDisplayFields(copy) {
     people,
     byline: shown.map((p) => p.author.display_name).join(', '),
     authorSort: shown[0]?.author.sort_name ?? '',
+    titleSort: titleSortKey(copy.title, copy.languages),
     searchText: normalize(`${copy.title} ${people.map((p) => `${p.author.display_name} ${p.author.sort_name}`).join(' ')}`),
   }
+}
+
+// Leading articles to skip when sorting by title, by the book's language
+// (like MARC nonfiling characters). "Die Hard" keeps its "Die"; a German "Die ..." doesn't.
+const ARTICLES = {
+  English: ['the', 'an', 'a'],
+  French: ['les', 'le', 'la', "l'", 'une', 'un'],
+  Spanish: ['los', 'las', 'el', 'la', 'una', 'un'],
+  German: ['der', 'die', 'das', 'eine', 'ein'],
+  Italian: ['gli', 'il', 'lo', 'la', 'le', 'i', "l'", 'una', 'uno', 'un'],
+}
+
+// "The Hobbit" → "hobbit", ignoring opening quotes or brackets too.
+function titleSortKey(title, languages) {
+  const langs = languages.length ? languages : ['English']
+  const articles = langs.flatMap((lang) => ARTICLES[lang] ?? [])
+  let key = normalize(title).replace(/^[^\p{L}\p{N}]+/u, '').replace(/’/g, "'")
+  const article = articles.find((a) => key.startsWith(a.endsWith("'") ? a : `${a} `))
+  if (article) key = key.slice(article.length).trimStart()
+  return key
 }
 
 // Open Library cover image for a copy (size S, M, or L), or null.
