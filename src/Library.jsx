@@ -3,8 +3,9 @@ import BookDetail from './BookDetail.jsx'
 import { coverUrl, normalize } from './useCatalog.js'
 
 const SORTS = {
-  author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.title.localeCompare(b.title),
-  added: (a, b) => b.added_on.localeCompare(a.added_on) || a.title.localeCompare(b.title),
+  author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.titleSort.localeCompare(b.titleSort),
+  title: (a, b) => a.titleSort.localeCompare(b.titleSort) || a.authorSort.localeCompare(b.authorSort),
+  added: (a, b) => b.added_on.localeCompare(a.added_on) || a.titleSort.localeCompare(b.titleSort),
 }
 
 function Library({ copies, error }) {
@@ -74,7 +75,8 @@ function Library({ copies, error }) {
             Sort{' '}
             <select value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="author">Author A–Z</option>
-              <option value="added">Date added</option>
+              <option value="title">Title A–Z</option>
+              <option value="added">Date cataloged</option>
             </select>
           </label>
           {flaggedCount > 0 && (

@@ -27,7 +27,7 @@ function BookDetail({ copy, onBack }) {
     ['LibraryThing call number', copy.lcc],
     ['Dewey', [copy.dewey, copy.dewey_wording.join('; ')].filter(Boolean).join(' — ')],
     ['LibraryThing genres', copy.lt_genres.join(', ')],
-    ['Date added', copy.added_on],
+    ['Date cataloged', copy.added_on],
   ]
 
   return (
