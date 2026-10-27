@@ -111,6 +111,67 @@ body {
   font-size: 16px;
 }
 
+/* The search box holds the input, its ✕ button, and the suggestions dropdown. */
+.search-box {
+  position: relative;
+}
+
+.search-box .search {
+  padding-right: 40px;
+}
+
+/* Hide Safari's own clear button so there's only one ✕. */
+.search::-webkit-search-cancel-button {
+  display: none;
+}
+
+.clear {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--muted);
+}
+
+.suggestions {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.suggestion-label {
+  margin: 0;
+  padding: 8px 12px 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.suggestions button {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
 .controls {
   display: flex;
   align-items: center;

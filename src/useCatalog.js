@@ -54,14 +54,32 @@ function withDisplayFields(copy) {
   const people = [...(copy.work?.contributors ?? [])].sort((a, b) => a.position - b.position)
   const main = people.filter((p) => MAIN_ROLES.includes(p.role))
   const shown = main.length ? main : people
+  const headings = subjectHeadings(copy)
   return {
     ...copy,
     people,
+    headings,
     byline: shown.map((p) => p.author.display_name).join(', '),
     authorSort: shown[0]?.author.sort_name ?? '',
     titleSort: titleSortKey(copy.title, copy.languages),
-    searchText: normalize(`${copy.title} ${people.map((p) => `${p.author.display_name} ${p.author.sort_name}`).join(' ')}`),
+    searchText: normalize(
+      [copy.title, ...people.map((p) => `${p.author.display_name} ${p.author.sort_name}`), ...headings].join(' '),
+    ),
   }
+}
+
+// LC and LibraryThing subject headings as "Tales -- Japan" text, without repeats.
+function subjectHeadings(copy) {
+  const tidy = (part) => part.trim().replace(/[.,;:]+$/, '')
+  const lc = copy.lc_subjects.map((f) =>
+    f.sub
+      .filter(([code]) => /[a-z]/.test(code)) // heading parts, not $0/$2 source codes
+      .map(([, value]) => tidy(value))
+      .join(' -- '),
+  )
+  const lt = copy.subjects.map((parts) => parts.map(tidy).join(' -- '))
+  const seen = new Set()
+  return [...lc, ...lt].filter((h) => h && !seen.has(normalize(h)) && seen.add(normalize(h)))
 }
 
 // Leading articles to skip when sorting by title, by the book's language
@@ -87,6 +105,11 @@ function titleSortKey(title, languages) {
 // Open Library cover image for a copy (size S, M, or L), or null.
 export function coverUrl(copy, size) {
   return copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}-${size}.jpg` : null
+}
+
+// The words of a search, ignoring punctuation like "--".
+export function searchWords(query) {
+  return normalize(query).split(/[^\p{L}\p{N}']+/u).filter(Boolean)
 }
 
 // Lowercase and strip accents, so "pokemon" matches "Pokémon".
