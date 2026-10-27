@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
-import { coverUrl, normalize } from './useCatalog.js'
+import SearchBox from './SearchBox.jsx'
+import { coverUrl, searchWords } from './useCatalog.js'
 
 const SORTS = {
   author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.titleSort.localeCompare(b.titleSort),
@@ -40,7 +41,7 @@ function Library({ copies, error }) {
 
   const shown = useMemo(() => {
     if (!copies) return []
-    const words = normalize(query).split(/\s+/).filter(Boolean)
+    const words = searchWords(query)
     return copies
       .filter((c) => !onlyFlagged || c.needs_review)
       .filter((c) => words.every((w) => c.searchText.includes(w)))
@@ -62,13 +63,7 @@ function Library({ copies, error }) {
           <strong>{copies.length.toLocaleString()}</strong> books
         </p>
 
-        <input
-          className="search"
-          type="search"
-          placeholder="Search title or author"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <SearchBox copies={copies} query={query} setQuery={setQuery} onOpenBook={openBook} />
 
         <div className="controls">
           <label>
