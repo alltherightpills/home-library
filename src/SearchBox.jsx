@@ -85,6 +85,10 @@ function SearchBox({ copies, query, setQuery, onOpenBook }) {
         className="search"
         type="search"
         placeholder="Search title, author, or subject"
+        // No autocorrect: its bubble covers the first suggestion, and it "fixes" author names.
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
         value={query}
         onChange={(e) => {
           setQuery(e.target.value)
