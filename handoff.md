@@ -160,7 +160,7 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 
 **Sign-in**
 - **Email + password**, saved by iPhone Keychain. Sign in with Apple needs a paid Apple Developer account. Emailed links open in Safari, not the home-screen app. Emailed codes need editable email templates, which Supabase only allows with custom SMTP.
-- New sign-ups are turned off in Supabase. Turn back on briefly if a family member joins.
+- New sign-ups are turned off in Supabase. Turn back on briefly if a family member joins, or add the account by hand (Authentication → Users → Add user). The app's sign-in screen has no sign-up option (removed 2026-10-28).
 
 **Sharing (database design)**
 - One **shared household library**. Books, works, and authors belong to a library, not a person; `library_members` says who can use it, and every member can do everything. Reading history (Phase 2) will be per person within the library.
@@ -188,3 +188,15 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 - First-published year = the earliest of Open Library's `first_publish_year` and LC 008's original date for reprints (type `r`), ignoring years later than the edition. Stored with its source.
 - Covers use Open Library cover IDs (work-level, so sometimes another edition's cover). ISBN-based cover lookups are rate-limited (100 per 5 minutes), so not used for browsing.
 - The catalog is **physical books only**. 19 "Ebook" and 5 "Digital audiobook" records (plus *Shakespeare's Stratford*, "Other") are errors, usually from picking a Kindle/Audible listing when a UPC wouldn't scan; 20 of them have no ISBN. Import them as physical and flag them "Needs checking" so the owner can rescan or fix them. "Paper Book" is just another print label, not an error.
+
+**Backup and restore (2026-10-28)**
+- `npm run backup` signs in (the app's account) and saves a dated snapshot to `~/Documents/Home Library Backups` (iCloud-synced, outside the repo): every table as JSON, a readable `books.csv`, and `info.json`. Keeps the newest 30 runs. Cover photos go to a shared `photos/` folder that only grows. Manual for now; run it before any bulk data change.
+- `npm run restore [-- <snapshot>]` shows a plan and writes nothing until RESTORE is typed, then reads everything back and checks it. Into the same library it puts back changed/deleted rows and removes rows added since. Into a *different, empty* library it copies everything with new ids: that is how it was tested (hand-made test account, all 1,403 books verified, then deleted) and how to rebuild in a new Supabase project.
+
+**Categories (in progress, 2026-10-28)**
+- Decided: 8 main categories: Fiction, Nonfiction, Poetry, Drama, Comics & graphic novels, Biography & memoir, Myth folklore & fairy tales, Essays letters & criticism. Kids / Teen / Adult is an **audience label** on every book, not a category. Travel writing is Nonfiction › Travel. Subcategories come from the collection's own data, not BISAC.
+- The owner's category list is a **fixed vocabulary**: rules may only suggest from it. Raw cataloging data (LC headings, genre/form terms, Dewey, LC class, Open Library subjects) stays in the database for searching but not on the book page; the book page gets a collapsed "Cataloging details" section instead.
+- Rules: `scripts/lib/category-rules.mjs` (first match wins for the main category: Dewey, then headings, LC class, LibraryThing genre, title). Engine: `scripts/lib/categorize.mjs`. `npm run categories:report` runs them on the newest backup (no sign-in) and writes `data/reports/categories-<snapshot>.csv` with the clue behind every choice.
+- First pass: 91% decided by Dewey; 10 books with no category. Dewey quirks handled: 89x puts the form digit after the language (895.63 = Japanese fiction); 808.8x anthologies; classical 88x/87x; biographies are marked by 092 within their subject. 8x8/808 "miscellaneous" is a grab bag (Poe's tales land in Essays); individual misfits (*Waiting for Godot*, *One Hundred Years of Solitude*) are for manual overrides, not rules.
+- Books added later have no LibraryThing data. Tested on the current collection using only LC + Open Library: classification alone gives a main category for 70% (94% matching the full-data result); adding Open Library subjects as a fallback reaches 89% (fallback guesses ~73% right). Plan for Scan to add: classification-decided books filed automatically, fallback guesses shown for one-tap confirmation, the rest picked by hand. Open Library subjects need normalizing (case, hyphens) and variant lists (*sci-fi*, *Science-Fiction*, BISAC strings).
+- Next: finalize the full subcategory list. The main gap is Fiction: 227 of 655 match no genre (catch-all "Literary fiction" and/or genres from LC genre/form terms: psychological, domestic, humorous, bildungsroman, adventure). Then category tables (manual choices always win), the review list, and the book page.

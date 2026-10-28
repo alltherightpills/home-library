@@ -43,7 +43,7 @@ export const PHOTO_PATH = '/storage/v1/object/public/covers/'
 // books.csv: one row per book, in words a person can check at a glance
 // ---------------------------------------------------------------------------
 
-function csvCell(value) {
+export function csvCell(value) {
   const text = value == null ? '' : String(value)
   return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
 }
