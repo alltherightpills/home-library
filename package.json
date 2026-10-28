@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "import:lt": "node scripts/import-librarything.mjs",
-    "enrich": "node scripts/enrich.mjs"
+    "enrich": "node scripts/enrich.mjs",
+    "backup": "node scripts/backup.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
