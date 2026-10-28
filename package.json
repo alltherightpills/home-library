@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "import:lt": "node scripts/import-librarything.mjs",
     "enrich": "node scripts/enrich.mjs",
-    "backup": "node scripts/backup.mjs"
+    "backup": "node scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
