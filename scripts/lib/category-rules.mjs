@@ -20,18 +20,21 @@ export const MAIN_CATEGORIES = [
   'Nonfiction',
   'Poetry',
   'Drama',
-  'Comics & graphic novels',
-  'Biography & memoir',
-  'Myth, folklore & fairy tales',
-  'Essays, letters & criticism',
+  'Comics & Graphic Novels',
+  'Biography & Memoir',
+  'Myth, Folklore & Fairy Tales',
+  'Essays, Letters & Criticism',
 ]
 
 // The main category: rules are tried top to bottom and the FIRST match decides.
 // So the order is the priority: Dewey (a cataloger's call for this edition)
 // comes before subject headings, and LibraryThing genres come last.
 export const MAIN_RULES = [
+  // McSweeney's is a fiction anthology in every issue, whatever its Dewey or format.
+  { main: 'Fiction', when: { title: ["mcsweeney's"] } },
+
   // Format first: a graphic memoir or graphic novel goes here, whatever its subject.
-  { main: 'Comics & graphic novels', when: { dewey: ['741.5'], lc: ['PN6700-6790'], genre: ['Comics'],
+  { main: 'Comics & Graphic Novels', when: { dewey: ['741.5'], lc: ['PN6700-6790'], genre: ['Comics'],
     heading: ['graphic novels', 'comic books, strips', 'comics (graphic works)'] } },
 
   // Travel writing is Nonfiction > Travel, even when told as a memoir.
@@ -39,9 +42,11 @@ export const MAIN_RULES = [
 
   // Lives. Dewey files most biographies with their subject and marks them with
   // 092 (641.5092 is a chef's life), so these come before the subject rules.
-  { main: 'Biography & memoir', when: { dewey: ['920-929', '*092'], lc: ['CT'],
+  // But 08 then 092 means a collection by a group of people (823.0108092), not a life,
+  // and 8x0.8 is a collection of one literature (820.809287 is writing by women).
+  { main: 'Biography & Memoir', when: { dewey: ['920-929', '*092'], lc: ['CT'],
     heading: ['-- biography', 'autobiographies', 'biographies', '-- diaries'] },
-    unless: { heading: ['-- fiction', 'juvenile fiction'] } },
+    unless: { dewey: ['*08092', '8x0.8'], heading: ['-- fiction', 'juvenile fiction'] } },
 
   // Literature. Collections of several literatures: 808.81 poetry, 808.82 drama, 808.83 fiction.
   { main: 'Poetry', when: { dewey: ['808.81'] } },
@@ -57,22 +62,22 @@ export const MAIN_RULES = [
   { main: 'Drama', when: { dewey: ['8x2'] }, unless: { dewey: ['89'] } },
   { main: 'Poetry', when: { dewey: ['8x1'] }, unless: { dewey: ['89'] } },
   { main: 'Fiction', when: { dewey: ['8x3'] }, unless: { dewey: ['89'] } },
-  { main: 'Essays, letters & criticism', when: { dewey: ['800-809', '8x0', '8x4', '8x5', '8x6', '8x7', '8x8'] },
+  { main: 'Essays, Letters & Criticism', when: { dewey: ['800-809', '8x0', '8x4', '8x5', '8x6', '8x7', '8x8'] },
     unless: { dewey: ['89'] } },
 
   // Folklore and mythology (Dewey 398 and 290s mythology, LC GR and BL300-325).
-  { main: 'Myth, folklore & fairy tales', when: { dewey: ['398', '201.3', '292', '293', '299'], lc: ['GR', 'BL300-325'] } },
+  { main: 'Myth, Folklore & Fairy Tales', when: { dewey: ['398', '201.3', '292', '293', '299'], lc: ['GR', 'BL300-325'] } },
 
   // Every other Dewey number is nonfiction.
   { main: 'Nonfiction', when: { dewey: ['0', '1', '2', '3', '4', '5', '6', '7', '9'] } },
 
   // No usable Dewey: fall back to LC class, then headings, then LibraryThing.
   { main: 'Fiction', when: { lc: ['PZ'] } },
-  { main: 'Myth, folklore & fairy tales', when: { heading: ['fairy tales', 'folklore', 'legends', 'mythology'] },
+  { main: 'Myth, Folklore & Fairy Tales', when: { heading: ['fairy tales', 'folklore', 'legends', 'mythology'] },
     unless: { heading: ['-- fiction', 'juvenile fiction'] } },
   { main: 'Poetry', when: { heading: ['-- poetry', 'poems'], genre: ['Poetry'] } },
   { main: 'Drama', when: { heading: ['-- drama', 'plays'] } },
-  { main: 'Biography & memoir', when: { heading: ['-- biography', 'autobiographies', 'biographies'], genre: ['Biography & Memoir'] } },
+  { main: 'Biography & Memoir', when: { heading: ['-- biography', 'autobiographies', 'biographies'], genre: ['Biography & Memoir'] } },
   { main: 'Fiction', when: { heading: ['fiction', 'novels', 'short stories'],
     genre: ['Fiction', 'General Fiction', 'Fantasy', 'Science Fiction', 'Historical Fiction', 'Romance', 'Horror', 'Mystery', 'Suspense & Thriller', 'Christian Fiction'] } },
   { main: 'Nonfiction', when: { lc: ['A*', 'B*', 'C*', 'D*', 'E', 'F', 'G*', 'H*', 'J*', 'K*', 'L*', 'M*', 'N*', 'Q*', 'R*', 'S*', 'T*', 'U*', 'V*', 'Z*'],
@@ -80,50 +85,59 @@ export const MAIN_RULES = [
 
   // Nothing else to go on.
   { main: 'Poetry', when: { heading: ['poetry'], title: ['poems', 'poetry'] } },
-  { main: 'Myth, folklore & fairy tales', when: { title: ['myths', 'legends', 'tales of', 'tales from', 'fairy tales'] } },
+  { main: 'Myth, Folklore & Fairy Tales', when: { title: ['myths', 'legends', 'tales of', 'tales from', 'fairy tales'] } },
   { main: 'Fiction', when: { title: ['stories', 'a novel'] } },
 ]
 
 // Subcategories: a book gets EVERY one that matches within its main category.
 export const SUBCATEGORY_RULES = {
   'Fiction': [
-    { sub: 'Fantasy', when: { genre: ['Fantasy'], heading: ['fantasy'] } },
-    { sub: 'Historical fiction', when: { genre: ['Historical Fiction'], heading: ['historical fiction'] } },
-    { sub: 'Mystery & suspense', when: { genre: ['Mystery', 'Suspense & Thriller'], heading: ['detective and mystery', 'mystery', 'suspense', 'thrillers'] } },
+    { sub: 'Fantasy', when: { genre: ['Fantasy'], heading: ['fantasy', 'magic', 'time travel', 'monsters', 'dragons', 'wizards', 'witches'] } },
+    { sub: 'Historical Fiction', when: { genre: ['Historical Fiction'], heading: ['historical fiction'] } },
+    { sub: 'Mystery & Suspense', when: { genre: ['Mystery', 'Suspense & Thriller'], heading: ['detective and mystery', 'mystery', 'suspense', 'thrillers'] } },
     { sub: 'Romance', when: { genre: ['Romance'], heading: ['love stories', 'romance fiction', 'romances'] } },
-    { sub: 'Science fiction', when: { genre: ['Science Fiction'], heading: ['science fiction'] } },
-    { sub: 'Horror', when: { genre: ['Horror'], heading: ['horror', 'ghost stories', 'gothic fiction'] } },
-    { sub: 'Short stories', when: { heading: ['short stories'] } },
-    { sub: 'Christian fiction', when: { genre: ['Christian Fiction'], heading: ['christian fiction'] } },
+    { sub: 'Science Fiction', when: { genre: ['Science Fiction'], heading: ['science fiction'] } },
+    { sub: 'Horror', when: { genre: ['Horror'], heading: ['horror', 'ghost stories', 'gothic fiction', 'supernatural'], title: ['ghost stor', 'weird'] } },
+    // Story collections often have no heading but say so in the title ("Tenth of December: Stories").
+    // Fiction anthologies go here too: in fiction they are nearly always story collections.
+    { sub: 'Short Stories & Anthologies', when: { dewey: ['808.83', '*0108', '8x3.x08'], heading: ['short stories', 'anthologies', 'anthology'],
+      title: [' stories', 'tales of', 'and other tales', 'anthology', "mcsweeney's"] } },
+    { sub: 'Literary Fiction', when: { heading: ['fiction / literary', 'literary fiction'] } },
+    { sub: 'Family & Relationships', when: { heading: ['psychological fiction', 'domestic fiction', 'married women', 'family life',
+      'parent and adult child', 'fathers and daughters', 'mothers and daughters', 'man-woman relationships'] } },
+    { sub: 'Coming of Age', when: { heading: ['bildungsrom', 'coming of age', 'autobiographical fiction'] } },
+    { sub: 'Humor', when: { heading: ['humorous', 'satire', 'comic fiction'] } },
+    { sub: 'Adventure', when: { heading: ['adventure stories', 'adventure and adventurers', 'sea stories', 'survival'] } },
+    { sub: 'Christian Fiction', when: { genre: ['Christian Fiction'], heading: ['christian fiction'] } },
     { sub: 'LGBTQ+', when: { genre: ['LGBTQ+'], heading: ['gay', 'lesbian', 'bisexual', 'transgender', 'queer', 'sexual minorit'] } },
-    { sub: 'In translation', when: { dewey: ['83', '84', '85', '86', '87', '88', '89'], lc: ['PA', 'PB', 'PC', 'PD', 'PF', 'PG', 'PH', 'PJ', 'PK', 'PL', 'PQ', 'PT'] } },
+    { sub: 'In Translation', when: { dewey: ['83', '84', '85', '86', '87', '88', '89'], lc: ['PA', 'PB', 'PC', 'PD', 'PF', 'PG', 'PH', 'PJ', 'PK', 'PL', 'PQ', 'PT'] } },
   ],
   'Nonfiction': [
     { sub: 'History', when: { dewey: ['900-909', '930-999'], lc: ['C*', 'D*', 'E', 'F'], genre: ['History'] } },
     { sub: 'Travel', when: { dewey: ['910-919'], lc: ['G'], genre: ['Travel'], heading: ['-- description and travel', 'voyages and travels'] } },
-    { sub: 'Religion & spirituality', when: { dewey: ['2'], lc: ['BL', 'BM', 'BP', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BX'], genre: ['Religion & Spirituality'] } },
-    { sub: 'Philosophy & psychology', when: { dewey: ['1'], lc: ['B', 'BC', 'BD', 'BF', 'BH', 'BJ'], genre: ['Philosophy'] } },
-    { sub: 'Society, politics & gender', when: { dewey: ['300-389'], lc: ['H*', 'J*', 'K*'], genre: ['Sociology', 'Politics, Government, Law and Public Policy', 'Sexuality and Gender Studies', 'Anthropology'] } },
-    { sub: 'Arts, crafts & design', when: { dewey: ['700-789'], lc: ['M*', 'N*', 'TT'], genre: ['Art & Design', 'Music'] } },
-    { sub: 'Science & nature', when: { dewey: ['5'], lc: ['Q*'], genre: ['Science & Nature'] } },
-    { sub: 'Health, food & home', when: { dewey: ['6'], lc: ['R*', 'TX'], genre: ['Health & Wellness', 'Food & Cooking'] } },
-    { sub: 'Language & writing', when: { dewey: ['4'], lc: ['P', 'PE'], heading: ['english language', 'authorship'] } },
-    { sub: 'Sports & recreation', when: { dewey: ['790-799'], lc: ['GV'], genre: ['Sports and Leisure'] } },
+    { sub: 'Religion & Spirituality', when: { dewey: ['2'], lc: ['BL', 'BM', 'BP', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BX'], genre: ['Religion & Spirituality'] } },
+    { sub: 'Philosophy & Psychology', when: { dewey: ['1'], lc: ['B', 'BC', 'BD', 'BF', 'BH', 'BJ'], genre: ['Philosophy'] } },
+    { sub: 'Society, Politics & Gender', when: { dewey: ['300-389'], lc: ['H*', 'J*', 'K*'], genre: ['Sociology', 'Politics, Government, Law and Public Policy', 'Sexuality and Gender Studies', 'Anthropology'] } },
+    { sub: 'Arts, Crafts & Design', when: { dewey: ['700-789'], lc: ['M*', 'N*', 'TT'], genre: ['Art & Design', 'Music'] } },
+    { sub: 'Science & Nature', when: { dewey: ['5'], lc: ['Q*'], genre: ['Science & Nature'] } },
+    { sub: 'Health, Food & Home', when: { dewey: ['6'], lc: ['R*', 'TX'], genre: ['Health & Wellness', 'Food & Cooking'] } },
+    { sub: 'Language & Writing', when: { dewey: ['4'], lc: ['P', 'PE'], heading: ['english language', 'authorship'] } },
+    { sub: 'Sports & Recreation', when: { dewey: ['790-799'], lc: ['GV'], genre: ['Sports and Leisure'] } },
     { sub: 'Reference', when: { dewey: ['0'], genre: ['Reference'], heading: ['-- dictionaries', 'encyclopedias'] } },
   ],
   'Poetry': [
-    { sub: 'American poetry', when: { dewey: ['811'], lc: ['PS'] } },
-    { sub: 'British & Irish poetry', when: { dewey: ['821'], lc: ['PR'] } },
-    { sub: 'Poetry in translation', when: { dewey: ['83', '84', '85', '86', '87', '88', '89'], lc: ['PA', 'PG', 'PJ', 'PK', 'PL', 'PQ', 'PT'] } },
-    { sub: 'Epic poetry', when: { heading: ['epic poetry'] } },
+    { sub: 'American Poetry', when: { dewey: ['811'], lc: ['PS'] } },
+    { sub: 'British & Irish Poetry', when: { dewey: ['821'], lc: ['PR'] } },
+    { sub: 'Poetry in Translation', when: { dewey: ['83', '84', '85', '86', '87', '88', '89'], lc: ['PA', 'PG', 'PJ', 'PK', 'PL', 'PQ', 'PT'] } },
+    { sub: 'Epic Poetry', when: { heading: ['epic poetry'] } },
   ],
   'Drama': [
     { sub: 'Shakespeare', when: { lc: ['PR2750-3112'], heading: ['shakespeare, william'] } },
     { sub: 'Classical (Greek & Roman)', when: { dewey: ['882', '872'], lc: ['PA'], heading: ['greek drama', 'latin drama'] } },
   ],
-  'Myth, folklore & fairy tales': [
-    { sub: 'Fairy tales', when: { heading: ['fairy tales'] } },
-    { sub: 'Folk tales & legends', when: { heading: ['folklore', 'legends', 'tales'] } },
+  'Myth, Folklore & Fairy Tales': [
+    { sub: 'Fairy Tales', when: { heading: ['fairy tales'] } },
+    { sub: 'Folk Tales & Legends', when: { heading: ['folklore', 'legends', 'tales'] } },
     { sub: 'Mythology', when: { dewey: ['201.3', '292', '293', '299'], lc: ['BL300-325'], heading: ['mythology'] } },
   ],
 }

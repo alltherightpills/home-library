@@ -27,7 +27,7 @@ for (const credit of [...workAuthors].sort((a, b) => a.position - b.position)) {
 
 // What LibraryThing's genres alone would suggest, to compare with the rules.
 const LT_MAIN = {
-  'Poetry': 'Poetry', 'Comics': 'Comics & graphic novels', 'Biography & Memoir': 'Biography & memoir',
+  'Poetry': 'Poetry', 'Comics': 'Comics & Graphic Novels', 'Biography & Memoir': 'Biography & Memoir',
   'Fiction': 'Fiction', 'General Fiction': 'Fiction', 'Nonfiction': 'Nonfiction', 'General Nonfiction': 'Nonfiction',
 }
 const ltSays = (genres) => [...new Set(genres.map((g) => LT_MAIN[g]).filter(Boolean))]
