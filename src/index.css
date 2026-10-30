@@ -386,6 +386,7 @@ body {
 }
 
 .edit-book input,
+.edit-book select,
 .edit-book textarea {
   width: 100%;
   min-height: 44px;

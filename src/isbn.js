@@ -11,3 +11,15 @@ export function toIsbn(code) {
   const check = (10 - (sum % 10)) % 10
   return check === Number(code[12]) ? code : null
 }
+
+// Returns the ISBN-10 if `code` is valid, otherwise null. Its last character
+// is a check digit too, which can be X (meaning 10).
+export function toIsbn10(code) {
+  if (!/^\d{9}[\dX]$/.test(code)) return null
+
+  let sum = 0
+  for (let i = 0; i < 10; i++) {
+    sum += (code[i] === 'X' ? 10 : Number(code[i])) * (10 - i)
+  }
+  return sum % 11 === 0 ? code : null
+}
