@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { formFromCopy, formProblem, removeBook, saveBookEdits } from './bookEdits.js'
 
 function Field({ label, value, onChange, numeric }) {
@@ -10,6 +10,35 @@ function Field({ label, value, onChange, numeric }) {
         inputMode={numeric ? 'numeric' : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
+  )
+}
+
+// A text box that grows to show all of a long title. Pressing return saves
+// rather than starting a new line, and a pasted line break becomes a space.
+function TitleField({ label, value, onChange }) {
+  const box = useRef(null)
+
+  useLayoutEffect(() => {
+    box.current.style.height = 'auto'
+    box.current.style.height = `${box.current.offsetHeight - box.current.clientHeight + box.current.scrollHeight}px`
+  }, [value])
+
+  return (
+    <label>
+      {label}
+      <textarea
+        ref={box}
+        rows={1}
+        value={value}
+        onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, ' '))}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            e.target.form.requestSubmit()
+          }
+        }}
       />
     </label>
   )
@@ -71,7 +100,7 @@ function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, 
       {error && <p className="error">{error}</p>}
 
       <h3>Details</h3>
-      <Field label="Title" value={form.title} onChange={set('title')} />
+      <TitleField label="Title" value={form.title} onChange={set('title')} />
       {form.people.map((person, i) => (
         <div className="edit-pair" key={i}>
           <Field
