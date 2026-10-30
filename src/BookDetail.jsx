@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import CoverPicker from './CoverPicker.jsx'
+import EditBook from './EditBook.jsx'
 import { coverUrl } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
@@ -19,12 +20,17 @@ const COVER_SOURCES = {
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, onBack, onCoverChange }) {
-  // The cover picker is a step in the browser history too, so swiping back closes it.
+function BookDetail({ copy, onBack, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+  // The cover picker and edit screen are steps in the browser history too, so
+  // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
+  const [editing, setEditing] = useState(() => Boolean(history.state?.edit))
 
   useEffect(() => {
-    const onPop = (e) => setPicking(Boolean(e.state?.cover))
+    const onPop = (e) => {
+      setPicking(Boolean(e.state?.cover))
+      setEditing(Boolean(e.state?.edit))
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -33,6 +39,26 @@ function BookDetail({ copy, onBack, onCoverChange }) {
     history.pushState({ ...history.state, cover: true }, '')
     setPicking(true)
     window.scrollTo(0, 0)
+  }
+
+  function editBook() {
+    history.pushState({ ...history.state, edit: true }, '')
+    setEditing(true)
+    window.scrollTo(0, 0)
+  }
+
+  if (editing) {
+    return (
+      <EditBook
+        copy={copy}
+        sharedWork={sharedWork}
+        onCancel={() => history.back()}
+        onSaved={() => history.back()}
+        onRemoved={onRemoved}
+        updateCopy={updateCopy}
+        updateWork={updateWork}
+      />
+    )
   }
 
   if (picking) {
@@ -65,15 +91,22 @@ function BookDetail({ copy, onBack, onCoverChange }) {
     ['LibraryThing call number', copy.lcc],
     ['Dewey', [copy.dewey, copy.dewey_wording.join('; ')].filter(Boolean).join(' — ')],
     ['LibraryThing genres', copy.lt_genres.join(', ')],
+    ['Year acquired', copy.acquired_year],
+    ['Place acquired', [copy.acquired_city, copy.acquired_region, copy.acquired_country].filter(Boolean).join(', ')],
     ['Date cataloged', copy.added_on],
     ['Cover from', COVER_SOURCES[copy.cover_source] ?? copy.cover_source],
   ]
 
   return (
     <div className="book-detail">
-      <button className="link" onClick={onBack}>
-        ‹ Back
-      </button>
+      <div className="detail-actions">
+        <button className="link" onClick={onBack}>
+          ‹ Back
+        </button>
+        <button className="link" onClick={editBook}>
+          Edit book
+        </button>
+      </div>
       <div className="cover-area">
         {coverUrl(copy, 'L') && <img className="cover" src={coverUrl(copy, 'L')} alt="" />}
         <button className="link" onClick={pickCover}>

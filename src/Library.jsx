@@ -9,7 +9,7 @@ const SORTS = {
   added: (a, b) => b.added_on.localeCompare(a.added_on) || a.titleSort.localeCompare(b.titleSort),
 }
 
-function Library({ copies, error, updateCopy }) {
+function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('author')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
@@ -62,6 +62,13 @@ function Library({ copies, error, updateCopy }) {
           copy={open}
           onBack={() => history.back()}
           onCoverChange={(changes) => updateCopy(open.id, changes)}
+          sharedWork={copies.some((c) => c.id !== open.id && c.work?.id === open.work?.id)}
+          updateCopy={updateCopy}
+          updateWork={updateWork}
+          onRemoved={() => {
+            removeCopy(open.id)
+            history.go(-2) // past the edit screen and the book page, back to the list
+          }}
         />
       )}
       <div className="library" hidden={!!open}>

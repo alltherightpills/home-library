@@ -343,6 +343,96 @@ body {
   text-decoration: underline;
 }
 
+.link.strong {
+  font-weight: 600;
+}
+
+.detail-actions {
+  display: flex;
+  justify-content: space-between;
+}
+
+.edit-book {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.edit-header h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.edit-book h3 {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.edit-book label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.edit-book input {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+/* minmax(0, …) lets the two fields share the width instead of overflowing. */
+.edit-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.danger {
+  min-height: 48px;
+  margin-top: 16px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: #a3261b;
+}
+
+.danger.filled {
+  margin-top: 0;
+  padding: 0 20px;
+  background: #a3261b;
+  color: #fff;
+}
+
+.confirm-remove {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.confirm-remove p {
+  margin: 0;
+}
+
 .error {
   color: #a3261b;
 }
