@@ -1,3 +1,4 @@
+import { toIsbn, toIsbn10 } from './isbn.js'
 import { supabase } from './supabase.js'
 
 // "Joyce, James" → { last: 'Joyce', first: 'James' }; "Homer" has only a last name.
@@ -19,12 +20,21 @@ export function formFromCopy(copy) {
     people,
     firstPublished: text(copy.work?.first_published_year),
     pages: text(copy.pages),
+    publisher: text(copy.publisher),
+    editionYear: text(copy.edition_year),
+    binding: text(copy.binding),
+    languages: copy.languages.join(', '),
+    isbn13: text(copy.isbn13),
+    isbn10: text(copy.isbn10),
     acquiredYear: text(copy.acquired_year),
     city: text(copy.acquired_city),
     region: text(copy.acquired_region),
     country: text(copy.acquired_country),
   }
 }
+
+// "0-375-70539-2" → "0375705392", as ISBNs are stored.
+const cleanIsbn = (value) => value.replace(/[\s-]/g, '').toUpperCase() || null
 
 // What's wrong with the form, in plain words, or '' if it can be saved.
 export function formProblem(form, copy) {
@@ -38,6 +48,19 @@ export function formProblem(form, copy) {
     return 'First published should be a year, like 1914.'
   }
   if (form.pages.trim() && !/^[1-9]\d{0,4}$/.test(form.pages.trim())) return 'Pages should be a whole number, like 224.'
+  // Older records may hold odd values, so these are only checked once changed.
+  const editionYear = form.editionYear.trim()
+  if (editionYear && editionYear !== String(copy.edition_year) && !/^\d{4}$/.test(editionYear)) {
+    return 'Edition year should be a four-digit year, like 2008.'
+  }
+  const isbn13 = cleanIsbn(form.isbn13)
+  if (isbn13 && isbn13 !== copy.isbn13 && !toIsbn(isbn13)) {
+    return "That ISBN-13 isn't valid. Check for a mistyped digit."
+  }
+  const isbn10 = cleanIsbn(form.isbn10)
+  if (isbn10 && isbn10 !== copy.isbn10 && !toIsbn10(isbn10)) {
+    return "That ISBN-10 isn't valid. Check for a mistyped digit."
+  }
   const year = form.acquiredYear.trim()
   if (year && (!/^\d{4}$/.test(year) || Number(year) > new Date().getFullYear())) {
     return 'Year acquired should be a four-digit year, not in the future.'
@@ -134,6 +157,11 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
     {
       title,
       pages: numberOrNull(form.pages),
+      publisher: textOrNull(form.publisher),
+      edition_year: numberOrNull(form.editionYear),
+      binding: form.binding || null,
+      isbn13: cleanIsbn(form.isbn13),
+      isbn10: cleanIsbn(form.isbn10),
       acquired_year: numberOrNull(form.acquiredYear),
       acquired_city: textOrNull(form.city),
       acquired_region: textOrNull(form.region),
@@ -141,6 +169,8 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
     },
     copy,
   )
+  const languages = form.languages.split(',').map((l) => l.trim()).filter(Boolean)
+  if (languages.join() !== copy.languages.join()) copyChanges.languages = languages
   if (Object.keys(copyChanges).length) {
     const { error } = await supabase.from('copies').update(copyChanges).eq('id', copy.id)
     check(error, 'Saving the book')

@@ -118,6 +118,23 @@ function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, 
         <Field label="Pages" value={form.pages} onChange={set('pages')} numeric />
       </div>
 
+      <h3>This edition</h3>
+      <Field label="Publisher" value={form.publisher} onChange={set('publisher')} />
+      <div className="edit-pair">
+        <Field label="Edition year" value={form.editionYear} onChange={set('editionYear')} numeric />
+        <label>
+          Binding
+          <select value={form.binding} onChange={(e) => set('binding')(e.target.value)}>
+            <option value="">Not set</option>
+            <option>Paperback</option>
+            <option>Hardcover</option>
+          </select>
+        </label>
+        <Field label="ISBN-13" value={form.isbn13} onChange={set('isbn13')} numeric />
+        <Field label="ISBN-10" value={form.isbn10} onChange={set('isbn10')} />
+      </div>
+      <Field label="Language (commas between several)" value={form.languages} onChange={set('languages')} />
+
       <h3>From the bookplate</h3>
       <div className="edit-pair">
         <Field label="Year acquired" value={form.acquiredYear} onChange={set('acquiredYear')} numeric />
