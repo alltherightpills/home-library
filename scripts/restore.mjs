@@ -68,6 +68,8 @@ function copyIntoLibrary(tables, libraryId) {
     work_authors: tables.work_authors.map((r) => moved(r, { work_id: newId(r.work_id), author_id: newId(r.author_id) })),
     copies: tables.copies.map((r) => moved(r, { id: newId(r.id), work_id: newId(r.work_id) })),
     lookups: tables.lookups.map((r) => moved(r, {})),
+    categories: tables.categories.map((r) => moved(r, { id: newId(r.id), parent_id: r.parent_id && newId(r.parent_id) })),
+    book_categories: tables.book_categories.map((r) => moved(r, { copy_id: newId(r.copy_id), category_id: newId(r.category_id) })),
   }
 }
 
@@ -83,7 +85,10 @@ if (!snapshots.includes(snapshot)) {
 const folder = join(BACKUP_ROOT, snapshot)
 const info = JSON.parse(await readFile(join(folder, 'info.json'), 'utf8'))
 const backup = {}
-for (const table of BOOK_TABLES) backup[table.name] = JSON.parse(await readFile(join(folder, `${table.name}.json`), 'utf8'))
+// Backups made before a table existed have no file for it: that table was empty then.
+for (const table of BOOK_TABLES) {
+  backup[table.name] = JSON.parse(await readFile(join(folder, `${table.name}.json`), 'utf8').catch(() => '[]'))
+}
 console.log(`Backup ${snapshot}: ${backup.copies.length} books.\n`)
 
 const { supabase, libraryId } = await signIn()
@@ -185,16 +190,16 @@ async function removeRows({ name, key }, rows) {
   }
 }
 
-for (const name of ['work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['book_categories', 'work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
 for (const { local, path } of photosToUpload) {
   const { error } = await bucket.upload(path, await readFile(local), { contentType: 'image/jpeg', upsert: true })
   if (error) throw new Error(`Uploading photo ${path}: ${error.message}`)
 }
-for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups']) {
+for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories']) {
   await putRows(byName[name], plan[name].put)
   console.log(`${name}: done`)
 }
-for (const name of ['works', 'authors']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['works', 'authors', 'categories']) await removeRows(byName[name], plan[name].remove)
 
 // ---------------------------------------------------------------------------
 // Check: read everything back and compare, row by row and as books.csv
