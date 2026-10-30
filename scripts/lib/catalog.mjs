@@ -16,6 +16,8 @@ export const BOOK_TABLES = [
   { name: 'work_authors', key: ['work_id', 'author_id', 'role'], primaryKey: 'work_id,author_id,role' },
   { name: 'copies', key: ['id'], primaryKey: 'id' },
   { name: 'lookups', key: ['source', 'isbn'], primaryKey: 'library_id,source,isbn' },
+  { name: 'categories', key: ['id'], primaryKey: 'id' },
+  { name: 'book_categories', key: ['copy_id', 'category_id'], primaryKey: 'copy_id,category_id' },
 ]
 
 // Backed up for reference; a restore leaves these as they are.

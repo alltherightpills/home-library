@@ -134,6 +134,8 @@ export const SUBCATEGORY_RULES = {
   'Drama': [
     { sub: 'Shakespeare', when: { lc: ['PR2750-3112'], heading: ['shakespeare, william'] } },
     { sub: 'Classical (Greek & Roman)', when: { dewey: ['882', '872'], lc: ['PA'], heading: ['greek drama', 'latin drama'] } },
+    // From about the 1880s on. 812 is all American drama; elsewhere the digits after the form are the period.
+    { sub: 'Modern Drama', when: { dewey: ['812', '822.8', '822.9', '832.8', '832.9', '842.8', '842.9', '891.72'] } },
   ],
   'Myth, Folklore & Fairy Tales': [
     { sub: 'Fairy Tales', when: { heading: ['fairy tales'] } },
@@ -194,6 +196,7 @@ export const LABEL_RULES = {
   'Drama': {
     'Shakespeare': ['shakespeare'],
     'Classical (Greek & Roman)': ['drama / ancient', 'greek drama', 'latin drama'],
+    'Modern Drama': ['drama / american'],
   },
   'Myth, Folklore & Fairy Tales': {
     'Fairy Tales': ['fairy tales'],
