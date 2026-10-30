@@ -69,11 +69,13 @@ export async function signIn() {
 }
 
 // Fetch every row of a table in this library (the server returns 1,000 at a time).
-export async function fetchAll(supabase, table, columns, libraryId) {
+// `orderBy` must name each row exactly, or rows can be skipped between batches.
+export async function fetchAll(supabase, table, columns, libraryId, orderBy = [columns.split(',')[0].trim()]) {
   const rows = []
   for (let from = 0; ; from += 1000) {
-    const { data, error } = await supabase
-      .from(table).select(columns).eq('library_id', libraryId).order(columns.split(',')[0].trim()).range(from, from + 999)
+    let query = supabase.from(table).select(columns).eq('library_id', libraryId)
+    for (const column of orderBy) query = query.order(column)
+    const { data, error } = await query.range(from, from + 999)
     if (error) throw error
     rows.push(...data)
     if (data.length < 1000) return rows

@@ -5,50 +5,18 @@
 //   npm run enrich -- --try 0375705392   (look up one ISBN and show the result; no sign-in, saves nothing)
 //   npm run enrich -- --limit 20         (sign in; process only the first 20 books not yet looked up)
 //   npm run enrich                       (sign in; process everything)
+//   npm run enrich -- --votes            (sign in; save the category vote's LC and Google answers)
+//   npm run enrich -- --votes --limit 20 (the same, for the first 20 books not yet done)
 //
 // Safe to stop and rerun: books already looked up are skipped, and only empty
 // fields are ever filled, so hand edits are never overwritten. (Covers are the one
 // exception: a cover from enrichment is upgraded to this edition's own when found.)
 
 import { fetchAll, signIn } from './lib/session.mjs'
-
-const USER_AGENT = 'HomeLibrary/0.1 (personal catalog; github.com/alltherightpills/home-library)'
-
-// ---------------------------------------------------------------------------
-// Polite fetching: each source has its own pace, and failures are retried.
-// ---------------------------------------------------------------------------
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
-
-function pacer(minGapMs) {
-  let next = 0
-  return async function fetchPolitely(url) {
-    for (let attempt = 1; ; attempt++) {
-      const wait = next - Date.now()
-      if (wait > 0) await sleep(wait)
-      next = Date.now() + minGapMs
-      try {
-        const res = await fetch(url, {
-          headers: { 'User-Agent': USER_AGENT },
-          signal: AbortSignal.timeout(30_000),
-        })
-        if (res.ok) return await res.text()
-        // Too many requests or a server hiccup: back off and try again.
-        if ((res.status === 429 || res.status >= 500) && attempt < 4) {
-          next = Date.now() + minGapMs * 10 * attempt
-          continue
-        }
-        throw new Error(`HTTP ${res.status}`)
-      } catch (err) {
-        if (attempt >= 4) throw err
-        next = Date.now() + minGapMs * 10 * attempt
-      }
-    }
-  }
-}
+import { fetchLoc, pacer, parseMarcXml } from './lib/lookup-tools.mjs'
+import { GoogleCapReached, googleCalls, lookUpGoogle, lookUpLocByTitle } from './lib/vote-lookups.mjs'
 
 const fetchOpenLibrary = pacer(1000)
-const fetchLoc = pacer(2000)
 
 // ---------------------------------------------------------------------------
 // Sources
@@ -84,38 +52,6 @@ async function lookUpLoc(isbn10, isbn13) {
     if (record) return record
   }
   return null
-}
-
-// ---------------------------------------------------------------------------
-// Reading MARCXML (LC's format is regular enough for simple patterns)
-// ---------------------------------------------------------------------------
-
-function decodeXml(s) {
-  return s
-    .replace(/&#x([0-9a-f]+);/gi, (_, h) => String.fromCodePoint(parseInt(h, 16)))
-    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(Number(d)))
-    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-}
-
-// -> { leader, control: { '008': '...' }, fields: [{ tag, ind1, ind2, sub: [['a', '...'], ...] }] }
-export function parseMarcXml(xml) {
-  const rec = xml.match(/<(?:\w+:)?record[\s>][\s\S]*?<\/(?:\w+:)?record>/)?.[0]
-  if (!rec || !/<(?:\w+:)?leader>/.test(rec)) return null
-  const control = {}
-  for (const [, tag, value] of rec.matchAll(/<(?:\w+:)?controlfield tag="(\w+)">([\s\S]*?)<\/(?:\w+:)?controlfield>/g)) {
-    control[tag] = decodeXml(value)
-  }
-  const fields = []
-  for (const [, tag, ind1, ind2, body] of rec.matchAll(
-    /<(?:\w+:)?datafield tag="(\w+)" ind1="(.)" ind2="(.)">([\s\S]*?)<\/(?:\w+:)?datafield>/g,
-  )) {
-    const sub = [...body.matchAll(/<(?:\w+:)?subfield code="(.)">([\s\S]*?)<\/(?:\w+:)?subfield>/g)].map(
-      ([, code, value]) => [code, decodeXml(value).trim()],
-    )
-    fields.push({ tag, ind1, ind2, sub })
-  }
-  return { leader: rec.match(/<(?:\w+:)?leader>([\s\S]*?)<\//)?.[1] ?? '', control, fields }
 }
 
 // ---------------------------------------------------------------------------
@@ -206,7 +142,78 @@ if (flag('--try') !== null) {
   process.exit(0)
 }
 
-await run(flag('--limit') ? Number(flag('--limit')) : Infinity)
+const limit = flag('--limit') ? Number(flag('--limit')) : Infinity
+await (args.includes('--votes') ? runVotes(limit) : run(limit))
+
+// Saves LC-by-title and Google's best match for every book. Books with no ISBN
+// are saved under "copy:<id>". Only `lookups` changes; no book record is touched.
+// When Google's daily allowance runs out, LC carries on; rerun tomorrow for the rest.
+async function runVotes(limit) {
+  const { supabase, libraryId } = await signIn()
+  console.log('Signed in. Reading the catalog…')
+
+  const copies = await fetchAll(supabase, 'copies', 'id, work_id, title, isbn13, isbn10', libraryId)
+  const authors = await fetchAll(supabase, 'authors', 'id, sort_name, display_name', libraryId)
+  const credits = await fetchAll(supabase, 'work_authors', 'work_id, author_id, role, position', libraryId, ['work_id', 'author_id', 'role'])
+  const saved = await fetchAll(supabase, 'lookups', 'source, isbn', libraryId, ['source', 'isbn'])
+  const have = new Set(saved.map((l) => `${l.source}|${l.isbn}`))
+
+  const authorById = new Map(authors.map((a) => [a.id, a]))
+  const mainAuthor = (workId) => {
+    const own = credits.filter((c) => c.work_id === workId).sort((a, b) => a.position - b.position)
+    return authorById.get((own.find((c) => c.role === 'Author') ?? own[0])?.author_id)
+  }
+
+  const books = new Map()
+  for (const c of copies) books.set(c.isbn13 ?? c.isbn10 ?? `copy:${c.id}`, c)
+  const missing = (key) => ['loc_search', 'google'].filter((source) => !have.has(`${source}|${key}`))
+  const todo = [...books].filter(([key]) => missing(key).length)
+  const batch = todo.slice(0, limit)
+  console.log(`${books.size} books; ${todo.length} still need LC or Google; doing ${batch.length} this run.`)
+
+  const started = Date.now()
+  let failures = 0
+  let capped = false
+  for (const [i, [key, c]] of batch.entries()) {
+    const author = mainAuthor(c.work_id)
+    const surname = author?.sort_name.split(',')[0].trim()
+    const look = {
+      loc_search: () => lookUpLocByTitle(c.title, surname),
+      google: () => lookUpGoogle({
+        title: c.title, author: author?.display_name, surname, isbns: [c.isbn13, c.isbn10].filter(Boolean),
+      }),
+    }
+    const results = []
+    for (const source of missing(key)) {
+      if (source === 'google' && capped) continue
+      try {
+        const data = await look[source]()
+        const row = { library_id: libraryId, source, isbn: key, found: Boolean(data), data }
+        const { error } = await supabase.from('lookups').upsert(row)
+        if (error) throw new Error(error.message)
+        have.add(`${source}|${key}`)
+        results.push(`${source === 'google' ? 'Google' : 'LC'} ${data ? '✓' : '–'}`)
+      } catch (err) {
+        if (err instanceof GoogleCapReached) {
+          capped = true
+          console.log(`${err.message}. That's today's allowance; carrying on with LC only.`)
+        } else {
+          failures++
+          results.push(`${source} error (${err.message}; will retry next run)`)
+        }
+      }
+    }
+    const done = i + 1
+    const minutesLeft = Math.round(((Date.now() - started) / done) * (batch.length - done) / 60000)
+    console.log(`[${done}/${batch.length}] ${c.title.slice(0, 50)} — ${results.join(', ')}` +
+      (done < batch.length ? `  (~${minutesLeft} min left)` : ''))
+  }
+
+  const remaining = (source) => [...books.keys()].filter((key) => !have.has(`${source}|${key}`)).length
+  console.log(`\nGoogle calls this run: ${googleCalls}. Still to do: LC ${remaining('loc_search')}, Google ${remaining('google')}.`)
+  if (failures) console.log(`${failures} lookups failed this run; run again to retry them.`)
+  if (remaining('loc_search') || remaining('google')) console.log('Run the same command again to continue (tomorrow, if Google stopped).')
+}
 
 async function run(limit) {
   const { supabase, libraryId } = await signIn()
@@ -218,7 +225,7 @@ async function run(limit) {
     libraryId,
   )
   const works = await fetchAll(supabase, 'works', 'id, first_published_year', libraryId)
-  const saved = await fetchAll(supabase, 'lookups', 'isbn, source, found, data', libraryId)
+  const saved = await fetchAll(supabase, 'lookups', 'isbn, source, found, data', libraryId, ['source', 'isbn'])
   const lookups = new Map(saved.map((l) => [`${l.source}|${l.isbn}`, l]))
 
   // --- Phase 1: look up every ISBN not already looked up --------------------
