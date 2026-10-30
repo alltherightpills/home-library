@@ -14,7 +14,8 @@
     "restore": "node scripts/restore.mjs",
     "categories:report": "node scripts/categories-report.mjs",
     "categories:vote": "node scripts/categories-vote.mjs",
-    "categories:setup": "node scripts/categories-setup.mjs"
+    "categories:setup": "node scripts/categories-setup.mjs",
+    "titles:report": "node scripts/titles-report.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

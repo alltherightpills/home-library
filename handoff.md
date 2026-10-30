@@ -232,3 +232,11 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 - The "Needs checking" flag and its optional note can be set from the form; turning the flag off clears the note. `cleanup.md` tracks small jobs; this flag is for problems with one book.
 - Remove from library deletes the copy and anything only it used (photo, work, authors). `lookups` rows stay, so re-adding the book doesn't need new lookups.
 - `npm run enrich` fills blanks only: hand edits stay, but a pages or first-published field cleared by hand gets refilled.
+
+**Title cleanup (decided 2026-10-30)**
+- `npm run titles:report` (`src/titles/cleanTitle.js`) lists what would change, reading a backup and changing nothing. The owner is ruling on its phrase list before anything is applied.
+- Removed from titles: form labels ("A Novel", "Poems", "Stories" and similar) and award or promotional text are deleted; plain format words ("Hardcover") are deleted. Real subtitles stay.
+- Moved to their own fields, all new except publisher: **series** and number, **publisher's series** ("Penguin Classics", separate from both series and publisher), and **edition note** ("The Gabler Edition"). The original title is kept.
+- The owner's rulings live in `src/titles/phrase-rulings.js`. Search should also read the saved original title, so alternate titles removed from view ("The Hunchback of Notre Dame") still find the book.
+- **Where this stands (2026-10-30):** first report on backup `2026-10-30_1345`: 653 no change, 550 automatic, 200 to check, before the owner's rulings. `unknown` phrases are ruled. Next: the owner rules on the `series` rows (anything that's really a publisher's line, such as *Cambridge Companions to Literature*, *DK Pockets*), then rerun the report on a fresh backup, then review Check rows. Don't rerun on the same backup while the owner is reading it, since line numbers shift. Don't apply the cleanup during a Google lookup run.
+- Edit a Book, the Needs checking switch, and the search fix were tested on the owner's iPhone and work. Not yet built on that screen: series fields (with the cleanup) and main category and subcategory (after the vote's results are saved).

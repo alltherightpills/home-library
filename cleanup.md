@@ -13,15 +13,14 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 | Merge duplicate author names | ~15 pairs | Owner | On Edit a Book, retype the name to match the form to keep. Keep accents. Check first that it's the same person (*Mitchell, David* and *Mitchell, David T.* may not be). |
 | Fix junk in author names | A few | Owner | *Raymond Original Cinema Poster*; *Lucy Maud[Canadian author](1874-1942)*; *père, Alexandre Dumas*. |
 | Add ISBNs to no-ISBN records | ~40 | Owner | Needs the books in hand. Run `npm run enrich` afterward. Many are Ebook and audiobook records that also need checking as physical copies. |
-| Test autofill fix | 1 test | Owner | Hidden "search" box names, waiting on the Mac for the next batch. If the bar stays, try rewording the labels once, then stop. |
 
 ## Waiting on something
 
 | Job | Waiting on | Who | Notes |
 |---|---|---|---|
 | Redo lookups for *The Winter of Our Discontent* | Google lookup run | Claude | Clear and relook up its `loc_search` and `google` rows; they used the old title. |
-| Title cleanup: move series, publisher's series, and promotional text out of titles | Owner's answers on "A Novel" labels and award notes | Both | "What would change" list first; about 504 titles have brackets. Keep originals. The vote keeps reading the original title. |
-| Add a Series field | Title cleanup | Claude | Needs a database change. Add it to Edit a Book too. |
+| Title cleanup: move series, publisher's series, edition notes, and promotional text out of titles | Owner's rulings on the phrase list | Both | `unknown` rows ruled; `series` rows next. Then apply the rulings, back up, rerun the report, and review Check rows. Keep originals, and the vote keeps reading the original title. |
+| Add series, publisher's series, and edition note fields | Title cleanup | Claude | Needs a database change, plus a saved original title. Add them to Edit a Book, and make search read the original title. |
 | Fix over-trimmed work titles | Title cleanup | Claude | The import cut work titles at the colon, which drops real subtitles. |
 | Raise the photo size limit | Next cover work | Claude | Photos shrink to 1,000px, too small for a large cover. |
 | Re-add the book removed while testing | Scan to add | Owner | The owner knows which one; it's also in backup `2026-10-30_1345`. |
