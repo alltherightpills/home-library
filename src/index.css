@@ -404,6 +404,21 @@ body {
   resize: none;
 }
 
+.edit-book .edit-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.edit-book .edit-check input {
+  width: 22px;
+  height: 22px;
+  min-height: 0;
+  margin: 0;
+}
+
 /* minmax(0, …) lets the two fields share the width instead of overflowing. */
 .edit-pair {
   display: grid;

@@ -136,7 +136,14 @@ export function searchWords(query) {
   return normalize(query).split(/[^\p{L}\p{N}']+/u).filter(Boolean)
 }
 
-// Lowercase and strip accents, so "pokemon" matches "Pokémon".
+// Letters that aren't an accent on a plain letter, so removing accents misses them.
+const SPECIAL_LETTERS = { ø: 'o', ł: 'l', đ: 'd', ð: 'd', þ: 'th', æ: 'ae', œ: 'oe', ß: 'ss', ı: 'i' }
+
+// Lowercase and strip accents, so "pokemon" matches "Pokémon" and "soren" matches "Søren".
 export function normalize(s) {
-  return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+  return s
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .replace(/[øłđðþæœßı]/g, (letter) => SPECIAL_LETTERS[letter])
 }
