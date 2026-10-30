@@ -30,6 +30,8 @@ export function formFromCopy(copy) {
     city: text(copy.acquired_city),
     region: text(copy.acquired_region),
     country: text(copy.acquired_country),
+    needsReview: copy.needs_review,
+    reviewNote: text(copy.review_note),
   }
 }
 
@@ -168,6 +170,9 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
       acquired_city: textOrNull(form.city),
       acquired_region: textOrNull(form.region),
       acquired_country: textOrNull(form.country),
+      needs_review: form.needsReview,
+      // Turning the flag off clears its note, so an old note can't reappear.
+      review_note: form.needsReview ? textOrNull(form.reviewNote) : null,
     },
     copy,
   )

@@ -1,12 +1,20 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { formFromCopy, formProblem, removeBook, saveBookEdits } from './bookEdits.js'
 
+// iPhones ignore autoComplete="off" on boxes labeled like a contact form, but
+// tend to skip autofill when a box's hidden name contains "search".
+function useNoAutofillName() {
+  return `search-${useId()}`
+}
+
 function Field({ label, value, onChange, numeric }) {
+  const name = useNoAutofillName()
   return (
     <label>
       {label}
       <input
         type="text"
+        name={name}
         inputMode={numeric ? 'numeric' : undefined}
         autoComplete="off"
         value={value}
@@ -20,6 +28,7 @@ function Field({ label, value, onChange, numeric }) {
 // rather than starting a new line, and a pasted line break becomes a space.
 function TitleField({ label, value, onChange }) {
   const box = useRef(null)
+  const name = useNoAutofillName()
 
   useLayoutEffect(() => {
     box.current.style.height = 'auto'
@@ -32,6 +41,7 @@ function TitleField({ label, value, onChange }) {
       <textarea
         ref={box}
         rows={1}
+        name={name}
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, ' '))}
@@ -142,6 +152,19 @@ function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, 
         <Field label="State / region" value={form.region} onChange={set('region')} />
         <Field label="Country" value={form.country} onChange={set('country')} />
       </div>
+
+      <h3>Needs checking</h3>
+      <label className="edit-check">
+        <input
+          type="checkbox"
+          checked={form.needsReview}
+          onChange={(e) => set('needsReview')(e.target.checked)}
+        />
+        Flag this book to check later
+      </label>
+      {form.needsReview && (
+        <Field label="What to check (optional)" value={form.reviewNote} onChange={set('reviewNote')} />
+      )}
 
       {confirmingRemove ? (
         <div className="confirm-remove">

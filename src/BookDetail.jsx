@@ -116,7 +116,7 @@ function BookDetail({ copy, onBack, onCoverChange, sharedWork, updateCopy, updat
       <h2>{copy.title}</h2>
       <p className="book-meta">{copy.byline}</p>
 
-      {copy.needs_review && <p className="review-note">⚠︎ Needs checking: {copy.review_note}</p>}
+      {copy.needs_review && <p className="review-note">⚠︎ Needs checking{copy.review_note && `: ${copy.review_note}`}</p>}
 
       <dl>
         {rows
