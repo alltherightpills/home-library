@@ -223,3 +223,10 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 
 **Passwords (2026-10-30)**
 - `src/PasswordForm.jsx`: Change password (asks for the current one) and the form a reset email's link opens. "Forgot password?" is on the sign-in screen. Supabase's URL Configuration must allow `https://alltherightpills.github.io/home-library/`. Test on the test account (`zheyveld+test@gmail.com`), not the real one. The app never creates a library; only the terminal scripts do (via `my_library()`), so a new account has no library until a script signs in with it.
+
+**Edit a book (2026-10-30)**
+- `src/EditBook.jsx` (the form) and `src/bookEdits.js` (saving), opened by "Edit book" on the book page. Categories wait for step 4, and Use my location for Phase 3 (build order).
+- A title, pages, and bookplate edit changes this copy only. First published and people belong to the work, so they show on every copy of it. The work's title follows only if this is its only copy.
+- Correcting a person's name changes **this work only**: it links to the person with that exact name, adding them if needed, and removes the old person if no books are left. Renaming someone everywhere belongs to Manage › Authors (Phase 2). Names can be corrected but people can't yet be added to or removed from a book, except adding the first to a book with none.
+- Remove from library deletes the copy and anything only it used (photo, work, authors). `lookups` rows stay, so re-adding the book doesn't need new lookups.
+- `npm run enrich` fills blanks only: hand edits stay, but a pages or first-published field cleared by hand gets refilled.

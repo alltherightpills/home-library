@@ -7,6 +7,7 @@ const COLUMNS = `
   id, library_id, title, isbn13, isbn10, publisher, edition_year, pages, binding, languages,
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
   cover_id, cover_url, cover_source, lc_call_number, lc_subjects,
+  acquired_year, acquired_city, acquired_region, acquired_country,
   work:works ( id, title, first_published_year, first_published_source, original_language,
     contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ) )
 `
@@ -48,7 +49,18 @@ export function useCatalog() {
     setCopies((all) => all.map((c) => (c.id === id ? withDisplayFields({ ...c, ...changes }) : c)))
   }
 
-  return { copies, error, updateCopy }
+  // The same for a work, which every copy of it shares.
+  function updateWork(workId, changes) {
+    setCopies((all) =>
+      all.map((c) => (c.work?.id === workId ? withDisplayFields({ ...c, work: { ...c.work, ...changes } }) : c)),
+    )
+  }
+
+  function removeCopy(id) {
+    setCopies((all) => all.filter((c) => c.id !== id))
+  }
+
+  return { copies, error, updateCopy, updateWork, removeCopy }
 }
 
 // Main roles shown as "by ..." on a book; others (Editor, Illustrator...) show on the book page.
