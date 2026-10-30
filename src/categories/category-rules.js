@@ -92,12 +92,12 @@ export const MAIN_RULES = [
 // Subcategories: a book gets EVERY one that matches within its main category.
 export const SUBCATEGORY_RULES = {
   'Fiction': [
-    { sub: 'Fantasy', when: { genre: ['Fantasy'], heading: ['fantasy', 'magic', 'time travel', 'monsters', 'dragons', 'wizards', 'witches'] } },
-    { sub: 'Historical Fiction', when: { genre: ['Historical Fiction'], heading: ['historical fiction'] } },
-    { sub: 'Mystery & Suspense', when: { genre: ['Mystery', 'Suspense & Thriller'], heading: ['detective and mystery', 'mystery', 'suspense', 'thrillers'] } },
-    { sub: 'Romance', when: { genre: ['Romance'], heading: ['love stories', 'romance fiction', 'romances'] } },
-    { sub: 'Science Fiction', when: { genre: ['Science Fiction'], heading: ['science fiction'] } },
-    { sub: 'Horror', when: { genre: ['Horror'], heading: ['horror', 'ghost stories', 'gothic fiction', 'supernatural'], title: ['ghost stor', 'weird'] } },
+    { sub: 'Fantasy', when: { dewey: ['8x3.08766'], genre: ['Fantasy'], heading: ['fantasy', 'magic', 'time travel', 'monsters', 'dragons', 'wizards', 'witches'] } },
+    { sub: 'Historical Fiction', when: { dewey: ['8x3.081'], genre: ['Historical Fiction'], heading: ['historical fiction'] } },
+    { sub: 'Mystery & Suspense', when: { dewey: ['8x3.0872'], genre: ['Mystery', 'Suspense & Thriller'], heading: ['detective and mystery', 'mystery', 'suspense', 'thrillers'] } },
+    { sub: 'Romance', when: { dewey: ['8x3.085'], genre: ['Romance'], heading: ['love stories', 'romance fiction', 'romances'] } },
+    { sub: 'Science Fiction', when: { dewey: ['8x3.08762'], genre: ['Science Fiction'], heading: ['science fiction'] } },
+    { sub: 'Horror', when: { dewey: ['8x3.0873'], genre: ['Horror'], heading: ['horror', 'ghost stories', 'gothic fiction', 'supernatural'], title: ['ghost stor', 'weird'] } },
     // Story collections often have no heading but say so in the title ("Tenth of December: Stories").
     // Fiction anthologies go here too: in fiction they are nearly always story collections.
     { sub: 'Short Stories & Anthologies', when: { dewey: ['808.83', '*0108', '8x3.x08'], heading: ['short stories', 'anthologies', 'anthology'],
@@ -147,4 +147,74 @@ export const AUDIENCE_RULES = [
   { audience: 'Teen', when: { genre: ['Teen', 'Young Adult'], heading: ['young adult fiction', 'young adult literature'] } },
   { audience: 'Kids', when: { lc: ['PZ'], genre: ['Kids', "Children's Books", 'Tween', 'Picture Books'],
     heading: ['juvenile fiction', 'juvenile literature', 'juvenile poetry', 'juvenile works', "children's stories", 'picture books'] } },
+]
+
+// ---------------------------------------------------------------------------
+// The vote's translation table: what Google Books' labels and Open Library's
+// subjects mean in the fixed list. Matched ignoring capitals and hyphens; a
+// book gets a vote for EVERY match. '^' means the label must start that way.
+// ---------------------------------------------------------------------------
+
+export const LABEL_RULES = {
+  'Fiction': {
+    'Fantasy': ['fantasy'],
+    'Science Fiction': ['science fiction', 'sci fi'],
+    'Historical Fiction': ['fiction / historical', 'historical fiction', 'fiction, historical'],
+    'Mystery & Suspense': ['mysteries', 'mystery', 'detective', 'thrillers', 'suspense', 'crime'],
+    'Romance': ['romance', 'love stories'],
+    'Horror': ['horror', 'ghost', 'gothic'],
+    'Short Stories & Anthologies': ['short stories', 'anthologies'],
+    'Literary Fiction': ['fiction / literary', 'literary fiction', 'fiction, literary'],
+    'Family & Relationships': ['fiction / family', 'family life', 'domestic fiction'],
+    'Coming of Age': ['coming of age', 'bildungsroman'],
+    'Humor': ['humorous', 'humor', 'satire'],
+    'Adventure': ['adventure'],
+    'Christian Fiction': ['fiction / christian', 'christian fiction'],
+    'LGBTQ+': ['lgbt', 'gay', 'lesbian', 'transgender', 'queer'],
+  },
+  'Nonfiction': {
+    'History': ['^history'],
+    'Travel': ['^travel'],
+    'Religion & Spirituality': ['^religion', '^bibles', '^body, mind & spirit'],
+    'Philosophy & Psychology': ['^philosophy', '^psychology', '^self help'],
+    'Society, Politics & Gender': ['^social science', '^political science', '^law', '^true crime', '^business'],
+    'Arts, Crafts & Design': ['^art', '^music', '^design', '^crafts', '^architecture', '^photography', '^antiques'],
+    'Science & Nature': ['^science', '^nature', '^mathematics', '^technology'],
+    'Health, Food & Home': ['^health', '^medical', '^cooking', '^house & home', '^gardening', '^family & relationships', '^pets'],
+    'Language & Writing': ['^language arts', '^foreign language'],
+    'Sports & Recreation': ['^sports', '^games', '^transportation'],
+    'Reference': ['^reference', '^study aids'],
+  },
+  'Poetry': {
+    'American Poetry': ['poetry / american', 'american poetry'],
+    'British & Irish Poetry': ['english, irish, scottish, welsh', 'english poetry', 'irish poetry'],
+    'Poetry in Translation': ['poetry / asian', 'poetry / european / french', 'poetry / european / german', 'poetry / middle eastern', 'poetry / russian'],
+    'Epic Poetry': ['epic poetry', 'poetry / epic'],
+  },
+  'Drama': {
+    'Shakespeare': ['shakespeare'],
+    'Classical (Greek & Roman)': ['drama / ancient', 'greek drama', 'latin drama'],
+  },
+  'Myth, Folklore & Fairy Tales': {
+    'Fairy Tales': ['fairy tales'],
+    'Folk Tales & Legends': ['folklore', 'legends'],
+    'Mythology': ['mythology'],
+  },
+}
+
+// Audience in those same labels. Teen is tried first: "young adult" picks Teen.
+export const AUDIENCE_LABELS = [
+  { audience: 'Teen', labels: ['young adult'] },
+  { audience: 'Kids', labels: ['juvenile', "children's", 'picture books'] },
+]
+
+// A label's start says which main category it points at; anything else is Nonfiction.
+export const MAIN_LABELS = [
+  { main: 'Comics & Graphic Novels', labels: ['^comics'] },
+  { main: 'Fiction', labels: ['^fiction', '^juvenile fiction', '^young adult fiction'] },
+  { main: 'Poetry', labels: ['^poetry'] },
+  { main: 'Drama', labels: ['^drama'] },
+  { main: 'Biography & Memoir', labels: ['^biography'] },
+  { main: 'Essays, Letters & Criticism', labels: ['^literary criticism', '^literary collections'] },
+  { main: 'Myth, Folklore & Fairy Tales', labels: ['folklore & mythology'] },
 ]

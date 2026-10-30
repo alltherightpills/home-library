@@ -12,7 +12,8 @@
     "enrich": "node scripts/enrich.mjs",
     "backup": "node scripts/backup.mjs",
     "restore": "node scripts/restore.mjs",
-    "categories:report": "node scripts/categories-report.mjs"
+    "categories:report": "node scripts/categories-report.mjs",
+    "categories:vote": "node scripts/categories-vote.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

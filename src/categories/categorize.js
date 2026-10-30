@@ -1,6 +1,6 @@
-// Applies the rules in category-rules.mjs to one book (a row of `copies`).
+// Applies the rules in category-rules.js to one book (a row of `copies`).
 
-import { AUDIENCE_RULES, MAIN_RULES, SUBCATEGORY_RULES } from './category-rules.mjs'
+import { AUDIENCE_RULES, MAIN_RULES, SUBCATEGORY_RULES } from './category-rules.js'
 
 const trimEnd = (text) => text.trim().replace(/[\s.,;:/]+$/, '')
 
@@ -81,23 +81,24 @@ function firstMatch(when = {}, clues) {
   return null
 }
 
-const ruleMatch = (rule, clues) => (firstMatch(rule.unless, clues) ? null : firstMatch(rule.when, clues))
+export const ruleMatch = (rule, clues) => (firstMatch(rule.unless, clues) ? null : firstMatch(rule.when, clues))
 
 // ---------------------------------------------------------------------------
+
+// The first main-category rule these clues satisfy: { main, mainBecause }.
+export function mainFromClues(clues) {
+  for (const rule of MAIN_RULES) {
+    const mainBecause = ruleMatch(rule, clues)
+    if (mainBecause) return { main: rule.main, mainBecause }
+  }
+  return { main: null, mainBecause: null }
+}
 
 // The categories the rules give a book, and why:
 // { main, mainBecause, subs: [{ sub, because }], audience, audienceBecause }
 export function categorize(copy) {
   const clues = cluesOf(copy)
-  let main = null
-  let mainBecause = null
-  for (const rule of MAIN_RULES) {
-    mainBecause = ruleMatch(rule, clues)
-    if (mainBecause) {
-      main = rule.main
-      break
-    }
-  }
+  const { main, mainBecause } = mainFromClues(clues)
   const subs = []
   for (const rule of SUBCATEGORY_RULES[main] ?? []) {
     const because = ruleMatch(rule, clues)

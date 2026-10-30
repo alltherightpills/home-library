@@ -1,4 +1,4 @@
-// Tries the category rules (scripts/lib/category-rules.mjs) on a backup and
+// Tries the category rules (src/categories/category-rules.js) on a backup and
 // reports the result. Reads only the backup files: no sign-in, changes nothing.
 //
 //   npm run categories:report                       (newest backup)
@@ -10,8 +10,8 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BACKUP_ROOT, SNAPSHOT_NAME, csvCell } from './lib/catalog.mjs'
-import { MAIN_CATEGORIES, SUBCATEGORY_RULES } from './lib/category-rules.mjs'
-import { categorize } from './lib/categorize.mjs'
+import { MAIN_CATEGORIES, SUBCATEGORY_RULES } from '../src/categories/category-rules.js'
+import { categorize } from '../src/categories/categorize.js'
 
 const snapshots = (await readdir(BACKUP_ROOT)).filter((n) => SNAPSHOT_NAME.test(n)).sort()
 const snapshot = process.argv[2] ?? snapshots.at(-1)
