@@ -8,6 +8,7 @@ function Field({ label, value, onChange, numeric }) {
       <input
         type="text"
         inputMode={numeric ? 'numeric' : undefined}
+        autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -31,6 +32,7 @@ function TitleField({ label, value, onChange }) {
       <textarea
         ref={box}
         rows={1}
+        autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value.replace(/\s*\n\s*/g, ' '))}
         onKeyDown={(e) => {
