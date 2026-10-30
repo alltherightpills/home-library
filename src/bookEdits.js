@@ -33,8 +33,10 @@ export function formFromCopy(copy) {
   }
 }
 
-// "0-375-70539-2" → "0375705392", as ISBNs are stored.
-const cleanIsbn = (value) => value.replace(/[\s-]/g, '').toUpperCase() || null
+// "0-375-70539-2" → "0375705392", as ISBNs are stored. Removes everything but
+// letters and digits, since text pasted from a website can hide odd hyphens and
+// invisible characters. A stray letter stays, so the check can catch it.
+const cleanIsbn = (value) => value.replace(/[^\p{L}\p{N}]/gu, '').toUpperCase() || null
 
 // What's wrong with the form, in plain words, or '' if it can be saved.
 export function formProblem(form, copy) {
