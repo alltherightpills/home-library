@@ -385,16 +385,22 @@ body {
   font-weight: 500;
 }
 
-.edit-book input {
+.edit-book input,
+.edit-book textarea {
   width: 100%;
-  height: 44px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid #ccc;
   border-radius: 8px;
   background: #fff;
   font: inherit;
   font-size: 16px;
   font-weight: normal;
+}
+
+.edit-book textarea {
+  display: block;
+  resize: none;
 }
 
 /* minmax(0, …) lets the two fields share the width instead of overflowing. */
