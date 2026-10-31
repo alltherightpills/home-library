@@ -2,7 +2,7 @@
 // publisher's series, form labels ("A Novel"), edition notes, and award or
 // promotional text. Shared by the report script and, later, Scan to add.
 
-import { PHRASE_RULINGS } from './phrase-rulings.js'
+import { PHRASE_RULINGS, SERIES_NAMES, TITLE_SERIES } from './phrase-rulings.js'
 
 // Award and promotional wording: always deleted.
 const PROMO = /\b(winner|finalist|prize|awards?|notable book|book of the year|book club|bestsell\w*|best[- ]selling|perfect for|must[- ]read|fans\b|christmas present|now a |major motion|netflix|tiktok|oprah|gma\b|reese'?s)/i
@@ -57,18 +57,24 @@ const tidy = (s) => s.replace(/\s+/g, ' ').replace(/\s+([,;:])/g, '$1').replace(
 export function cleanTitle(title, knownSeries = []) {
   const result = { title: title.trim(), series: [], number: '', publisherSeries: [], editionNotes: [], removed: [], checks: [] }
 
+  function addSeries(name) {
+    const standard = SERIES_NAMES[name.toLowerCase()] ?? name
+    if (!result.series.includes(standard)) result.series.push(standard)
+  }
+
   function record(text, piece) {
     if (piece.kind === 'series' || piece.kind === 'publisher series') {
       if (piece.kind === 'publisher series') result.publisherSeries.push([piece.name, piece.number].filter(Boolean).join(' '))
       else {
-        if (piece.name) result.series.push(piece.name)
-        result.number ||= piece.number
+        if (piece.name) addSeries(piece.name)
+        // A "0" is a bookseller's blank, not a place in a series.
+        if (piece.number !== '0') result.number ||= piece.number
       }
     }
     // Plain format words and dates are already covered by other fields.
     if (piece.kind === 'edition' && !PLAIN_FORMAT.test(text)) result.editionNotes.push(text)
     result.removed.push({ text, kind: piece.kind })
-    if (piece.check) result.checks.push(`"${text}": ${piece.kind === 'series' ? 'a number with no series name' : 'what is this?'}`)
+    if (piece.check && piece.kind !== 'series') result.checks.push(`"${text}": what is this?`)
   }
 
   // Text in parentheses or brackets, anywhere in the title. Left in the title
@@ -115,10 +121,27 @@ export function cleanTitle(title, knownSeries = []) {
     return ''
   }))
 
+  for (const { pattern, name } of TITLE_SERIES) {
+    const match = clean.match(pattern)
+    if (!match) continue
+    addSeries(name)
+    result.number ||= match[1] ?? ''
+  }
+
+  // A number found alone belongs to the series named elsewhere on the book.
+  if (result.number && !result.series.length) {
+    const named = knownSeries.find((s) => plain(s) && ` ${plain(clean)} `.includes(` ${plain(s)} `))
+    if (named) addSeries(named)
+    else if (result.publisherSeries.length === 1) {
+      result.publisherSeries[0] += ` ${result.number}`
+      result.number = ''
+    } else result.checks.push(`"${result.number}": a number with no series name`)
+  }
+
   // Things a rule shouldn't guess at.
   if (/\s[-–—]\s/.test(clean)) result.checks.push('has a dash: real subtitle, or added text?')
   if (/^by\s/i.test(clean)) result.checks.push('starts with the author')
-  if (/(\bvol\.?|\bvolume|\bpart|\bbook|#)\s*#?\d/i.test(clean)) result.checks.push('series or volume number inside the title')
+  if (!(result.series.length && result.number) && /(\bvol\.?|\bvolume|\bpart|\bbook|#)\s*#?\d/i.test(clean)) result.checks.push('series or volume number inside the title')
   if (/:\s*an? [^:]*\bnovel$/i.test(clean)) result.checks.push('"... Novel" subtitle: a label, or a series?')
   if (/:\s*['‘“"]/.test(clean)) result.checks.push('subtitle looks like a quoted review')
   if (clean.length > 90) result.checks.push('still very long')
