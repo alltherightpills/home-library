@@ -2,6 +2,7 @@
 // cleanTitle.js. Phrases are matched without regard to capitals.
 
 const series = (name, number = '') => ({ kind: 'series', name, number })
+const publisherSeries = (name, number = '') => ({ kind: 'publisher series', name, number })
 const editionNote = { kind: 'edition' }
 const deleted = { kind: 'deleted' }
 
@@ -20,10 +21,17 @@ export const PHRASE_RULINGS = {
   neapolitan: series('Neapolitan'),
   'alec flint, super sleuth': series('Alec Flint, Super Sleuth'),
   'calligraphy basics': series('Calligraphy Basics'),
+  hyperion: series('Hyperion'),
   'the complete greek tragedies': series('The Complete Greek Tragedies'),
+
+  'emergent strategy, 1': publisherSeries('Emergent Strategy', '1'),
+  "heroes of the women's suffrage movement": publisherSeries("Heroes of the Women's Suffrage Movement"),
+  'mysteries, magic and myth': publisherSeries('Mysteries, Magic and Myth'),
+  'national park mystery series': publisherSeries('National Park Mystery Series'),
 
   'english and german edition': editionNote,
   'greek edition': editionNote,
+  '2 books in 1': editionNote,
 
   ...Object.fromEntries(
     [
@@ -38,6 +46,26 @@ export const PHRASE_RULINGS = {
       'signature editions', 'syrian fiction', 'the ^aoxford shakespeare',
       'the archive for research in archetypal symbolism', 'the gray-eyed goddess; return to ithaca, the final battle',
       'the hunchback of notre dame', 'the nutshell library', 'the virginia woolf library',
+      'a wild true crime adventure', 'american experience in archaeological pespective', 'american lives',
+      'art and ideas', 'cambridge companions to literature', "dk children's anthologies", 'dk pockets', 'dk the met',
+      'engaging culture', 'firefly pocket series', "gregg press children's literature series", 'hogarth shakespeare',
+      'iowa whitman series', 'lonely planet phrasebooks', 'pitt poetry series', 'pocket essential series',
+      'tudor and stuart texts, volume 4',
     ].map((phrase) => [phrase, deleted]),
   ),
 }
+
+// Different spellings of one series. Each book keeps the number printed on it:
+// the two Narnia sets number the same books differently.
+export const SERIES_NAMES = {
+  'a narwhal and jelly': 'Narwhal and Jelly',
+  'an alec flint mystery': 'Alec Flint, Super Sleuth',
+  'chronicles of narnia': 'The Chronicles of Narnia',
+  'the three-body problem series': 'The Three-Body Problem',
+}
+
+// Series named in the title itself, with no brackets. A match's first group is the number.
+export const TITLE_SERIES = [
+  { pattern: /^McSweeney['’]s Issue (\d+)/i, name: "McSweeney's Quarterly Concern" },
+  { pattern: /^Lumberjanes\b(?:.*?\bVol\.?\s*(\d+))?/i, name: 'Lumberjanes' },
+]
