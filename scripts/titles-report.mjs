@@ -44,10 +44,10 @@ const toCsv = (rows) => '﻿' + rows.map((row) => row.map(csvCell).join(',')).jo
 const order = { Check: 0, Automatic: 1, 'No change': 2 }
 const sorted = [...books].sort((a, b) => order[status(a)] - order[status(b)] || a.copy.title.localeCompare(b.copy.title))
 const bookRows = [
-  ['Status', 'Current title', 'Proposed title', 'Series', 'Number', "Publisher's series", 'Edition note', 'Removed', 'To check'],
+  ['Status', 'Current title', 'Proposed title', 'Series', 'Number', "Publisher's series", 'Edition note', 'Removed', 'To check', 'Notes'],
   ...sorted.map((b) => [
     status(b), b.copy.title, b.title, b.series.join('; '), b.number, b.publisherSeries.join('; '), b.editionNotes.join('; '),
-    b.removed.filter((r) => !r.kept).map((r) => `${r.text} [${r.kind}]`).join('; '), b.checks.join('; '),
+    b.removed.filter((r) => !r.kept).map((r) => `${r.text} [${r.kind}]`).join('; '), b.checks.join('; '), b.notes ?? '',
   ]),
 ]
 const phraseRows = [

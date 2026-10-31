@@ -2,7 +2,7 @@
 // publisher's series, form labels ("A Novel"), edition notes, and award or
 // promotional text. Shared by the report script and, later, Scan to add.
 
-import { PHRASE_RULINGS, SERIES_NAMES, TITLE_SERIES } from './phrase-rulings.js'
+import { BOOK_RULINGS, BOOK_SERIES, PHRASE_RULINGS, SERIES_NAMES, TITLE_SERIES } from './phrase-rulings.js'
 
 // Award and promotional wording: always deleted.
 const PROMO = /\b(winner|finalist|prize|awards?|notable book|book of the year|book club|bestsell\w*|best[- ]selling|perfect for|must[- ]read|fans\b|christmas present|now a |major motion|netflix|tiktok|oprah|gma\b|reese'?s)/i
@@ -50,6 +50,13 @@ function classify(text, knownSeries) {
   if (number) return { kind: 'series', name: '', number, check: true }
   if (SERIES_WORD.test(name)) return { kind: 'series', name, number }
   return { kind: 'unknown', name, check: true }
+}
+
+// "A James Bond Novel", "A Skunk and Badger Story": the series again, not a subtitle.
+function seriesNamedBy(text, seriesNames) {
+  const match = text.match(/^an? (.+) (novel|book|story|mystery|adventure)$/i)
+  const bare = (name) => plain(name).replace(/^the /, '').replace(/ series$/, '')
+  return match && seriesNames.find((name) => bare(name) === bare(match[1]))
 }
 
 const tidy = (s) => s.replace(/\s+/g, ' ').replace(/\s+([,;:])/g, '$1').replace(/[\s,;:–—-]+$/, '').trim()
@@ -100,7 +107,9 @@ export function cleanTitle(title, knownSeries = []) {
     const colon = clean.lastIndexOf(':')
     if (colon === -1) break
     const tail = clean.slice(colon + 1).trim()
-    if (FORM_LABEL.test(tail)) record(tail, { kind: 'label' })
+    if (PHRASE_RULINGS[tail.toLowerCase()]) record(tail, PHRASE_RULINGS[tail.toLowerCase()])
+    else if (seriesNamedBy(tail, [...result.series, ...knownSeries])) record(tail, { kind: 'series', name: seriesNamedBy(tail, [...result.series, ...knownSeries]), number: '' })
+    else if (FORM_LABEL.test(tail)) record(tail, { kind: 'label' })
     else if (/^\d{1,3}$/.test(tail)) record(tail, { kind: 'series', name: '', number: tail, check: true })
     else if (EDITION_NOTE.test(tail) && tail.split(' ').length <= 5) record(tail, { kind: 'edition' })
     else if (PROMO.test(tail)) {
@@ -128,6 +137,12 @@ export function cleanTitle(title, knownSeries = []) {
     result.number ||= match[1] ?? ''
   }
 
+  const bookSeries = BOOK_SERIES[clean.toLowerCase()]
+  if (bookSeries) {
+    result.series = [...bookSeries]
+    result.number = ''
+  }
+
   // A number found alone belongs to the series named elsewhere on the book.
   if (result.number && !result.series.length) {
     const named = knownSeries.find((s) => plain(s) && ` ${plain(clean)} `.includes(` ${plain(s)} `))
@@ -148,6 +163,13 @@ export function cleanTitle(title, knownSeries = []) {
   if (clean === clean.toUpperCase() && /\p{L}{4}/u.test(clean)) result.checks.push('all capitals')
 
   result.title = clean || title.trim()
+
+  const ruling = BOOK_RULINGS[title.trim()]
+  if (ruling) {
+    Object.assign(result, ruling)
+    result.checks = []
+  }
+
   result.changed = result.title !== title.trim()
   return result
 }
