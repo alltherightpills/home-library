@@ -58,8 +58,11 @@ export function booksCsv({ works, authors, work_authors, copies, series, publish
   const workById = new Map(works.map((w) => [w.id, w]))
   const authorById = new Map(authors.map((a) => [a.id, a]))
   const creditsByWork = new Map()
-  for (const credit of [...work_authors].sort((a, b) => a.position - b.position)) {
-    const name = authorById.get(credit.author_id)?.display_name ?? '?'
+  const creditName = (credit) => authorById.get(credit.author_id)?.display_name ?? '?'
+  // Names settle ties in position, which a restore into another library would reorder.
+  const inOrder = [...work_authors].sort((a, b) => a.position - b.position || creditName(a).localeCompare(creditName(b)))
+  for (const credit of inOrder) {
+    const name = creditName(credit)
     const label = credit.role === 'Author' ? name : `${name} (${credit.role})`
     creditsByWork.set(credit.work_id, [...(creditsByWork.get(credit.work_id) ?? []), label])
   }

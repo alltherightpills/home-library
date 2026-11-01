@@ -111,11 +111,7 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
                   {c.needs_review && <span className="flag">⚠︎ </span>}
                   {c.title}
                 </span>
-                <span className="book-meta">
-                  {c.byline}
-                  {c.edition_year ? ` · ${c.edition_year}` : ''}
-                  {c.editionLine ? ` · ${c.editionLine}` : ''}
-                </span>
+                <span className="book-meta">{c.listLine}</span>
               </button>
             </li>
           ))}

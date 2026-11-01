@@ -83,8 +83,10 @@ function withDisplayFields(copy) {
     headings,
     series,
     publisherSeries,
-    // What tells editions apart on the main list, now that titles don't.
-    editionLine: [...publisherSeries.map(labelText), copy.edition_note].filter(Boolean).join(' · '),
+    // The main list's gray line. Series and edition details used to sit in titles.
+    listLine: [shown.map((p) => p.author.display_name).join(', '), copy.edition_year, ...series.map(labelText), ...publisherSeries.map(labelText), copy.edition_note]
+      .filter(Boolean)
+      .join(' · '),
     byline: shown.map((p) => p.author.display_name).join(', '),
     authorSort: shown[0]?.author.sort_name ?? '',
     titleSort: titleSortKey(copy.title, copy.languages),
