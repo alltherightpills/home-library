@@ -8,6 +8,9 @@ export function nameParts(sortName) {
   return { last: sortName.slice(0, comma).trim(), first: sortName.slice(comma + 1).trim() }
 }
 
+// A book with no labels yet gets one blank row to fill in.
+const labelRows = (labels) => (labels.length ? labels.map(({ name, number }) => ({ name, number })) : [{ name: '', number: '' }])
+
 // The form's starting values. Everything is text, as typed in a field.
 export function formFromCopy(copy) {
   const text = (value) => (value === null || value === undefined ? '' : String(value))
@@ -30,6 +33,10 @@ export function formFromCopy(copy) {
     city: text(copy.acquired_city),
     region: text(copy.acquired_region),
     country: text(copy.acquired_country),
+    series: labelRows(copy.series),
+    publisherSeries: labelRows(copy.publisherSeries),
+    editionNote: text(copy.edition_note),
+    notes: text(copy.notes),
     needsReview: copy.needs_review,
     reviewNote: text(copy.review_note),
   }
@@ -64,6 +71,10 @@ export function formProblem(form, copy) {
   const isbn10 = cleanIsbn(form.isbn10)
   if (isbn10 && isbn10 !== copy.isbn10 && !toIsbn10(isbn10)) {
     return "That ISBN-10 isn't valid. Check for a mistyped digit."
+  }
+  if (form.series.some((s) => s.number.trim() && !s.name.trim())) return 'A series number needs a series name.'
+  if (form.publisherSeries.some((s) => s.number.trim() && !s.name.trim())) {
+    return "A publisher's series number needs a name."
   }
   const year = form.acquiredYear.trim()
   if (year && (!/^\d{4}$/.test(year) || Number(year) > new Date().getFullYear())) {
@@ -153,6 +164,77 @@ async function saveAuthors(copy, form, onWork) {
   }
 }
 
+const SERIES = { list: 'series', links: 'copy_series', idColumn: 'series_id', onCopy: 'series_links', shown: 'series' }
+const PUBLISHER_SERIES = {
+  list: 'publisher_series',
+  links: 'copy_publisher_series',
+  idColumn: 'publisher_series_id',
+  onCopy: 'publisher_series_links',
+  shown: 'publisherSeries',
+}
+
+const sameLabelName = (a, b) => a.toLowerCase() === b.toLowerCase()
+
+// A list entry with no books left would clutter the list, unless it holds spellings worth keeping.
+async function removeLabelIfUnused(kind, label) {
+  if (label.aliases.length) return
+  const { count, error } = await supabase
+    .from(kind.links)
+    .select('copy_id', { count: 'exact', head: true })
+    .eq(kind.idColumn, label.id)
+  if (!error && count === 0) await supabase.from(kind.list).delete().eq('id', label.id)
+}
+
+// Makes this copy's labels match the form. A typed name that matches a list entry
+// or one of its aliases uses that entry, so spellings don't split a series.
+async function saveLabels(copy, rows, kind, onCopy) {
+  const wanted = rows.map((r) => ({ name: r.name.trim(), number: r.number.trim() })).filter((r) => r.name)
+  const current = copy[kind.shown]
+  if (JSON.stringify(wanted) === JSON.stringify(current.map(({ name, number }) => ({ name, number })))) return
+
+  const { data: list, error } = await supabase.from(kind.list).select('id, name, aliases').eq('library_id', copy.library_id)
+  check(error, 'Reading the series list')
+
+  const links = new Map() // by entry, so a name typed twice is one label
+  for (const row of wanted) {
+    let label = list.find((l) => sameLabelName(l.name, row.name) || l.aliases.some((a) => sameLabelName(a, row.name)))
+    if (!label) {
+      const { data: added, error: addError } = await supabase
+        .from(kind.list)
+        .insert({ library_id: copy.library_id, name: row.name })
+        .select('id, name, aliases')
+        .single()
+      check(addError, 'Adding to the series list')
+      list.push(added)
+      label = added
+    }
+    links.set(label.id, { number: row.number || null, position: links.size, label })
+  }
+
+  if (links.size) {
+    const rowsToSave = [...links].map(([id, { number, position }]) => ({
+      library_id: copy.library_id,
+      copy_id: copy.id,
+      [kind.idColumn]: id,
+      number,
+      position,
+    }))
+    const { error: saveError } = await supabase.from(kind.links).upsert(rowsToSave)
+    check(saveError, 'Saving the series')
+  }
+  const dropped = current.filter((label) => !links.has(label.id))
+  if (dropped.length) {
+    const { error: dropError } = await supabase
+      .from(kind.links)
+      .delete()
+      .eq('copy_id', copy.id)
+      .in(kind.idColumn, dropped.map((label) => label.id))
+    check(dropError, 'Removing the series')
+  }
+  onCopy(copy.id, { [kind.onCopy]: [...links.values()] })
+  for (const label of dropped) await removeLabelIfUnused(kind, label)
+}
+
 // Saves what changed. `sharedWork` means another copy belongs to the same work.
 export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) {
   const title = form.title.trim()
@@ -164,6 +246,8 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
       publisher: textOrNull(form.publisher),
       edition_year: numberOrNull(form.editionYear),
       binding: form.binding || null,
+      edition_note: textOrNull(form.editionNote),
+      notes: textOrNull(form.notes),
       isbn13: cleanIsbn(form.isbn13),
       isbn10: cleanIsbn(form.isbn10),
       acquired_year: numberOrNull(form.acquiredYear),
@@ -198,6 +282,8 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
   }
 
   await saveAuthors(copy, form, onWork)
+  await saveLabels(copy, form.series, SERIES, onCopy)
+  await saveLabels(copy, form.publisherSeries, PUBLISHER_SERIES, onCopy)
 }
 
 // Deletes this copy, plus anything only it was using: a photo of its cover, and
@@ -209,6 +295,9 @@ export async function removeBook(copy) {
 
   const photo = copy.cover_source === 'photo' && copy.cover_url?.split('/object/public/covers/')[1]
   if (photo) await supabase.storage.from('covers').remove([photo])
+
+  for (const label of copy.series) await removeLabelIfUnused(SERIES, label)
+  for (const label of copy.publisherSeries) await removeLabelIfUnused(PUBLISHER_SERIES, label)
 
   const { count, error: countError } = await supabase
     .from('copies')

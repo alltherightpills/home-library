@@ -17,7 +17,7 @@ const snapshot = process.argv[2] ?? snapshots.at(-1)
 if (!snapshots.includes(snapshot)) throw new Error(`No backup named "${snapshot}". Backups: ${snapshots.join(', ') || 'none'}`)
 const copies = JSON.parse(await readFile(join(BACKUP_ROOT, snapshot, 'copies.json'), 'utf8'))
 
-const books = copies.map((copy) => ({ copy, ...cleanTitle(copy.title, copy.lt_record?.series ?? []) }))
+const books = copies.map((copy) => ({ copy, ...cleanTitle(copy.original_title ?? copy.title, copy.lt_record?.series ?? []) }))
 const status = (b) => (b.checks.length ? 'Check' : b.changed ? 'Automatic' : 'No change')
 const count = (name) => books.filter((b) => status(b) === name).length
 

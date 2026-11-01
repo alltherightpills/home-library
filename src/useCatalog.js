@@ -8,6 +8,9 @@ const COLUMNS = `
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
   cover_id, cover_url, cover_source, lc_call_number, lc_subjects,
   acquired_year, acquired_city, acquired_region, acquired_country,
+  original_title, edition_note, notes,
+  series_links:copy_series ( number, position, label:series ( id, name, aliases ) ),
+  publisher_series_links:copy_publisher_series ( number, position, label:publisher_series ( id, name, aliases ) ),
   work:works ( id, title, first_published_year, first_published_source, original_language,
     contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ) )
 `
@@ -72,18 +75,38 @@ function withDisplayFields(copy) {
   const main = people.filter((p) => MAIN_ROLES.includes(p.role))
   const shown = main.length ? main : people
   const headings = subjectHeadings(copy)
+  const series = labelsInOrder(copy.series_links)
+  const publisherSeries = labelsInOrder(copy.publisher_series_links)
   return {
     ...copy,
     people,
     headings,
+    series,
+    publisherSeries,
+    // What tells editions apart on the main list, now that titles don't.
+    editionLine: [...publisherSeries.map(labelText), copy.edition_note].filter(Boolean).join(' · '),
     byline: shown.map((p) => p.author.display_name).join(', '),
     authorSort: shown[0]?.author.sort_name ?? '',
     titleSort: titleSortKey(copy.title, copy.languages),
     searchText: normalize(
-      [copy.title, ...people.map((p) => `${p.author.display_name} ${p.author.sort_name}`), ...headings].join(' '),
+      [
+        copy.title,
+        copy.original_title,
+        copy.edition_note,
+        copy.notes,
+        ...[...series, ...publisherSeries].flatMap((s) => [s.name, ...s.aliases]),
+        ...people.map((p) => `${p.author.display_name} ${p.author.sort_name}`),
+        ...headings,
+      ].join(' '),
     ),
   }
 }
+
+const labelsInOrder = (links) =>
+  [...links].sort((a, b) => a.position - b.position).map((link) => ({ ...link.label, number: link.number ?? '' }))
+
+// "Penguin Classics", or "Narnia 3" with a number.
+export const labelText = ({ name, number }) => [name, number].filter(Boolean).join(' ')
 
 // LC and LibraryThing subject headings as "Tales -- Japan" text, without repeats.
 function subjectHeadings(copy) {

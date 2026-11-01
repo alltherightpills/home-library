@@ -70,6 +70,10 @@ function copyIntoLibrary(tables, libraryId) {
     lookups: tables.lookups.map((r) => moved(r, {})),
     categories: tables.categories.map((r) => moved(r, { id: newId(r.id), parent_id: r.parent_id && newId(r.parent_id) })),
     book_categories: tables.book_categories.map((r) => moved(r, { copy_id: newId(r.copy_id), category_id: newId(r.category_id) })),
+    series: tables.series.map((r) => moved(r, { id: newId(r.id) })),
+    publisher_series: tables.publisher_series.map((r) => moved(r, { id: newId(r.id) })),
+    copy_series: tables.copy_series.map((r) => moved(r, { copy_id: newId(r.copy_id), series_id: newId(r.series_id) })),
+    copy_publisher_series: tables.copy_publisher_series.map((r) => moved(r, { copy_id: newId(r.copy_id), publisher_series_id: newId(r.publisher_series_id) })),
   }
 }
 
@@ -89,6 +93,10 @@ const backup = {}
 for (const table of BOOK_TABLES) {
   backup[table.name] = JSON.parse(await readFile(join(folder, `${table.name}.json`), 'utf8').catch(() => '[]'))
 }
+// Columns added since an older backup were blank then. Spelled out, so a restore
+// clears them rather than leaving today's values in place.
+const ADDED_COPY_COLUMNS = ['audience', 'audience_set_by', 'original_title', 'edition_note', 'notes']
+for (const copy of backup.copies) for (const column of ADDED_COPY_COLUMNS) copy[column] ??= null
 console.log(`Backup ${snapshot}: ${backup.copies.length} books.\n`)
 
 const { supabase, libraryId } = await signIn()
@@ -190,16 +198,16 @@ async function removeRows({ name, key }, rows) {
   }
 }
 
-for (const name of ['book_categories', 'work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
 for (const { local, path } of photosToUpload) {
   const { error } = await bucket.upload(path, await readFile(local), { contentType: 'image/jpeg', upsert: true })
   if (error) throw new Error(`Uploading photo ${path}: ${error.message}`)
 }
-for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories']) {
+for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series']) {
   await putRows(byName[name], plan[name].put)
   console.log(`${name}: done`)
 }
-for (const name of ['works', 'authors', 'categories']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['works', 'authors', 'categories', 'series', 'publisher_series']) await removeRows(byName[name], plan[name].remove)
 
 // ---------------------------------------------------------------------------
 // Check: read everything back and compare, row by row and as books.csv

@@ -18,6 +18,10 @@ export const BOOK_TABLES = [
   { name: 'lookups', key: ['source', 'isbn'], primaryKey: 'library_id,source,isbn' },
   { name: 'categories', key: ['id'], primaryKey: 'id' },
   { name: 'book_categories', key: ['copy_id', 'category_id'], primaryKey: 'copy_id,category_id' },
+  { name: 'series', key: ['id'], primaryKey: 'id' },
+  { name: 'publisher_series', key: ['id'], primaryKey: 'id' },
+  { name: 'copy_series', key: ['copy_id', 'series_id'], primaryKey: 'copy_id,series_id' },
+  { name: 'copy_publisher_series', key: ['copy_id', 'publisher_series_id'], primaryKey: 'copy_id,publisher_series_id' },
 ]
 
 // Backed up for reference; a restore leaves these as they are.
@@ -50,7 +54,7 @@ export function csvCell(value) {
   return /[",\n\r]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text
 }
 
-export function booksCsv({ works, authors, work_authors, copies }) {
+export function booksCsv({ works, authors, work_authors, copies, series, publisher_series, copy_series, copy_publisher_series }) {
   const workById = new Map(works.map((w) => [w.id, w]))
   const authorById = new Map(authors.map((a) => [a.id, a]))
   const creditsByWork = new Map()
@@ -60,8 +64,25 @@ export function booksCsv({ works, authors, work_authors, copies }) {
     creditsByWork.set(credit.work_id, [...(creditsByWork.get(credit.work_id) ?? []), label])
   }
 
+  const labelsByCopy = (links, lists, idColumn) => {
+    const nameById = new Map(lists.map((l) => [l.id, l.name]))
+    const byCopy = new Map()
+    for (const link of [...links].sort((a, b) => a.position - b.position)) {
+      const label = [nameById.get(link[idColumn]) ?? '?', link.number].filter(Boolean).join(' ')
+      byCopy.set(link.copy_id, [...(byCopy.get(link.copy_id) ?? []), label])
+    }
+    return byCopy
+  }
+  const seriesByCopy = labelsByCopy(copy_series, series, 'series_id')
+  const publisherSeriesByCopy = labelsByCopy(copy_publisher_series, publisher_series, 'publisher_series_id')
+
   const columns = {
     'Title': (c) => c.title,
+    'Original title': (c) => c.original_title,
+    'Series': (c) => (seriesByCopy.get(c.id) ?? []).join('; '),
+    "Publisher's series": (c) => (publisherSeriesByCopy.get(c.id) ?? []).join('; '),
+    'Edition note': (c) => c.edition_note,
+    'Notes': (c) => c.notes,
     'Authors': (c) => (creditsByWork.get(c.work_id) ?? []).join('; '),
     'Publisher': (c) => c.publisher,
     'Edition year': (c) => c.edition_year,

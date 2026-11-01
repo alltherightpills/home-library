@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { formFromCopy, formProblem, removeBook, saveBookEdits } from './bookEdits.js'
 
 // iPhones ignore autoComplete="off" on boxes labeled like a contact form, but
@@ -7,7 +7,7 @@ function useNoAutofillName() {
   return `search-${useId()}`
 }
 
-function Field({ label, value, onChange, numeric }) {
+function Field({ label, value, onChange, numeric, list }) {
   const name = useNoAutofillName()
   return (
     <label>
@@ -16,6 +16,7 @@ function Field({ label, value, onChange, numeric }) {
         type="text"
         name={name}
         inputMode={numeric ? 'numeric' : undefined}
+        list={list}
         autoComplete="off"
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -56,12 +57,43 @@ function TitleField({ label, value, onChange }) {
   )
 }
 
+// Series or publisher's series: a name (with suggestions from the shared list)
+// and the number printed on this book, with room for more than one.
+function LabelRows({ label, rows, names, onChange }) {
+  const listId = useId()
+  const setRow = (i, key) => (value) => onChange(rows.map((r, n) => (n === i ? { ...r, [key]: value } : r)))
+  return (
+    <>
+      <datalist id={listId}>
+        {names.map((name) => (
+          <option key={name} value={name} />
+        ))}
+      </datalist>
+      {rows.map((row, i) => (
+        <div className="edit-label" key={i}>
+          <Field label={label} value={row.name} onChange={setRow(i, 'name')} list={listId} />
+          <Field label="Number" value={row.number} onChange={setRow(i, 'number')} />
+        </div>
+      ))}
+      <button type="button" className="link edit-add" onClick={() => onChange([...rows, { name: '', number: '' }])}>
+        + Add another
+      </button>
+    </>
+  )
+}
+
+const labelNames = (copies, key) =>
+  [...new Set(copies.flatMap((c) => c[key].map((label) => label.name)))].sort((a, b) => a.localeCompare(b))
+
 // Edit one copy (mockup screen 8). Categories and Use my location come later.
-function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, updateWork }) {
+function EditBook({ copy, copies, sharedWork, onCancel, onSaved, onRemoved, updateCopy, updateWork }) {
   const [form, setForm] = useState(() => formFromCopy(copy))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmingRemove, setConfirmingRemove] = useState(false)
+
+  const seriesNames = useMemo(() => labelNames(copies, 'series'), [copies])
+  const publisherSeriesNames = useMemo(() => labelNames(copies, 'publisherSeries'), [copies])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
   const setPerson = (i, key) => (value) =>
@@ -127,6 +159,7 @@ function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, 
         <Field label="First published" value={form.firstPublished} onChange={set('firstPublished')} numeric />
         <Field label="Pages" value={form.pages} onChange={set('pages')} numeric />
       </div>
+      <LabelRows label="Series" rows={form.series} names={seriesNames} onChange={set('series')} />
 
       <h3>This edition</h3>
       <Field label="Publisher" value={form.publisher} onChange={set('publisher')} />
@@ -144,6 +177,13 @@ function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, 
         <Field label="ISBN-10" value={form.isbn10} onChange={set('isbn10')} />
       </div>
       <Field label="Language (commas between several)" value={form.languages} onChange={set('languages')} />
+      <LabelRows
+        label="Publisher's series"
+        rows={form.publisherSeries}
+        names={publisherSeriesNames}
+        onChange={set('publisherSeries')}
+      />
+      <Field label="Edition note" value={form.editionNote} onChange={set('editionNote')} />
 
       <h3>From the bookplate</h3>
       <div className="edit-pair">
@@ -152,6 +192,9 @@ function EditBook({ copy, sharedWork, onCancel, onSaved, onRemoved, updateCopy, 
         <Field label="State / region" value={form.region} onChange={set('region')} />
         <Field label="Country" value={form.country} onChange={set('country')} />
       </div>
+
+      <h3>Notes</h3>
+      <TitleField label="Notes (a box set's contents, for example)" value={form.notes} onChange={set('notes')} />
 
       <h3>Needs checking</h3>
       <label className="edit-check">

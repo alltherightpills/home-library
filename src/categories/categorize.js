@@ -36,7 +36,7 @@ function headingsOf(copy) {
 // The clues a book carries, gathered once. The title leaves out anything in
 // brackets, which is usually a series or edition ("(Vega Family Love Stories)").
 export function cluesOf(copy) {
-  const title = copy.title.replace(/\(.*?\)|\[.*?\]/g, '')
+  const title = (copy.original_title ?? copy.title).replace(/\(.*?\)|\[.*?\]/g, '')
   return { dewey: deweyOf(copy), ...lcOf(copy), headings: headingsOf(copy), genres: copy.lt_genres, title }
 }
 

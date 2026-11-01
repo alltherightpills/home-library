@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import CoverPicker from './CoverPicker.jsx'
 import EditBook from './EditBook.jsx'
-import { coverUrl } from './useCatalog.js'
+import { coverUrl, labelText } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
 function formatMarcField({ tag, ind1, ind2, sub }) {
@@ -20,7 +20,7 @@ const COVER_SOURCES = {
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, onBack, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+function BookDetail({ copy, copies, onBack, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
   // The cover picker and edit screen are steps in the browser history too, so
   // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
@@ -51,6 +51,7 @@ function BookDetail({ copy, onBack, onCoverChange, sharedWork, updateCopy, updat
     return (
       <EditBook
         copy={copy}
+        copies={copies}
         sharedWork={sharedWork}
         onCancel={() => history.back()}
         onSaved={() => history.back()}
@@ -78,6 +79,11 @@ function BookDetail({ copy, onBack, onCoverChange, sharedWork, updateCopy, updat
   const rows = [
     ['Contributors', copy.people.map((p) => `${p.author.display_name} (${p.role})`).join('; ')],
     ['Work', copy.work?.title],
+    ['Series', copy.series.map(labelText).join('; ')],
+    ["Publisher's series", copy.publisherSeries.map(labelText).join('; ')],
+    ['Edition note', copy.edition_note],
+    ['Original title', copy.original_title !== copy.title && copy.original_title],
+    ['Notes', copy.notes],
     ['First published', firstPublished && `${firstPublished} (${copy.work.first_published_source ?? 'entered by hand'})`],
     ['Edition year', copy.edition_year],
     ['Publisher', copy.publisher],
@@ -120,7 +126,7 @@ function BookDetail({ copy, onBack, onCoverChange, sharedWork, updateCopy, updat
 
       <dl>
         {rows
-          .filter(([, value]) => value !== null && value !== undefined && value !== '')
+          .filter(([, value]) => value !== null && value !== undefined && value !== '' && value !== false)
           .map(([label, value]) => (
             <div key={label}>
               <dt>{label}</dt>

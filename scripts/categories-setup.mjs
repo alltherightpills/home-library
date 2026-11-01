@@ -56,8 +56,8 @@ const idOf = (main, sub) => {
 }
 const shelved = await fetchAll(supabase, 'book_categories', 'copy_id, category_id, set_by', libraryId, ['copy_id', 'category_id'])
 const owned = new Set(shelved.filter((r) => r.set_by === 'owner').map((r) => r.copy_id))
-const copies = await fetchAll(supabase, 'copies', 'id, title', libraryId)
-const titles = new Map(copies.map((c) => [c.id, c.title]))
+const copies = await fetchAll(supabase, 'copies', 'id, title, original_title', libraryId)
+const titles = new Map(copies.map((c) => [c.id, c.original_title ?? c.title]))
 
 // Check every choice first, so a mistake stops the run before anything is saved.
 const rows = new Map(MANUAL_CHOICES.map((choice) => {

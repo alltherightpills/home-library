@@ -419,6 +419,16 @@ body {
   margin: 0;
 }
 
+.edit-label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 80px;
+  gap: 10px;
+}
+
+.edit-add {
+  align-self: flex-start;
+}
+
 /* minmax(0, …) lets the two fields share the width instead of overflowing. */
 .edit-pair {
   display: grid;

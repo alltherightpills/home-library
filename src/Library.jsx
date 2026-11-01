@@ -62,6 +62,7 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
           copy={open}
           onBack={() => history.back()}
           onCoverChange={(changes) => updateCopy(open.id, changes)}
+          copies={copies}
           sharedWork={copies.some((c) => c.id !== open.id && c.work?.id === open.work?.id)}
           updateCopy={updateCopy}
           updateWork={updateWork}
@@ -113,6 +114,7 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
                 <span className="book-meta">
                   {c.byline}
                   {c.edition_year ? ` · ${c.edition_year}` : ''}
+                  {c.editionLine ? ` · ${c.editionLine}` : ''}
                 </span>
               </button>
             </li>

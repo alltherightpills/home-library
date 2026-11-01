@@ -153,7 +153,7 @@ async function runVotes(limit) {
   const { supabase, libraryId } = await signIn()
   console.log('Signed in. Reading the catalog…')
 
-  const copies = await fetchAll(supabase, 'copies', 'id, work_id, title, isbn13, isbn10', libraryId)
+  const copies = await fetchAll(supabase, 'copies', 'id, work_id, title, original_title, isbn13, isbn10', libraryId)
   const authors = await fetchAll(supabase, 'authors', 'id, sort_name, display_name', libraryId)
   const credits = await fetchAll(supabase, 'work_authors', 'work_id, author_id, role, position', libraryId, ['work_id', 'author_id', 'role'])
   const saved = await fetchAll(supabase, 'lookups', 'source, isbn', libraryId, ['source', 'isbn'])
@@ -181,10 +181,11 @@ async function runVotes(limit) {
   for (const [i, [key, c]] of batch.entries()) {
     const author = mainAuthor(c.work_id)
     const surname = author?.sort_name.split(',')[0].trim()
+    const lookupTitle = c.original_title ?? c.title
     const look = {
-      loc_search: () => lookUpLocByTitle(c.title, surname),
+      loc_search: () => lookUpLocByTitle(lookupTitle, surname),
       google: () => lookUpGoogle({
-        title: c.title, author: author?.display_name, surname, isbns: [c.isbn13, c.isbn10].filter(Boolean),
+        title: lookupTitle, author: author?.display_name, surname, isbns: [c.isbn13, c.isbn10].filter(Boolean),
       }),
     }
     const results = []
