@@ -137,11 +137,13 @@ export function cleanTitle(title, knownSeries = []) {
     result.number ||= match[1] ?? ''
   }
 
-  const bookSeries = BOOK_SERIES[clean.toLowerCase()]
-  if (bookSeries) {
+  const applyBookSeries = (cleaned) => {
+    const bookSeries = BOOK_SERIES[cleaned.toLowerCase()]
+    if (!bookSeries) return
     result.series = [...bookSeries]
     result.number = ''
   }
+  applyBookSeries(clean)
 
   // A number found alone belongs to the series named elsewhere on the book.
   if (result.number && !result.series.length) {
@@ -168,6 +170,8 @@ export function cleanTitle(title, knownSeries = []) {
   if (ruling) {
     Object.assign(result, ruling)
     result.checks = []
+    // A ruling can set the title, so look again under the title it gives.
+    applyBookSeries(result.title)
   }
 
   result.changed = result.title !== title.trim()

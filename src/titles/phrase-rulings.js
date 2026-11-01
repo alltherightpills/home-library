@@ -7,7 +7,7 @@ const editionNote = { kind: 'edition' }
 const deleted = { kind: 'deleted' }
 
 export const PHRASE_RULINGS = {
-  'griffin and sabine': series('Griffin and Sabine'),
+  'griffin and sabine': series('Griffin & Sabine'),
   pokémon: series('Pokémon'),
   'girls survive': series('Girls Survive'),
   'the library of esoterica': series('The Library of Esoterica'),
@@ -65,6 +65,7 @@ export const SERIES_NAMES = {
   'a narwhal and jelly': 'Narwhal and Jelly',
   'an alec flint mystery': 'Alec Flint, Super Sleuth',
   'chronicles of narnia': 'The Chronicles of Narnia',
+  'library of esoterica': 'The Library of Esoterica',
   'the three-body problem series': 'The Three-Body Problem',
 }
 
@@ -90,6 +91,46 @@ export const BOOK_SERIES = {
   'the broken lands': ['The Roaming World'],
   'the left-handed fate': ['The Roaming World'],
   rialto: ['The Roaming World'],
+  // From the owner's review of the missing-series list (2026-11-01).
+  "a reaper at the gates": ["An Ember in the Ashes"],
+  "an ember in the ashes": ["An Ember in the Ashes"],
+  "before the frost": ["Wallander"],
+  "dragonwatch: a fablehaven adventure": ["Dragonwatch"],
+  "faceless killers": ["Wallander"],
+  "gaudy night: a lord peter wimsey mystery with harriet vane": ["Lord Peter Wimsey mysteries"],
+  "griffin & sabine: an extraordinary correspondence": ["Griffin & Sabine"],
+  "judy moody and the not bummer summer": ["Judy Moody"],
+  "king solomon's mines": ["Allan Quatermain"],
+  "momo arashima breaks the mirror of the sun": ["Momo Arashima"],
+  "narwhal and jelly: peanut butter and jelly": ["Narwhal and Jelly"],
+  "one step behind": ["Wallander"],
+  "sideways stories from wayside school": ["Wayside School"],
+  "sign of four": ["Sherlock Holmes"],
+  "spy school goes wild": ["Spy School"],
+  "step aside, pops: a hark! a vagrant collection": ["Hark! A Vagrant"],
+  "study in scarlet": ["Sherlock Holmes"],
+  "tarot. the library of esoterica": ["The Library of Esoterica"],
+  "tarzan of the apes": ["Tarzan"],
+  "the best american noir of the century": ["Best American Series"],
+  "the best american short stories 2019": ["Best American Series"],
+  "the left hand of darkness": ["Hainish Cycle"],
+  "the lost world": ["Professor Challenger"],
+  "the original adventures of hank the cowdog": ["Hank the Cowdog"],
+  "the swifts: a gallery of rogues": ["The Swifts"],
+  "the valley of fear": ["Sherlock Holmes"],
+  "wayside school is falling down": ["Wayside School"],
+  "wolf hall": ["Wolf Hall"],
+  "adventures of sherlock holmes": ["Sherlock Holmes"],
+  "centerburg tales: more adventures of homer price": ["Homer Price"],
+  "memoirs of sherlock holmes": ["Sherlock Holmes"],
+  "perdido street station": ["New Crobuzon"],
+  "return of sherlock holmes": ["Sherlock Holmes"],
+  "case book of sherlock holmes": ["Sherlock Holmes"],
+  "the best american mystery stories of the century": ["Best American Series"],
+  "the scar": ["New Crobuzon"],
+  "the wimpy kid do-it-yourself book": ["Diary of a Wimpy Kid"],
+  "who would win?: extreme animal rumble": ["Who Would Win?"],
+  "winterhouse": ["Winterhouse"],
 }
 
 // The owner's rulings on single books, by current title. Listing a book clears its
