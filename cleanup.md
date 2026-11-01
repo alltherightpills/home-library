@@ -18,10 +18,8 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 
 | Job | Waiting on | Who | Notes |
 |---|---|---|---|
-| Title cleanup: move series, publisher's series, edition notes, and promotional text out of titles | New fields | Both | Line-by-line review finished 2026-10-31. Back up, confirm, and apply once the fields exist. Keep originals, and the vote keeps reading the original title. |
-| Fill in publisher's series from LC and Open Library | New fields | Both | Separate pass: at least 100 copies have one listed that LibraryThing doesn't. |
-| Show publisher's series and edition note on the main list | Title cleanup | Claude | Release with the cleanup: moving "(The Pelican Shakespeare)" out of titles removes what tells editions apart on the main screen. Add them to the author and year line. |
-| Fix over-trimmed work titles | Title cleanup | Claude | The import cut work titles at the colon, which drops real subtitles. |
+| Fill in publisher's series from LC and Open Library | Ready | Both | Separate pass: at least 100 copies have one listed that LibraryThing doesn't. |
+| Fix over-trimmed work titles | Ready | Claude | The import cut work titles at the colon, which drops real subtitles. |
 | Raise the photo size limit | Next cover work | Claude | Photos shrink to 1,000px, too small for a large cover. |
 | Re-add the book removed while testing | Scan to add | Owner | The owner knows which one; it's also in backup `2026-10-30_1345`. |
 | Remove the duplicate Lumberjanes Vol. 12 | Owner | Owner | The owner thinks the second copy is an error; remove it in the app. |
