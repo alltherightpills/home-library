@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { labelIndex } from './series.js'
 import { normalize, searchWords } from './useCatalog.js'
 
 // How many suggestions of each kind the dropdown shows.
 const LIMIT = 3
 
-// Every title, author, and subject heading in the library, with how many books have it.
+// Every title, author, series, and subject heading in the library, with how many books have it.
 function buildIndex(copies) {
   const titles = copies.map((c) => ({ text: c.title, note: c.byline, copy: c, key: normalize(c.title) }))
   const tally = (names) => {
@@ -19,7 +20,10 @@ function buildIndex(copies) {
   }
   const authors = tally(copies.flatMap((c) => c.people.map((p) => [p.author.display_name, c.id])))
   const subjects = tally(copies.flatMap((c) => c.headings.map((h) => [h, c.id])))
-  return { titles, authors, subjects }
+  // Other spellings of a series find it too.
+  const labels = (kind) =>
+    labelIndex(copies, kind).map((e) => ({ text: e.name, id: e.id, count: e.count, key: normalize([e.name, ...e.aliases].join(' ')) }))
+  return { titles, authors, subjects, series: labels('series'), publisherSeries: labels('publisherSeries') }
 }
 
 // Best matches first: ones that start with what was typed, then the most common.
@@ -36,7 +40,7 @@ function topMatches(items, words, start) {
 }
 
 // The Library search bar, with Google-style suggestions while typing.
-function SearchBox({ copies, query, setQuery, onOpenBook }) {
+function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
   const [suggesting, setSuggesting] = useState(false)
   const box = useRef(null)
   const input = useRef(null)
@@ -49,6 +53,8 @@ function SearchBox({ copies, query, setQuery, onOpenBook }) {
     return [
       ['Titles', 'title', topMatches(index.titles, words, start)],
       ['Authors', 'author', topMatches(index.authors, words, start)],
+      ['Series', 'series', topMatches(index.series, words, start)],
+      ["Publisher's series", 'publisherSeries', topMatches(index.publisherSeries, words, start)],
       ['Subjects', 'subject', topMatches(index.subjects, words, start)],
     ].filter(([, , items]) => items.length)
   }, [index, query, suggesting])
@@ -68,6 +74,7 @@ function SearchBox({ copies, query, setQuery, onOpenBook }) {
   function choose(kind, item) {
     done()
     if (kind === 'title') onOpenBook(item.copy.id)
+    else if (item.id) onOpenLabel(kind, item.id)
     else setQuery(item.text)
   }
 
@@ -84,7 +91,7 @@ function SearchBox({ copies, query, setQuery, onOpenBook }) {
         ref={input}
         className="search"
         type="search"
-        placeholder="Search title, author, or subject"
+        placeholder="Search title, author, series, or subject"
         // No autocorrect: its bubble covers the first suggestion, and it "fixes" author names.
         autoCorrect="off"
         autoCapitalize="off"

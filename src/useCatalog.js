@@ -107,8 +107,8 @@ function withDisplayFields(copy) {
 const labelsInOrder = (links) =>
   [...links].sort((a, b) => a.position - b.position).map((link) => ({ ...link.label, number: link.number ?? '' }))
 
-// "Penguin Classics", or "Narnia 3" with a number.
-export const labelText = ({ name, number }) => [name, number].filter(Boolean).join(' ')
+// "Penguin Classics", or "Narnia #3" with a number.
+export const labelText = ({ name, number }) => (number ? `${name} #${number}` : name)
 
 // LC and LibraryThing subject headings as "Tales -- Japan" text, without repeats.
 function subjectHeadings(copy) {

@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
+import BookList from './BookList.jsx'
 import SearchBox from './SearchBox.jsx'
-import { coverUrl, searchWords } from './useCatalog.js'
+import SeriesView from './SeriesView.jsx'
+import { labelIndex } from './series.js'
+import { searchWords } from './useCatalog.js'
 
 const SORTS = {
   author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.titleSort.localeCompare(b.titleSort),
@@ -16,28 +19,50 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
   // The open book lives in the browser history, so swiping back (or the
   // Back button) returns to the list.
   const [openId, setOpenId] = useState(() => history.state?.book ?? null)
-  const listScroll = useRef(0)
+  // A series screen is also a step in the history: { kind } lists them all, and
+  // { kind, id } shows the books in one.
+  const [place, setPlace] = useState(() => history.state?.place ?? null)
+  const listScroll = useRef({})
+  const viewName = place ? `${place.kind}:${place.id ?? ''}` : 'all'
 
   useEffect(() => {
     history.scrollRestoration = 'manual'
-    const onPop = (e) => setOpenId(e.state?.book ?? null)
+    const onPop = (e) => {
+      setOpenId(e.state?.book ?? null)
+      setPlace(e.state?.place ?? null)
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // Back on the list: return to where it was scrolled before the book opened.
+  // Back on a list: return to where it was scrolled before leaving it.
   useLayoutEffect(() => {
-    if (openId === null) window.scrollTo(0, listScroll.current)
-  }, [openId])
+    if (openId === null) window.scrollTo(0, listScroll.current[viewName] ?? 0)
+  }, [openId, viewName])
+
+  function rememberScroll() {
+    if (openId === null) listScroll.current[viewName] = window.scrollY
+  }
 
   function openBook(id) {
-    listScroll.current = window.scrollY
-    history.pushState({ book: id }, '')
+    rememberScroll()
+    history.pushState({ book: id, place }, '')
     setOpenId(id)
     window.scrollTo(0, 0)
   }
 
+  function openPlace(kind, id) {
+    rememberScroll()
+    const next = id ? { kind, id } : { kind }
+    listScroll.current[`${kind}:${id ?? ''}`] = 0
+    history.pushState({ place: next }, '')
+    setOpenId(null)
+    setPlace(next)
+  }
+
   const flaggedCount = copies?.filter((c) => c.needs_review).length ?? 0
+  const seriesCount = useMemo(() => (copies ? labelIndex(copies, 'series').length : 0), [copies])
+  const publisherSeriesCount = useMemo(() => (copies ? labelIndex(copies, 'publisherSeries').length : 0), [copies])
 
   const shown = useMemo(() => {
     if (!copies) return []
@@ -61,6 +86,7 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
         <BookDetail
           copy={open}
           onBack={() => history.back()}
+          onOpenLabel={openPlace}
           onCoverChange={(changes) => updateCopy(open.id, changes)}
           copies={copies}
           sharedWork={copies.some((c) => c.id !== open.id && c.work?.id === open.work?.id)}
@@ -72,12 +98,21 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
           }}
         />
       )}
-      <div className="library" hidden={!!open}>
+      {!open && place && (
+        <SeriesView
+          place={place}
+          copies={copies}
+          onOpenLabel={openPlace}
+          onOpenBook={openBook}
+          onBack={() => history.back()}
+        />
+      )}
+      <div className="library" hidden={!!open || !!place}>
         <p className="total">
           <strong>{copies.length.toLocaleString()}</strong> books
         </p>
 
-        <SearchBox copies={copies} query={query} setQuery={setQuery} onOpenBook={openBook} />
+        <SearchBox copies={copies} query={query} setQuery={setQuery} onOpenBook={openBook} onOpenLabel={openPlace} />
 
         <div className="controls">
           <label>
@@ -96,26 +131,21 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
               Needs checking ({flaggedCount})
             </button>
           )}
+          {seriesCount > 0 && (
+            <button className="chip" onClick={() => openPlace('series')}>
+              Series ({seriesCount})
+            </button>
+          )}
+          {publisherSeriesCount > 0 && (
+            <button className="chip" onClick={() => openPlace('publisherSeries')}>
+              Publisher's series ({publisherSeriesCount})
+            </button>
+          )}
         </div>
 
         {(query || onlyFlagged) && <p className="diagnostic">{shown.length} matching</p>}
 
-        <ul className="book-list">
-          {shown.map((c) => (
-            <li key={c.id}>
-              <button onClick={() => openBook(c.id)}>
-                <span className="thumb">
-                  {coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" loading="lazy" />}
-                </span>
-                <span className="book-title">
-                  {c.needs_review && <span className="flag">⚠︎ </span>}
-                  {c.title}
-                </span>
-                <span className="book-meta">{c.listLine}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        <BookList books={shown} onOpenBook={openBook} />
       </div>
     </>
   )

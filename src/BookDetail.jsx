@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import CoverPicker from './CoverPicker.jsx'
 import EditBook from './EditBook.jsx'
-import { coverUrl, labelText } from './useCatalog.js'
+import { coverUrl } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
 function formatMarcField({ tag, ind1, ind2, sub }) {
@@ -20,7 +20,7 @@ const COVER_SOURCES = {
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, copies, onBack, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+function BookDetail({ copy, copies, onBack, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
   // The cover picker and edit screen are steps in the browser history too, so
   // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
@@ -75,12 +75,25 @@ function BookDetail({ copy, copies, onBack, onCoverChange, sharedWork, updateCop
     )
   }
 
+  // Each name opens the books in that series.
+  const labelLinks = (kind) =>
+    copy[kind].length > 0 &&
+    copy[kind].map((label, i) => (
+      <span key={label.id}>
+        {i > 0 && '; '}
+        <button className="link" onClick={() => onOpenLabel(kind, label.id)}>
+          {label.name}
+        </button>
+        {label.number && ` #${label.number}`}
+      </span>
+    ))
+
   const firstPublished = copy.work?.first_published_year
   const rows = [
     ['Contributors', copy.people.map((p) => `${p.author.display_name} (${p.role})`).join('; ')],
     ['Work', copy.work?.title],
-    ['Series', copy.series.map(labelText).join('; ')],
-    ["Publisher's series", copy.publisherSeries.map(labelText).join('; ')],
+    ['Series', labelLinks('series')],
+    ["Publisher's series", labelLinks('publisherSeries')],
     ['Edition note', copy.edition_note],
     ['Original title', copy.original_title !== copy.title && copy.original_title],
     ['Notes', copy.notes],

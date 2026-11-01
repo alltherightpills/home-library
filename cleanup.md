@@ -10,6 +10,7 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 
 | Job | Size | Who | Notes |
 |---|---|---|---|
+| Make search suggestion headings stand out | Small | Claude | Make the Titles, Authors, Series, Publisher's series, and Subjects headings bold and larger, so they read differently from the results below them. |
 | Merge duplicate author names | ~15 pairs | Owner | On Edit a Book, retype the name to match the form to keep. Keep accents. Check first that it's the same person (*Mitchell, David* and *Mitchell, David T.* may not be). |
 | Fix junk in author names | A few | Owner | *Raymond Original Cinema Poster*; *Lucy Maud[Canadian author](1874-1942)*; *père, Alexandre Dumas*. |
 | Add ISBNs to no-ISBN records | ~40 | Owner | Needs the books in hand. Run `npm run enrich` afterward. Many are Ebook and audiobook records that also need checking as physical copies. |
