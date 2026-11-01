@@ -7,6 +7,7 @@
 //   npm run enrich                       (sign in; process everything)
 //   npm run enrich -- --votes            (sign in; save the category vote's LC and Google answers)
 //   npm run enrich -- --votes --limit 20 (the same, for the first 20 books not yet done)
+//   npm run enrich -- --votes --redo copy:<id> (look up one book again, as after a retitle; the key is its ISBN or copy:<id>)
 //
 // Safe to stop and rerun: books already looked up are skipped, and only empty
 // fields are ever filled, so hand edits are never overwritten. (Covers are the one
@@ -167,7 +168,10 @@ async function runVotes(limit) {
   const books = new Map()
   for (const c of copies) books.set(c.isbn13 ?? c.isbn10 ?? `copy:${c.id}`, c)
   const missing = (key) => ['loc_search', 'google'].filter((source) => !have.has(`${source}|${key}`))
-  const todo = [...books].filter(([key]) => missing(key).length)
+  // A redo saves over the old answers, so a failed lookup leaves them in place.
+  const redo = flag('--redo')
+  if (redo) for (const source of ['loc_search', 'google']) have.delete(`${source}|${redo}`)
+  const todo = [...books].filter(([key]) => (redo ? key === redo : missing(key).length))
   const batch = todo.slice(0, limit)
   console.log(`${books.size} books; ${todo.length} still need LC or Google; doing ${batch.length} this run.`)
 

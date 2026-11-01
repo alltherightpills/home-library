@@ -18,11 +18,10 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 
 | Job | Waiting on | Who | Notes |
 |---|---|---|---|
-| Redo lookups for *The Winter of Our Discontent* | Google lookup run | Claude | Clear and relook up its `loc_search` and `google` rows; they used the old title. |
+| Redo lookups for *The Winter of Our Discontent* | Owner runs it | Owner | `npm run enrich -- --votes --redo copy:7dc1297d-93b5-4501-abae-ba5fdf097c63`, before the next backup. Its saved answers used the old title. |
 | Title cleanup: move series, publisher's series, edition notes, and promotional text out of titles | New fields | Both | Line-by-line review finished 2026-10-31. Back up, confirm, and apply once the fields exist. Keep originals, and the vote keeps reading the original title. |
-| Rule on the 170 copies with a LibraryThing series but no label | Owner | Owner | Fill in Your ruling in `data/reports/series-candidates-2026-10-31_0942.csv`, or send rulings by line number. Do this before applying the cleanup. |
 | Fill in publisher's series from LC and Open Library | New fields | Both | Separate pass: at least 100 copies have one listed that LibraryThing doesn't. |
-| Add series, publisher's series, edition note, and notes fields | Rulings on the 170 copies | Claude | Series and publisher's series get shared tables with aliases. Needs a database change, plus a saved original title. Notes is a general field for things like a box set's contents, separate from the Needs checking note, which clears when the flag is turned off. Add them to Edit a Book, and make search read the original title. |
+| Add series, publisher's series, edition note, and notes fields | Build turn | Claude | Series and publisher's series get shared tables with aliases. Needs a database change, plus a saved original title. Notes is a general field for things like a box set's contents, separate from the Needs checking note, which clears when the flag is turned off. Add them to Edit a Book, and make search read the original title. |
 | Show publisher's series and edition note on the main list | Title cleanup | Claude | Release with the cleanup: moving "(The Pelican Shakespeare)" out of titles removes what tells editions apart on the main screen. Add them to the author and year line. |
 | Fix over-trimmed work titles | Title cleanup | Claude | The import cut work titles at the colon, which drops real subtitles. |
 | Raise the photo size limit | Next cover work | Claude | Photos shrink to 1,000px, too small for a large cover. |
