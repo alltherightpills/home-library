@@ -35,10 +35,14 @@ export const MAIN_RULES = [
 
   // Format first: a graphic memoir or graphic novel goes here, whatever its subject.
   { main: 'Comics & Graphic Novels', when: { dewey: ['741.5'], lc: ['PN6700-6790'], genre: ['Comics'],
-    heading: ['graphic novels', 'comic books, strips', 'comics (graphic works)'] } },
+    heading: ['graphic novels', 'comic books, strips', 'comics (graphic works)'] },
+    // A novel about making comics (Kavalier & Clay) isn't a comic.
+    unless: { heading: ['strips, etc -- authorship -- fiction'] } },
 
   // Travel writing is Nonfiction > Travel, even when told as a memoir.
-  { main: 'Nonfiction', when: { dewey: ['910-919'], heading: ['-- description and travel', 'voyages and travels'] } },
+  // A story about a journey ("Voyages and travels -- Fiction") isn't travel writing.
+  { main: 'Nonfiction', when: { dewey: ['910-919'], heading: ['-- description and travel', 'voyages and travels'] },
+    unless: { heading: ['-- fiction', '-- juvenile fiction'] } },
 
   // Lives. Dewey files most biographies with their subject and marks them with
   // 092 (641.5092 is a chef's life), so these come before the subject rules.
@@ -108,7 +112,6 @@ export const SUBCATEGORY_RULES = {
     { sub: 'Coming of Age', when: { heading: ['bildungsrom', 'coming of age', 'autobiographical fiction'] } },
     { sub: 'Humor', when: { heading: ['humorous', 'satire', 'comic fiction'] } },
     { sub: 'Adventure', when: { heading: ['adventure stories', 'adventure and adventurers', 'sea stories', 'survival'] } },
-    { sub: 'Christian Fiction', when: { genre: ['Christian Fiction'], heading: ['christian fiction'] } },
     { sub: 'LGBTQ+', when: { genre: ['LGBTQ+'], heading: ['gay', 'lesbian', 'bisexual', 'transgender', 'queer', 'sexual minorit'] } },
     { sub: 'In Translation', when: { dewey: ['83', '84', '85', '86', '87', '88', '89'], lc: ['PA', 'PB', 'PC', 'PD', 'PF', 'PG', 'PH', 'PJ', 'PK', 'PL', 'PQ', 'PT'] } },
   ],
@@ -138,7 +141,7 @@ export const SUBCATEGORY_RULES = {
     { sub: 'Modern Drama', when: { dewey: ['812', '822.8', '822.9', '832.8', '832.9', '842.8', '842.9', '891.72'] } },
   ],
   'Myth, Folklore & Fairy Tales': [
-    { sub: 'Fairy Tales', when: { heading: ['fairy tales'] } },
+    { sub: 'Fairy Tales', when: { heading: ['fairy tales'], title: ['fairy tales'] } },
     { sub: 'Folk Tales & Legends', when: { heading: ['folklore', 'legends', 'tales'] } },
     { sub: 'Mythology', when: { dewey: ['201.3', '292', '293', '299'], lc: ['BL300-325'], heading: ['mythology'] } },
   ],
@@ -171,7 +174,6 @@ export const LABEL_RULES = {
     'Coming of Age': ['coming of age', 'bildungsroman'],
     'Humor': ['humorous', 'humor', 'satire'],
     'Adventure': ['adventure'],
-    'Christian Fiction': ['fiction / christian', 'christian fiction'],
     'LGBTQ+': ['lgbt', 'gay', 'lesbian', 'transgender', 'queer'],
   },
   'Nonfiction': {

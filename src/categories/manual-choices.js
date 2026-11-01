@@ -16,6 +16,12 @@ export const MANUAL_CHOICES = [
     main: 'Drama', subs: ['Modern Drama'] },
   { copyId: 'b05b75db-10b3-44c6-8a1a-1e889082df30', title: 'One Hundred Years of Solitude',
     main: 'Fiction', subs: ['In Translation'] },
+  { copyId: '48acee77-06ee-4a38-ba33-19b0c8eab566', title: 'The Political Works',
+    main: 'Nonfiction', subs: ['Society, Politics & Gender'] },
+  { copyId: 'e4e2c4ae-0500-4acb-a425-7e6422f7d390', title: 'Gilgamesh: The Life of a Poem',
+    main: 'Nonfiction', subs: ['Language & Writing'] },
+  { copyId: '77cd7a21-8abb-4db2-9b27-6639fc1557fe', title: "Adventures of Huckleberry Finn (Oxford World's Classics)",
+    main: 'Fiction', subs: ['Historical Fiction', 'Adventure', 'Coming of Age'] },
   // Crosslisted only: the vote still chooses their main shelf and subcategories.
   { copyId: '084e9a50-0bac-4406-89da-c5572dbd1ebc', title: 'Circe',
     also: [{ main: 'Myth, Folklore & Fairy Tales', subs: ['Mythology'] }] },

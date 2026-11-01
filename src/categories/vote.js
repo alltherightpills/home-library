@@ -8,6 +8,10 @@ import { categorize, cluesOf, mainFromClues, ruleMatch } from './categorize.js'
 
 export const WEIGHTS = { own: 3, lc: 2, google: 2, openlibrary: 1 }
 export const THRESHOLD = 3
+// A book with no subcategory takes its 2-vote options, marked tentative, unless
+// more than this many tie: then they're too scattered to mean anything.
+export const TENTATIVE_SCORE = 2
+export const TENTATIVE_MOST = 2
 export const SOURCE_NAMES = { own: 'own record', lc: 'LC other editions', google: 'Google', openlibrary: 'Open Library' }
 
 // LC's subject fields, as enrichment and the lookups store them.
@@ -90,6 +94,11 @@ function voteSubcategories(main, sources) {
     .filter((s) => s.votes.length)
 }
 
+function tentativeSubs(considered) {
+  const options = considered.filter((s) => s.score === TENTATIVE_SCORE)
+  return options.length <= TENTATIVE_MOST ? options.map((s) => ({ ...s, tentative: true })) : []
+}
+
 // Kids and Teen together must reach the threshold ("juvenile fiction" may mean
 // either); then Teen needs more than Open Library alone to win over Kids.
 function voteAudience(sources) {
@@ -139,13 +148,15 @@ export function voteCategories(copy, answers = {}) {
   const { main, mainBecause, clues } = categorize(copy)
   const sources = sourcesFor(copy, answers)
   const considered = voteSubcategories(main, sources)
-  const subs = considered.filter((s) => s.score >= THRESHOLD)
+  const chosen = considered.filter((s) => s.score >= THRESHOLD)
+  const subs = chosen.length ? chosen : tentativeSubs(considered)
   const { audience, votes: audienceVotes } = voteAudience(sources)
 
   const review = []
   if (!main) review.push('no main category')
   else if ((SUBCATEGORY_RULES[main] ?? LABEL_RULES[main]) && !subs.length) review.push('no subcategory')
+  else if (subs.some((s) => s.tentative)) review.push('tentative subcategory')
   for (const [name, score] of otherMains(main, sources)) review.push(`sources lean ${name} (${score})`)
 
-  return { main, mainBecause, subs, nearMisses: considered.filter((s) => s.score < THRESHOLD), audience, audienceVotes, review, clues }
+  return { main, mainBecause, subs, nearMisses: considered.filter((s) => !subs.some((t) => t.sub === s.sub)), audience, audienceVotes, review, clues }
 }

@@ -52,12 +52,13 @@ for (const main of MAIN_CATEGORIES) {
 }
 const audience = (a) => count((b) => b.audience === a)
 console.log(`\nAudience: ${audience('Adult')} adult, ${audience('Teen')} teen, ${audience('Kids')} kids`)
+console.log(`Tentative subcategories: ${count((b) => b.subs.some((s) => s.tentative))} books`)
 console.log(`For review: ${count((b) => b.review.length)} books; sources disagree with the main category on ${count((b) => b.review.some((r) => r.startsWith('sources')))}`)
 console.log(`LibraryThing genre not chosen by the vote: ${count((b) => b.ltMissed.length)} books (of ${count((b) => b.ltSubs.length)} with one)`)
 
 const columns = {
   'Main category': (b) => b.main ?? '',
-  'Subcategories': (b) => b.subs.map((s) => s.sub).join('; '),
+  'Subcategories': (b) => b.subs.map((s) => (s.tentative ? `${s.sub} (tentative)` : s.sub)).join('; '),
   'Audience': (b) => b.audience,
   'Review': (b) => b.review.join('; '),
   'Title': (b) => b.copy.title,
