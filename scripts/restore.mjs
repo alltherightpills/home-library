@@ -95,8 +95,9 @@ for (const table of BOOK_TABLES) {
 }
 // Columns added since an older backup were blank then. Spelled out, so a restore
 // clears them rather than leaving today's values in place.
-const ADDED_COPY_COLUMNS = ['audience', 'audience_set_by', 'original_title', 'edition_note', 'notes']
+const ADDED_COPY_COLUMNS = ['audience', 'audience_set_by', 'original_title', 'edition_note', 'notes', 'category_review']
 for (const copy of backup.copies) for (const column of ADDED_COPY_COLUMNS) copy[column] ??= null
+for (const row of backup.book_categories) row.tentative ??= false
 console.log(`Backup ${snapshot}: ${backup.copies.length} books.\n`)
 
 const { supabase, libraryId } = await signIn()
