@@ -65,8 +65,18 @@ export const SERIES_NAMES = {
   'a narwhal and jelly': 'Narwhal and Jelly',
   'an alec flint mystery': 'Alec Flint, Super Sleuth',
   'chronicles of narnia': 'The Chronicles of Narnia',
+  'griffin and sabine': 'Griffin & Sabine',
   'library of esoterica': 'The Library of Esoterica',
   'the three-body problem series': 'The Three-Body Problem',
+}
+
+// Different spellings of one publisher's series.
+export const PUBLISHER_SERIES_NAMES = {
+  'the penguin american library': 'Penguin American Library',
+  'twentieth-century classics': 'Penguin Twentieth-century Classics',
+  'contemporary fiction, plume': 'Plume Contemporary Fiction',
+  "the world's classics": "Oxford World's Classics",
+  'cassell value titles': 'Cassell Value Titles',
 }
 
 // Series named in the title itself, with no brackets. A match's first group is the number.
