@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { shelfText } from './categories/review.js'
 import CoverPicker from './CoverPicker.jsx'
 import EditBook from './EditBook.jsx'
 import { coverUrl } from './useCatalog.js'
@@ -20,7 +21,7 @@ const COVER_SOURCES = {
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, copies, onBack, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+function BookDetail({ copy, copies, categories, onBack, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
   // The cover picker and edit screen are steps in the browser history too, so
   // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
@@ -89,7 +90,10 @@ function BookDetail({ copy, copies, onBack, onOpenLabel, onCoverChange, sharedWo
     ))
 
   const firstPublished = copy.work?.first_published_year
+  const shelved = shelfText(copy, categories)
   const rows = [
+    ['Shelved in', shelved.main || 'No main category yet'],
+    ['Also in', shelved.alsoIn.join('; ')],
     ['Contributors', copy.people.map((p) => `${p.author.display_name} (${p.role})`).join('; ')],
     ['Work', copy.work?.title],
     ['Series', labelLinks('series')],

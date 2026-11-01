@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
 import BookList from './BookList.jsx'
+import CategoryReview from './CategoryReview.jsx'
 import SearchBox from './SearchBox.jsx'
 import SeriesView from './SeriesView.jsx'
 import { labelIndex } from './series.js'
@@ -12,7 +13,7 @@ const SORTS = {
   added: (a, b) => b.added_on.localeCompare(a.added_on) || a.titleSort.localeCompare(b.titleSort),
 }
 
-function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
+function Library({ copies, categories, error, updateCopy, updateWork, removeCopy }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('author')
   const [onlyFlagged, setOnlyFlagged] = useState(false)
@@ -60,7 +61,14 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
     setPlace(next)
   }
 
+  // Moves on without leaving a step to swipe back to.
+  function replacePlace(next) {
+    history.replaceState({ place: next }, '')
+    setPlace(next)
+  }
+
   const flaggedCount = copies?.filter((c) => c.needs_review).length ?? 0
+  const reviewCount = copies?.filter((c) => c.category_review).length ?? 0
   const seriesCount = useMemo(() => (copies ? labelIndex(copies, 'series').length : 0), [copies])
   const publisherSeriesCount = useMemo(() => (copies ? labelIndex(copies, 'publisherSeries').length : 0), [copies])
 
@@ -89,6 +97,7 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
           onOpenLabel={openPlace}
           onCoverChange={(changes) => updateCopy(open.id, changes)}
           copies={copies}
+          categories={categories}
           sharedWork={copies.some((c) => c.id !== open.id && c.work?.id === open.work?.id)}
           updateCopy={updateCopy}
           updateWork={updateWork}
@@ -98,7 +107,21 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
           }}
         />
       )}
-      {!open && place && (
+      {place?.kind === 'review' && (
+        <div hidden={!!open}>
+          <CategoryReview
+            place={place}
+            copies={copies}
+            categories={categories}
+            onOpenPlace={openPlace}
+            onReplacePlace={replacePlace}
+            onOpenBook={openBook}
+            onBack={() => history.back()}
+            updateCopy={updateCopy}
+          />
+        </div>
+      )}
+      {!open && place && place.kind !== 'review' && (
         <SeriesView
           place={place}
           copies={copies}
@@ -129,6 +152,11 @@ function Library({ copies, error, updateCopy, updateWork, removeCopy }) {
               onClick={() => setOnlyFlagged(!onlyFlagged)}
             >
               Needs checking ({flaggedCount})
+            </button>
+          )}
+          {reviewCount > 0 && (
+            <button className="chip" onClick={() => openPlace('review')}>
+              Review categories ({reviewCount})
             </button>
           )}
           {seriesCount > 0 && (

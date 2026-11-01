@@ -1,5 +1,7 @@
+import { planShelfDecision } from './categories/review.js'
 import { toIsbn, toIsbn10 } from './isbn.js'
 import { supabase } from './supabase.js'
+import { SHELF_COLUMNS } from './useCatalog.js'
 
 // "Joyce, James" → { last: 'Joyce', first: 'James' }; "Homer" has only a last name.
 export function nameParts(sortName) {
@@ -284,6 +286,30 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
   await saveAuthors(copy, form, onWork)
   await saveLabels(copy, form.series, SERIES, onCopy)
   await saveLabels(copy, form.publisherSeries, PUBLISHER_SERIES, onCopy)
+}
+
+// Saves the owner's decision from the review list, which takes the book off the
+// list. Reads the shelves back either way, so after a failure partway the screen
+// matches the database and Save can simply be tapped again.
+export async function saveShelfDecision(copy, categories, mainId, subIds, onCopy) {
+  const { demote, rows } = planShelfDecision(copy, categories, mainId, subIds)
+  try {
+    if (demote) {
+      const { error } = await supabase
+        .from('book_categories')
+        .update({ is_main: false, removed: true, set_by: 'owner' })
+        .match({ copy_id: copy.id, category_id: demote })
+      check(error, 'Changing the main category')
+    }
+    const { error } = await supabase.from('book_categories').upsert(rows)
+    check(error, 'Saving the categories')
+    const { error: reviewError } = await supabase.from('copies').update({ category_review: null }).eq('id', copy.id)
+    check(reviewError, 'Taking the book off the review list')
+    onCopy(copy.id, { category_review: null })
+  } finally {
+    const { data } = await supabase.from('book_categories').select(SHELF_COLUMNS).eq('copy_id', copy.id)
+    if (data) onCopy(copy.id, { shelves: data })
+  }
 }
 
 // Deletes this copy, plus anything only it was using: a photo of its cover, and

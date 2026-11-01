@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 
+export const SHELF_COLUMNS = 'category_id, is_main, set_by, removed, tentative, reasons'
+
 // The columns the app needs for each copy, plus its work and the people on it.
 // (Leaves out lt_record, the large original LibraryThing data.)
 const COLUMNS = `
@@ -8,7 +10,8 @@ const COLUMNS = `
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
   cover_id, cover_url, cover_source, lc_call_number, lc_subjects,
   acquired_year, acquired_city, acquired_region, acquired_country,
-  original_title, edition_note, notes,
+  original_title, edition_note, notes, category_review,
+  shelves:book_categories ( ${SHELF_COLUMNS} ),
   series_links:copy_series ( number, position, label:series ( id, name, aliases ) ),
   publisher_series_links:copy_publisher_series ( number, position, label:publisher_series ( id, name, aliases ) ),
   work:works ( id, title, first_published_year, first_published_source, original_language,
@@ -20,11 +23,21 @@ const PAGE = 1000 // the most rows the server returns per request
 // Loads every copy in the library once, when signed in.
 export function useCatalog() {
   const [copies, setCopies] = useState(null) // null while loading
+  const [categories, setCategories] = useState([])
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
     async function load() {
+      const { data: list, error: listError } = await supabase
+        .from('categories')
+        .select('id, name, parent_id, position')
+        .order('position')
+      if (listError) {
+        if (!cancelled) setError(listError.message)
+        return
+      }
+      if (!cancelled) setCategories(list)
       const all = []
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await supabase
@@ -63,7 +76,7 @@ export function useCatalog() {
     setCopies((all) => all.filter((c) => c.id !== id))
   }
 
-  return { copies, error, updateCopy, updateWork, removeCopy }
+  return { copies, categories, error, updateCopy, updateWork, removeCopy }
 }
 
 // Main roles shown as "by ..." on a book; others (Editor, Illustrator...) show on the book page.

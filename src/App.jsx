@@ -58,7 +58,7 @@ function SignedInApp({ session, notice, setNotice }) {
   const [tab, setTab] = useState('library')
   const [changingPassword, setChangingPassword] = useState(false)
   const current = TABS.find((t) => t.id === tab)
-  const { copies, error, updateCopy, updateWork, removeCopy } = useCatalog()
+  const { copies, categories, error, updateCopy, updateWork, removeCopy } = useCatalog()
 
   return (
     <div className="app">
@@ -68,6 +68,7 @@ function SignedInApp({ session, notice, setNotice }) {
         {tab === 'library' && !changingPassword && (
           <Library
             copies={copies}
+            categories={categories}
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}
