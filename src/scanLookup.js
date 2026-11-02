@@ -6,7 +6,7 @@ import { isbn13To10 } from './isbn.js'
 import { locCallNumber, locDewey, locOriginalYear, locPages, locSubjects, lookUpLocByIsbn, lookUpLocByTitle } from './locLookups.js'
 import { supabase } from './supabase.js'
 
-async function fetchText(url) {
+export async function fetchText(url) {
   const res = await fetch(url)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.text()
@@ -14,7 +14,7 @@ async function fetchText(url) {
 
 // Asks the Library of Congress through the relay (supabase/functions/loc),
 // since the phone can't reach LC's catalog itself.
-async function askLoc(query, max) {
+export async function askLoc(query, max) {
   const { data, error } = await supabase.functions.invoke('loc', { body: { query, max } })
   if (error) throw new Error(error.message)
   return data
@@ -91,17 +91,15 @@ export async function lookUpNewBook(isbn13, libraryId) {
   book.answers = { locSearch, google, openlibrary: ol }
   book.unreachable = [...new Set(unreachable.map((s) => SOURCE_NAMES[s]))]
 
-  // Other editions you own of the same Open Library work, by the ISBNs they were looked up under.
-  book.sameWorkIsbns = []
-  if (book.workKey) {
-    const { data } = await supabase
-      .from('lookups')
-      .select('isbn')
-      .eq('source', 'openlibrary')
-      .eq('data->>key', book.workKey)
-    book.sameWorkIsbns = (data ?? []).map((r) => r.isbn).filter((i) => !keys.includes(i))
-  }
+  book.sameWorkIsbns = (await sameWorkIsbns(book.workKey)).filter((i) => !keys.includes(i))
   return book
+}
+
+// Other editions you own of the same Open Library work, by the ISBNs they were looked up under.
+export async function sameWorkIsbns(workKey) {
+  if (!workKey) return []
+  const { data } = await supabase.from('lookups').select('isbn').eq('source', 'openlibrary').eq('data->>key', workKey)
+  return (data ?? []).map((r) => r.isbn)
 }
 
 // ['A', 'B', 'C'] -> "A, B and C"
@@ -121,7 +119,7 @@ function bindingOf(format) {
 }
 
 // Open Library writes languages as "/languages/eng", Google as "en".
-const LANGUAGES = {
+export const LANGUAGES = {
   eng: 'English', en: 'English', fre: 'French', fra: 'French', fr: 'French', spa: 'Spanish', es: 'Spanish',
   ger: 'German', deu: 'German', de: 'German', ita: 'Italian', it: 'Italian', jpn: 'Japanese', ja: 'Japanese',
   lat: 'Latin', la: 'Latin', grc: 'Greek, Ancient', gre: 'Greek, Modern', rus: 'Russian', ru: 'Russian',
@@ -131,14 +129,14 @@ const LANGUAGES = {
 // Open Library often writes titles in library style ("African American
 // folktales"); Google usually has the same words in title case. Same words, so
 // take Google's capitals; otherwise keep Open Library's title.
-function betterCase(openLibrary, google) {
+export function betterCase(openLibrary, google) {
   if (!openLibrary) return google ?? null
   return google && plain(google) === plain(openLibrary) ? google : openLibrary
 }
 
 // The earliest first-published year from Open Library and LC's reprint date,
 // as `npm run enrich` picks it; a year after this edition's can't be right.
-function firstPublished(ol, lc, year) {
+export function firstPublished(ol, lc, year) {
   return [
     { year: ol?.first_publish_year, source: 'Open Library' },
     { year: locOriginalYear(lc), source: 'LC catalog (008 reprint date)' },

@@ -70,9 +70,10 @@ function VoteNote({ vote, categories, mainId, onUseGuess }) {
   )
 }
 
-// The check form for one book. onSaved gets { id, warning } once the book is in the database.
-function CheckBook({ scan, copies, categories, acquired, onSaved, onSkip }) {
-  const book = scan.lookup.book
+// The check form for one book, scanned or (`manual`) added by hand, which also
+// shows the edition's details to fill in. onSaved gets { id, warning } once the
+// book is in the database.
+export function CheckBook({ book, isbn, manual, copies, categories, acquired, onSaved, onSkip, skipLabel = 'Skip' }) {
   const others = useMemo(() => otherEditions(copies, book), [copies, book])
   const seriesNames = useMemo(() => labelNames(copies, 'series'), [copies])
   const publisherSeriesNames = useMemo(() => labelNames(copies, 'publisherSeries'), [copies])
@@ -114,7 +115,7 @@ function CheckBook({ scan, copies, categories, acquired, onSaved, onSkip }) {
           book,
           vote,
           categories,
-          isbn13: scan.isbn,
+          isbn13: isbn,
           libraryId: copies[0].library_id,
           knownAuthorIds: new Set(authors.map((a) => a.id)),
         }),
@@ -130,12 +131,15 @@ function CheckBook({ scan, copies, categories, acquired, onSaved, onSkip }) {
       <div className="scan-preview">
         <span className="thumb large">{book.coverUrl && <img src={book.coverUrl} alt="" />}</span>
         <div>
+          {!manual && (
+            <p className="book-meta">
+              {[book.publisher, book.year, book.pages && `${book.pages} pages`, book.binding].filter(Boolean).join(' · ')}
+            </p>
+          )}
+          {!manual && book.firstPublished && <p className="book-meta">First published {book.firstPublished}</p>}
           <p className="book-meta">
-            {[book.publisher, book.year, book.pages && `${book.pages} pages`, book.binding].filter(Boolean).join(' · ')}
-          </p>
-          {book.firstPublished && <p className="book-meta">First published {book.firstPublished}</p>}
-          <p className="book-meta">
-            ISBN {scan.isbn} · from {listText(book.sources)}
+            {isbn ? `ISBN ${isbn}` : 'No ISBN'}
+            {book.sources.length ? ` · from ${listText(book.sources)}` : ' · typed in'}
           </p>
         </div>
       </div>
@@ -182,6 +186,27 @@ function CheckBook({ scan, copies, categories, acquired, onSaved, onSkip }) {
           >
             + Add another person
           </button>
+        </>
+      )}
+
+      {manual && (
+        <>
+          <Field label="Publisher" value={form.publisher} onChange={set('publisher')} />
+          <div className="edit-pair">
+            <Field label="Edition year" value={form.editionYear} onChange={set('editionYear')} numeric />
+            <Field label="Pages" value={form.pages} onChange={set('pages')} numeric />
+            <label>
+              Binding
+              <select value={form.binding} onChange={(e) => set('binding')(e.target.value)}>
+                <option value="">Not set</option>
+                <option>Paperback</option>
+                <option>Hardcover</option>
+              </select>
+            </label>
+            {!linkedTo && (
+              <Field label="First published" value={form.firstPublished} onChange={set('firstPublished')} numeric />
+            )}
+          </div>
         </>
       )}
 
@@ -234,7 +259,7 @@ function CheckBook({ scan, copies, categories, acquired, onSaved, onSkip }) {
 
       <div className="review-actions">
         <button type="button" className="link" onClick={onSkip} disabled={busy}>
-          Skip
+          {skipLabel}
         </button>
         <button type="submit" className="primary" disabled={busy}>
           {busy ? 'Saving…' : 'Save and next'}
@@ -320,7 +345,7 @@ function AddCheck({ queue, scans, copies, categories, acquired, onSkipped, onDon
   } else if (status === 'looking') {
     body = <p className="placeholder">Looking it up…</p>
   } else if (status !== 'done' || !book.found) {
-    body = <p className="placeholder">No record was found for ISBN {isbn}. Adding by hand comes in a later step.</p>
+    body = <p className="placeholder">No record was found for ISBN {isbn}. Use its Add by hand link on the Scan tab.</p>
   }
 
   return (
@@ -339,7 +364,8 @@ function AddCheck({ queue, scans, copies, categories, acquired, onSkipped, onDon
           <h2>Check and add</h2>
           <CheckBook
             key={isbn}
-            scan={scan}
+            book={scan.lookup.book}
+            isbn={isbn}
             copies={copies}
             categories={categories}
             acquired={acquired}

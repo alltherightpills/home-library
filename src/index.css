@@ -561,6 +561,10 @@ body {
   flex: 1;
 }
 
+.by-hand-link {
+  margin: 8px 0 0;
+}
+
 .scan-hint {
   padding: 10px 12px;
   border-radius: 8px;

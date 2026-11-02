@@ -128,8 +128,11 @@ export function formFromLookup(book, acquired, others, knownSeries, categories) 
   const raw = book.subtitle ? `${book.title}: ${book.subtitle}` : book.title
   const clean = cleanTitle(raw, knownSeries)
   const series = clean.series.map((name, i) => ({ name, number: i === clean.series.length - 1 ? clean.number : '' }))
-  const people = book.authors.length ? book.authors.map(splitName) : [{ last: '', first: '' }]
+  // LC files names as "García Márquez, Gabriel", which splits better than the shown form.
+  const names = book.authorSortNames?.length ? book.authorSortNames : book.authors
+  const people = names.length ? names.map(splitName) : [{ last: '', first: '' }]
   const originalTitle = clean.changed ? raw : null
+  const text = (value) => (value === null || value === undefined ? '' : String(value))
   const vote = voteOnNewBook(book, { title: clean.title, originalTitle }, categories)
   const form = {
     title: clean.title,
@@ -137,7 +140,14 @@ export function formFromLookup(book, acquired, others, knownSeries, categories) 
     people,
     series: series.length ? series : [blankRow],
     publisherSeries: clean.publisherSeries.length ? clean.publisherSeries.map(splitPublisherSeries) : [blankRow],
-    editionNote: clean.editionNotes.join('; '),
+    editionNote: [...clean.editionNotes, book.editionNote].filter(Boolean).join('; '),
+    // Shown only in Add by hand; a scanned book keeps what the lookup found.
+    publisher: text(book.publisher),
+    editionYear: text(book.year),
+    // An odd value from a lookup (0 pages) is left out rather than blocking a save.
+    pages: book.pages > 0 && book.pages < 100000 ? String(book.pages) : '',
+    binding: text(book.binding),
+    firstPublished: text(book.firstPublished),
     acquiredYear: acquired.year,
     city: acquired.city,
     region: acquired.region,
@@ -156,6 +166,14 @@ export function addProblem(form) {
   if (!form.workId && form.people.some((p) => p.first.trim() && !p.last.trim())) {
     return 'Each person needs a last name (or a single name, like Homer).'
   }
+  // Ancient works can have a year before 0, stored as a negative number.
+  if (form.firstPublished.trim() && !/^-?\d{1,4}$/.test(form.firstPublished.trim())) {
+    return 'First published should be a year, like 1914.'
+  }
+  if (form.editionYear.trim() && !/^\d{4}$/.test(form.editionYear.trim())) {
+    return 'Edition year should be a four-digit year, like 2008.'
+  }
+  if (form.pages.trim() && !/^[1-9]\d{0,4}$/.test(form.pages.trim())) return 'Pages should be a whole number, like 224.'
   if ([...form.series, ...form.publisherSeries].some((s) => s.number.trim() && !s.name.trim())) {
     return 'A series number needs a series name.'
   }
@@ -183,6 +201,10 @@ const today = () => new Date().toLocaleDateString('en-CA')
 export async function saveNewBook({ form, book, vote, categories, isbn13, libraryId, knownAuthorIds }) {
   const title = form.title.trim()
   const text = (value) => value.trim() || null
+  const number = (value) => (value.trim() ? Number(value.trim()) : null)
+  // A year typed over the lookup's is the owner's, which a blank source records.
+  const firstYear = number(form.firstPublished)
+  const firstSource = firstYear === book.firstPublished ? book.firstPublishedSource : null
   let workId = form.workId
   let newWorkId = null
   const people = []
@@ -195,12 +217,7 @@ export async function saveNewBook({ form, book, vote, categories, isbn13, librar
       // The lookup has already left out a first-published year after this edition's.
       const { data: work, error } = await supabase
         .from('works')
-        .insert({
-          library_id: libraryId,
-          title,
-          first_published_year: book.firstPublished,
-          first_published_source: book.firstPublishedSource,
-        })
+        .insert({ library_id: libraryId, title, first_published_year: firstYear, first_published_source: firstSource })
         .select('id')
         .single()
       check(error, 'Adding the work')
@@ -225,10 +242,10 @@ export async function saveNewBook({ form, book, vote, categories, isbn13, librar
         original_title: form.originalTitle,
         isbn13,
         isbn10: book.isbn10 ?? null,
-        publisher: book.publisher,
-        edition_year: book.year,
-        pages: book.pages,
-        binding: book.binding,
+        publisher: text(form.publisher),
+        edition_year: number(form.editionYear),
+        pages: number(form.pages),
+        binding: form.binding || null,
         languages: book.languages,
         edition_note: text(form.editionNote),
         acquired_year: form.acquiredYear.trim() ? Number(form.acquiredYear.trim()) : null,
@@ -249,6 +266,7 @@ export async function saveNewBook({ form, book, vote, categories, isbn13, librar
 
     // The book is saved; series or categories that fail to save are only warnings.
     const warnings = []
+    await saveLookups(book.lookupsToSave, isbn13 ?? `copy:${copy.id}`, libraryId)
     try {
       await saveNewCopyLabels({ id: copy.id, library_id: libraryId, series: [], publisherSeries: [] }, form, () => {})
     } catch (err) {
@@ -278,4 +296,12 @@ async function saveCategories(copyId, libraryId, vote, categories, form) {
   }
   const voted = { id: copyId, library_id: libraryId, shelves: rows, category_review: vote.review }
   await saveShelfEdit(voted, categories, form.shelves, form.looksRight, () => {})
+}
+
+// Add by hand's answers, saved under the book's key (its ISBN, or copy:<id>
+// for a book with none), so `npm run categories:save` sees what the vote saw.
+// Not saving them is no reason to stop; `npm run enrich -- --votes` can ask again.
+async function saveLookups(answers, key, libraryId) {
+  const rows = Object.entries(answers ?? {}).map(([source, data]) => ({ library_id: libraryId, source, isbn: key, found: Boolean(data), data }))
+  if (rows.length) await supabase.from('lookups').upsert(rows)
 }

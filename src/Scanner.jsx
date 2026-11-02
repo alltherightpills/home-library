@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import AddByHand from './AddByHand.jsx'
 import AddCheck from './AddCheck.jsx'
 import { Field } from './EditBook.jsx'
 import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
@@ -36,10 +37,14 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
   // The ISBNs being checked and added, in scan order, or null on the scan screen.
   // The check screen is a step in the history, so swiping back returns here.
   const [checking, setChecking] = useState(null)
+  // Add by hand, likewise a step in the history: { isbn } (null for a book with
+  // no ISBN), or null when not showing.
+  const [byHand, setByHand] = useState(null)
 
   useEffect(() => {
     const onPop = () => {
       if (!history.state?.checking) setChecking(null)
+      if (!history.state?.byHand) setByHand(null)
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
@@ -50,6 +55,14 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
     setStatus('idle')
     history.pushState({ tab: 'scan', checking: true }, '')
     setChecking(queue)
+    window.scrollTo(0, 0)
+  }
+
+  function openByHand(isbn = null) {
+    stopCamera()
+    setStatus('idle')
+    history.pushState({ tab: 'scan', byHand: true }, '')
+    setByHand({ isbn })
     window.scrollTo(0, 0)
   }
 
@@ -170,6 +183,20 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
     handleIsbn(isbn)
   }
 
+  if (byHand) {
+    return (
+      <AddByHand
+        isbn={byHand.isbn}
+        copies={copies}
+        categories={categories}
+        acquired={acquired}
+        addCopy={addCopy}
+        onOpenBook={onOpenBook}
+        onDone={() => history.back()}
+      />
+    )
+  }
+
   if (checking) {
     return (
       <AddCheck
@@ -249,6 +276,14 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
         </button>
       </form>
 
+      {copies && (
+        <p className="by-hand-link">
+          <button className="link" onClick={() => openByHand()}>
+            No ISBN? Add by hand
+          </button>
+        </p>
+      )}
+
       {hint && <p className="scan-hint">{hint}</p>}
 
       <h2>Scanned this session</h2>
@@ -270,6 +305,7 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
               onOpenBook={onOpenBook}
               onRetry={() => lookUp(s.isbn)}
               onAdd={() => openCheck([s.isbn])}
+              onAddByHand={() => openByHand(s.isbn)}
             />
           ))}
         </ul>
@@ -279,7 +315,7 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
 }
 
 // One scanned ISBN: the copies you own with it, or what the lookup found.
-function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd }) {
+function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd, onAddByHand }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
   if (owned.length > 0) {
     return owned.map((c) => (
@@ -295,7 +331,12 @@ function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd }) {
         {status === 'done' && (
           <span className="book-meta">
             Not in your library, and no record found in Open Library or Google Books
-            {book.unreachable.length ? ` (${listText(book.unreachable)} didn't answer)` : ''}.
+            {book.unreachable.length ? ` (${listText(book.unreachable)} didn't answer)` : ''}.{' '}
+            {copies && (
+              <button className="link strong" onClick={onAddByHand}>
+                Add by hand
+              </button>
+            )}
           </span>
         )}
         {status === 'error' && (

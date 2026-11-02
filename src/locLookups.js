@@ -61,11 +61,17 @@ export async function lookUpLocByIsbn(isbn10, isbn13, askLoc) {
 }
 
 // Records of any edition whose title starts with the book's title and that
-// name the author: { query, records }, or null.
-export async function lookUpLocByTitle(title, surname, askLoc) {
-  const short = shortTitle(title).replace(/"/g, '')
+// name the author: { query, records }, or null. LC sends at most 10, newest
+// editions first, so `year` (the year printed in a copy) narrows it to that year's.
+// LC's search finds nothing for accented letters ("García Márquez": 0 records;
+// "Garcia Marquez": 7), so they're asked without accents.
+const unaccented = (text) => text.normalize('NFKD').replace(/\p{M}/gu, '').replace(/"/g, '')
+
+export async function lookUpLocByTitle(title, surname, askLoc, { year } = {}) {
+  const short = unaccented(shortTitle(title))
   if (!short) return null
-  const query = `dc.title="${short}"` + (surname ? ` and bath.author="${surname.replace(/"/g, '')}"` : '')
+  const query = `dc.title="${short}"` + (surname ? ` and bath.author="${unaccented(surname)}"` : '') +
+    (year ? ` and dc.date=${year}` : '')
   const records = parseMarcRecords(await askLoc(query, 10)).filter((r) => {
     const f245 = r.fields.find((f) => f.tag === '245')
     const heading = f245?.sub.filter(([c]) => c === 'a' || c === 'b').map(([, v]) => v).join(' ') ?? ''
@@ -106,4 +112,53 @@ export function locPages(lc) {
   const extent = lc?.fields.find((f) => f.tag === '300')?.sub.find(([c]) => c === 'a')?.[1] ?? ''
   const nums = [...extent.matchAll(/(\d+)\s*(?:p\b|pages)/g)].map((m) => Number(m[1]))
   return nums.length ? Math.max(...nums) : null
+}
+
+// ---------------------------------------------------------------------------
+// One record as a book's details, for Add by hand
+// ---------------------------------------------------------------------------
+
+// Drops the punctuation LC puts between parts: "The wind in the willows /" -> "The wind in the willows".
+const tidyPart = (text) => (text ?? '').replace(/\s*[/:;,=]\s*$/, '').replace(/(?<!\b\p{Lu})\.$/u, '').trim()
+
+// The people credited as authors: the main entry (100) and added names (700)
+// with no role or the role "author", leaving out illustrators, editors and the like.
+function locAuthors(lc) {
+  return lc.fields
+    .filter((f) => f.tag === '100' || f.tag === '700')
+    .filter((f) => !f.sub.some(([c]) => c === 't'))
+    .filter((f) => f.tag === '100' || !f.sub.some(([c, v]) => c === 'e' && !/author/i.test(v)))
+    .map((f) => tidyPart(f.sub.find(([c]) => c === 'a')?.[1]))
+    .filter(Boolean)
+}
+
+// "Grahame, Kenneth" -> "Kenneth Grahame"
+const displayName = (sortName) => {
+  const [last, first] = sortName.split(/,\s*/, 2)
+  return first ? `${first} ${last}` : last
+}
+
+// What an LC record says about its edition. Authors come both as LC files them
+// ("García Márquez, Gabriel", which splits cleanly) and as they're shown.
+export function locEdition(lc) {
+  const f245 = lc.fields.find((f) => f.tag === '245')
+  const part = (code) => tidyPart(f245?.sub.find(([c]) => c === code)?.[1])
+  const imprint = lc.fields.find((f) => f.tag === '264' && f.ind2 === '1') ?? lc.fields.find((f) => f.tag === '260')
+  const f008 = lc.control['008'] ?? ''
+  const year = /^\d{4}$/.test(f008.slice(7, 11)) ? Number(f008.slice(7, 11))
+    : Number(imprint?.sub.find(([c]) => c === 'c')?.[1].match(/\d{4}/)?.[0]) || null
+  const sortNames = locAuthors(lc)
+  return {
+    title: part('a'),
+    subtitle: part('b') || null,
+    authorSortNames: sortNames,
+    authors: sortNames.map(displayName),
+    publisher: tidyPart(imprint?.sub.find(([c]) => c === 'b')?.[1]) || null,
+    year,
+    pages: locPages(lc),
+    firstPublished: locOriginalYear(lc),
+    // "7. ed." keeps its periods; only the joining punctuation goes.
+    edition: lc.fields.find((f) => f.tag === '250')?.sub.find(([c]) => c === 'a')?.[1].replace(/\s*[/:;,=]\s*$/, '').trim() || null,
+    languageCode: f008.slice(35, 38).trim() || null,
+  }
 }

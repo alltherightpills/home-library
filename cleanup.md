@@ -14,6 +14,7 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 | Merge duplicate author names | ~15 pairs | Owner | On Edit a Book, retype the name to match the form to keep. Keep accents. Check first that it's the same person (*Mitchell, David* and *Mitchell, David T.* may not be). |
 | Fix junk in author names | A few | Owner | *Raymond Original Cinema Poster*; *Lucy Maud[Canadian author](1874-1942)*; *père, Alexandre Dumas*. |
 | Re-add the book removed while testing | 1 | Owner | Scan it and use Check and add. The owner knows which one; it's also in backup `2026-10-30_1345`. |
+| Redo LC's title search for accented names | Up to 24 | Claude | LC's search finds nothing for accented letters ("García Márquez": 0 records, "Garcia Marquez": 7). Fixed for new searches on 2026-11-02, but 24 backlog books whose title or surname has a non-plain letter got no LC answer. Some may be just a curly apostrophe. Redo their `loc_search` (`enrich --votes --redo` does one book at a time, so it needs a list option), then `categories:save`. |
 | Add ISBNs to no-ISBN records | ~40 | Owner | Needs the books in hand. Run `npm run enrich` afterward. Many are Ebook and audiobook records that also need checking as physical copies. |
 
 ## Waiting on something

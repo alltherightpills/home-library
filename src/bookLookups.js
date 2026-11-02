@@ -23,6 +23,14 @@ export async function lookUpOpenLibrary(isbn, fetchText) {
   return JSON.parse(await fetchText(url)).docs?.[0] ?? null
 }
 
+// Open Library's works with this title (and author, if given), best match first.
+// Each covers every edition, so its publisher and Dewey lists mix them all.
+export async function searchOpenLibrary(title, author, fetchText, limit = 5) {
+  const params = new URLSearchParams({ title, fields: OL_FIELDS, limit: String(limit) })
+  if (author) params.set('author', author)
+  return JSON.parse(await fetchText(`https://openlibrary.org/search.json?${params}`)).docs ?? []
+}
+
 // Returns Open Library's record for this exact edition, or null. Its cover is
 // this ISBN's own, unlike the work record's, which can come from any edition.
 export async function lookUpOpenLibraryEdition(isbn, fetchText) {
