@@ -52,6 +52,7 @@ function BookReading({ copy, readings }) {
         )}
       </div>
       {error && <p className="error">{error}</p>}
+      {copy.read && !hasRead(mine) && <p className="book-meta">You've read another copy of this book.</p>}
       {mine.length > 0 && (
         <ul className="reading-history">
           {mine.map((r) => (

@@ -99,6 +99,19 @@ export function readingsOf(list, copyId) {
 // Read means finished at least once; set aside doesn't count.
 export const hasRead = (readings) => readings.some((r) => r.status === 'finished')
 
+// The copies counted as read: finished at least once, this copy or another
+// copy of the same work (reading one edition reads them all).
+export function readCopyIds(list, copies) {
+  const finished = new Set((list ?? []).filter((r) => r.status === 'finished' && r.copy_id).map((r) => r.copy_id))
+  const workOf = (c) => c.work?.id ?? `copy:${c.id}`
+  const works = new Set(copies.filter((c) => finished.has(c.id)).map(workOf))
+  return new Set(copies.filter((c) => works.has(workOf(c))).map((c) => c.id))
+}
+
+// The Read filter on book lists: 'all', 'unread' or 'read', by each copy's `read`.
+export const byRead = (copies, filter) =>
+  filter === 'all' ? copies : copies.filter((c) => c.read === (filter === 'read'))
+
 // "Nov 2, 2026" from a stored "2026-11-02".
 export const dateText = (iso) =>
   new Date(`${iso}T00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })

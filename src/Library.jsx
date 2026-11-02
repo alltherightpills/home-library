@@ -1,9 +1,10 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
-import BookList, { SortSelect, ViewToggle } from './BookList.jsx'
+import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
+import { byRead, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
 import { labelIndex } from './series.js'
 import { SORTS, searchWords } from './useCatalog.js'
@@ -12,8 +13,20 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies, categories, readings, error, updateCopy, updateWork, removeCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, error, updateCopy, updateWork, removeCopy, query, nav }) {
+  // Every copy marked `read` (yours, or another copy of the same work), for
+  // the ✓, the count and the Read filter.
+  const copies = useMemo(() => {
+    if (!catalog) return catalog
+    const read = readCopyIds(readings.list, catalog)
+    return catalog.map((c) => ({ ...c, read: read.has(c.id) }))
+  }, [catalog, readings.list])
+  const readCount = useMemo(() => copies?.filter((c) => c.read).length ?? 0, [copies])
   const [sort, setSort] = useState('author')
+  // All / Unread / Read, offered once the reading history has loaded.
+  const [readFilterChoice, setReadFilter] = useState('all')
+  const readFilter = readings.list ? readFilterChoice : 'all'
+  const filterProps = { readFilter, setReadFilter: readings.list ? setReadFilter : null }
   // List or Gallery, for every list of books, remembered on the phone.
   const [view, setViewState] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'list')
   const setView = (v) => {
@@ -93,8 +106,10 @@ function Library({ copies, categories, readings, error, updateCopy, updateWork, 
     if (!copies) return []
     const words = searchWords(query)
     if (!words.length) return []
-    return copies.filter((c) => words.every((w) => c.searchText.includes(w))).sort(SORTS[sort])
-  }, [copies, query, sort])
+    return byRead(copies, readFilter)
+      .filter((c) => words.every((w) => c.searchText.includes(w)))
+      .sort(SORTS[sort])
+  }, [copies, query, sort, readFilter])
 
   if (error) return <p className="error">Couldn't load the catalog: {error}</p>
   if (!copies) return <p className="placeholder">Loading your books…</p>
@@ -148,6 +163,7 @@ function Library({ copies, categories, readings, error, updateCopy, updateWork, 
           setSort={setSort}
           view={view}
           setView={setView}
+          {...filterProps}
           onOpenPlace={openPlace}
           onReplacePlace={replacePlace}
           onOpenBook={openBook}
@@ -160,6 +176,7 @@ function Library({ copies, categories, readings, error, updateCopy, updateWork, 
           copies={copies}
           view={view}
           setView={setView}
+          {...filterProps}
           onOpenLabel={openPlace}
           onOpenBook={openBook}
           onBack={() => history.back()}
@@ -168,6 +185,25 @@ function Library({ copies, categories, readings, error, updateCopy, updateWork, 
       <div className="library" hidden={!!open || !!place}>
         <p className="total">
           <strong>{copies.length.toLocaleString()}</strong> books
+          {readings.list && (
+            <>
+              {' · '}
+              {readCount > 0 ? (
+                // Opens All books showing only the read ones.
+                <button
+                  className="link"
+                  onClick={() => {
+                    setReadFilter('read')
+                    openPlace('all')
+                  }}
+                >
+                  {readCount.toLocaleString()} read
+                </button>
+              ) : (
+                'none read yet'
+              )}
+            </>
+          )}
         </p>
 
         {query.trim() ? (
@@ -175,8 +211,11 @@ function Library({ copies, categories, readings, error, updateCopy, updateWork, 
             <div className="controls">
               <SortSelect sort={sort} setSort={setSort} />
               <ViewToggle view={view} setView={setView} />
+              <ReadFilter filter={readFilter} setFilter={filterProps.setReadFilter} />
             </div>
-            <p className="diagnostic">{shown.length} matching</p>
+            <p className="diagnostic">
+              {shown.length} matching{readFilter !== 'all' && ` (${readFilter} only)`}
+            </p>
             <BookList books={shown} onOpenBook={openBook} view={view} />
           </>
         ) : (

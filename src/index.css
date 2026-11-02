@@ -964,3 +964,9 @@ body {
   color: var(--muted);
   font-size: 14px;
 }
+
+/* The ✓ before a read book's title in lists and the gallery. */
+.read-mark {
+  color: var(--green);
+  font-weight: bold;
+}

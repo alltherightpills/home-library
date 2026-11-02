@@ -3,7 +3,6 @@ import BookReading from './BookReading.jsx'
 import { shelfText } from './categories/review.js'
 import CoverPicker from './CoverPicker.jsx'
 import EditBook from './EditBook.jsx'
-import { hasRead, readingsOf } from './readings.js'
 import { coverUrl, normalize } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
@@ -160,7 +159,7 @@ function BookDetail({ copy, copies, categories, readings, onBack, onOpenBook, on
         {coverUrl(copy, 'L') && (
           <span className="cover-wrap">
             <img className="cover" src={coverUrl(copy, 'L')} alt="" />
-            {hasRead(readingsOf(readings.list, copy.id)) && (
+            {copy.read && (
               <span className="read-badge" title="You've read this">
                 ✓
               </span>
