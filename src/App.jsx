@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Library from './Library.jsx'
 import PasswordForm from './PasswordForm.jsx'
+import ReadingTab from './ReadingTab.jsx'
 import Scanner from './Scanner.jsx'
 import SearchBox from './SearchBox.jsx'
 import SignIn from './SignIn.jsx'
@@ -121,7 +122,8 @@ function SignedInApp({ session, notice, setNotice }) {
         {tab === 'scan' && (
           <Scanner copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
         )}
-        {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
+        {tab === 'reading' && <ReadingTab copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
+        {tab === 'pick' && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && changingPassword && (
           <PasswordForm
             email={session.user.email}

@@ -1,36 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import AddByHand from './AddByHand.jsx'
 import AddCheck from './AddCheck.jsx'
 import { Field } from './EditBook.jsx'
+import IsbnReader from './IsbnReader.jsx'
 import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
-import { BarcodeDetector, setZXingModuleOverrides } from 'barcode-detector/ponyfill'
-import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'
-import { UPC_HINT, copiesWithIsbn, readTypedIsbn, toIsbn } from './isbn.js'
+import { copiesWithIsbn } from './isbn.js'
 import { listText, lookUpNewBook, otherEditions } from './scanLookup.js'
 import { coverUrl } from './useCatalog.js'
 
-// Load the barcode engine from the app's own files instead of the internet,
-// so scanning works offline.
-setZXingModuleOverrides({
-  locateFile: (path, prefix) => (path.endsWith('.wasm') ? wasmUrl : prefix + path),
-})
-
-// Store (UPC) barcodes are read too, only to say they aren't the ISBN.
-const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e'] })
-
-// How often to look at the camera picture for a barcode, in milliseconds.
-const SCAN_INTERVAL = 150
-
 // `scans` lives in App, so the list survives a visit to a book page.
+// The camera turns off whenever IsbnReader leaves the screen (the check form,
+// Add by hand, or another tab).
 function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
-  const videoRef = useRef(null)
-  const streamRef = useRef(null)
-  const [status, setStatus] = useState('idle') // idle | starting | scanning | error
-  const [error, setError] = useState('')
-  const [hint, setHint] = useState('')
-  const [typed, setTyped] = useState('')
-  // The last code the camera read, so a barcode held in view counts once.
-  const lastCode = useRef(null)
   // "New books saved as [year · place]", remembered on the phone.
   const [acquired, setAcquired] = useState(loadAcquired)
   const [changingAcquired, setChangingAcquired] = useState(false)
@@ -51,16 +32,12 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
   }, [])
 
   function openCheck(queue) {
-    stopCamera()
-    setStatus('idle')
     history.pushState({ tab: 'scan', checking: true }, '')
     setChecking(queue)
     window.scrollTo(0, 0)
   }
 
   function openByHand(isbn = null) {
-    stopCamera()
-    setStatus('idle')
     history.pushState({ tab: 'scan', byHand: true }, '')
     setByHand({ isbn })
     window.scrollTo(0, 0)
@@ -76,44 +53,13 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
         .filter((s) => s.lookup?.status === 'looking' || (s.lookup?.status === 'done' && s.lookup.book.found))
     : []
 
-  function stopCamera() {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-  }
-
-  async function startCamera() {
-    setStatus('starting')
-    setError('')
-    lastCode.current = null
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      })
-      streamRef.current = stream
-      videoRef.current.srcObject = stream
-      await videoRef.current.play()
-      setStatus('scanning')
-    } catch (err) {
-      stopCamera()
-      setStatus('error')
-      setError(
-        err.name === 'NotAllowedError'
-          ? 'Camera permission was denied. Allow camera access for this site in Settings, then try again.'
-          : `Could not start the camera (${err.name}: ${err.message}).`,
-      )
-    }
-  }
-
   // A book's ISBN-13, from the camera or the typing box. A book you own
   // opens straight away; with two copies, both are listed to pick from.
   function handleIsbn(isbn) {
-    setHint('')
     const earlier = scans.find((s) => s.isbn === isbn)
     setScans((prev) => [{ ...earlier, isbn, time: new Date() }, ...prev.filter((s) => s.isbn !== isbn)])
     const owned = copies ? copiesWithIsbn(copies, isbn) : []
     if (owned.length === 1) {
-      stopCamera()
       onOpenBook(owned[0].id)
     } else if (owned.length === 0 && !['looking', 'done'].includes(earlier?.lookup?.status)) {
       lookUp(isbn)
@@ -129,58 +75,6 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
     } catch (err) {
       setLookup({ status: 'error', message: err.message })
     }
-  }
-
-  // The camera loop keeps running across screen updates, so it calls the
-  // newest handleIsbn (which sees the newest catalog) through this ref.
-  const handleIsbnRef = useRef(handleIsbn)
-  useEffect(() => {
-    handleIsbnRef.current = handleIsbn
-  })
-
-  // While scanning, check the camera picture for a barcode every SCAN_INTERVAL.
-  useEffect(() => {
-    if (status !== 'scanning') return
-    let timer
-    let cancelled = false
-
-    async function look() {
-      try {
-        const found = await detector.detect(videoRef.current)
-        for (const barcode of found) {
-          if (barcode.rawValue === lastCode.current) continue
-          lastCode.current = barcode.rawValue
-          const isbn = toIsbn(barcode.rawValue)
-          if (isbn) handleIsbnRef.current(isbn)
-          else setHint(UPC_HINT)
-        }
-      } catch (err) {
-        setStatus('error')
-        setError(`The barcode reader failed (${err.name}: ${err.message}).`)
-        return
-      }
-      if (!cancelled) timer = setTimeout(look, SCAN_INTERVAL)
-    }
-
-    look()
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [status])
-
-  // Turn the camera off when leaving the Scan tab.
-  useEffect(() => stopCamera, [])
-
-  function submitTyped(e) {
-    e.preventDefault()
-    const { isbn, problem } = readTypedIsbn(typed)
-    if (problem) {
-      setHint(problem)
-      return
-    }
-    setTyped('')
-    handleIsbn(isbn)
   }
 
   if (byHand) {
@@ -247,44 +141,15 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
         </p>
       )}
 
-      <div className="viewfinder">
-        <video ref={videoRef} playsInline muted />
-        {status === 'scanning' && <div className="aim-box" />}
-        {status !== 'scanning' && (
-          <button className="primary" onClick={startCamera} disabled={status === 'starting'}>
-            {status === 'starting' ? 'Starting…' : 'Start camera'}
-          </button>
+      <IsbnReader onIsbn={handleIsbn}>
+        {copies && (
+          <p className="by-hand-link">
+            <button className="link" onClick={() => openByHand()}>
+              No ISBN? Add by hand
+            </button>
+          </p>
         )}
-      </div>
-
-      {error && <p className="error">{error}</p>}
-
-      <form className="typed-isbn" onSubmit={submitTyped}>
-        <input
-          className="search"
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder="Or type an ISBN"
-          aria-label="ISBN"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck="false"
-          enterKeyHint="search"
-        />
-        <button className="primary" type="submit" disabled={!typed.trim()}>
-          Find
-        </button>
-      </form>
-
-      {copies && (
-        <p className="by-hand-link">
-          <button className="link" onClick={() => openByHand()}>
-            No ISBN? Add by hand
-          </button>
-        </p>
-      )}
-
-      {hint && <p className="scan-hint">{hint}</p>}
+      </IsbnReader>
 
       <h2>Scanned this session</h2>
       {waiting.length > 0 && (
