@@ -16,6 +16,7 @@
 import { fetchAll, signIn } from './lib/session.mjs'
 import { fetchLoc, pacer, parseMarcXml } from './lib/lookup-tools.mjs'
 import { GoogleCapReached, googleCalls, lookUpGoogle, lookUpLocByTitle } from './lib/vote-lookups.mjs'
+import * as openLibrary from '../src/bookLookups.js'
 
 const fetchOpenLibrary = pacer(1000)
 
@@ -23,24 +24,9 @@ const fetchOpenLibrary = pacer(1000)
 // Sources
 // ---------------------------------------------------------------------------
 
-const OL_FIELDS = 'key,title,author_name,first_publish_year,cover_i,number_of_pages_median,subject,edition_count'
-
-// Returns Open Library's work-level record for this ISBN, or null.
-async function lookUpOpenLibrary(isbn) {
-  const url = `https://openlibrary.org/search.json?q=isbn:${isbn}&fields=${OL_FIELDS}&limit=1`
-  return JSON.parse(await fetchOpenLibrary(url)).docs?.[0] ?? null
-}
-
-// Returns Open Library's record for this exact edition, or null. Its cover is
-// this ISBN's own, unlike the work record's, which can come from any edition.
-async function lookUpOpenLibraryEdition(isbn) {
-  try {
-    return JSON.parse(await fetchOpenLibrary(`https://openlibrary.org/isbn/${isbn}.json`))
-  } catch (err) {
-    if (err.message === 'HTTP 404') return null
-    throw err
-  }
-}
+// Open Library's work and edition records (shared with the app), at a polite pace.
+const lookUpOpenLibrary = (isbn) => openLibrary.lookUpOpenLibrary(isbn, fetchOpenLibrary)
+const lookUpOpenLibraryEdition = (isbn) => openLibrary.lookUpOpenLibraryEdition(isbn, fetchOpenLibrary)
 
 // Returns the LC catalog's MARC record for this book, or null. LC's catalog
 // often indexes only the ISBN-10, so try that first, then the ISBN-13.

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { BarcodeDetector, setZXingModuleOverrides } from 'barcode-detector/ponyfill'
 import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'
 import { UPC_HINT, copiesWithIsbn, readTypedIsbn, toIsbn } from './isbn.js'
+import { lookUpNewBook, otherEditions } from './scanLookup.js'
 import { coverUrl } from './useCatalog.js'
 
 // Load the barcode engine from the app's own files instead of the internet,
@@ -60,11 +61,25 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
   // opens straight away; with two copies, both are listed to pick from.
   function handleIsbn(isbn) {
     setHint('')
-    setScans((prev) => [{ isbn, time: new Date() }, ...prev.filter((s) => s.isbn !== isbn)])
+    const earlier = scans.find((s) => s.isbn === isbn)
+    setScans((prev) => [{ ...earlier, isbn, time: new Date() }, ...prev.filter((s) => s.isbn !== isbn)])
     const owned = copies ? copiesWithIsbn(copies, isbn) : []
     if (owned.length === 1) {
       stopCamera()
       onOpenBook(owned[0].id)
+    } else if (owned.length === 0 && !['looking', 'done'].includes(earlier?.lookup?.status)) {
+      lookUp(isbn)
+    }
+  }
+
+  // Looks up a book you don't own, showing progress in its row of the list.
+  async function lookUp(isbn) {
+    const setLookup = (lookup) => setScans((prev) => prev.map((s) => (s.isbn === isbn ? { ...s, lookup } : s)))
+    setLookup({ status: 'looking' })
+    try {
+      setLookup({ status: 'done', book: await lookUpNewBook(isbn, copies?.[0]?.library_id) })
+    } catch (err) {
+      setLookup({ status: 'error', message: err.message })
     }
   }
 
@@ -160,7 +175,7 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
       ) : (
         <ul className="book-list scan-results">
           {scans.map((s) => (
-            <ScanResult key={s.isbn} scan={s} copies={copies} onOpenBook={onOpenBook} />
+            <ScanResult key={s.isbn} scan={s} copies={copies} onOpenBook={onOpenBook} onRetry={() => lookUp(s.isbn)} />
           ))}
         </ul>
       )}
@@ -168,29 +183,90 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
   )
 }
 
-// One scanned ISBN: the copies you own with it, or a note that it's new.
-function ScanResult({ scan, copies, onOpenBook }) {
+// One scanned ISBN: the copies you own with it, or what the lookup found.
+function ScanResult({ scan, copies, onOpenBook, onRetry }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
-  if (owned.length === 0) {
+  if (owned.length > 0) {
+    return owned.map((c) => (
+      <OwnedRow key={c.id} copy={c} note={owned.length > 1 ? `You own ${owned.length} copies` : 'You own this'} onOpenBook={onOpenBook} />
+    ))
+  }
+  const { status, book, message } = scan.lookup ?? {}
+  if (status !== 'done' || !book.found) {
     return (
       <li className="scan-new">
         <strong>{scan.isbn}</strong>
-        <span className="book-meta">{copies ? 'Not in your library' : 'Checking…'}</span>
+        {status === 'looking' && <span className="book-meta">Not in your library. Looking it up…</span>}
+        {status === 'done' && (
+          <span className="book-meta">
+            Not in your library, and no record found in Open Library or Google Books
+            {book.unreachable.length ? ` (${book.unreachable.join(' and ')} didn't answer)` : ''}.
+          </span>
+        )}
+        {status === 'error' && (
+          <span className="book-meta">
+            Not in your library. Couldn't look it up: check your connection. ({message}){' '}
+            <button className="link" onClick={onRetry}>
+              Try again
+            </button>
+          </span>
+        )}
+        {!status && <span className="book-meta">{copies ? 'Not in your library' : 'Checking…'}</span>}
       </li>
     )
   }
-  return owned.map((c) => (
-    <li key={c.id}>
-      <button onClick={() => onOpenBook(c.id)}>
-        <span className="thumb">{coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" />}</span>
-        <span className="book-title">{c.title}</span>
+  const others = copies ? otherEditions(copies, book) : []
+  return (
+    <li className="scan-found">
+      <div className="scan-preview">
+        <span className="thumb large">{book.coverUrl && <img src={book.coverUrl} alt="" />}</span>
+        <div>
+          <p className="book-title">
+            {book.title}
+            {book.subtitle && <span className="scan-subtitle">: {book.subtitle}</span>}
+          </p>
+          {book.authors.length > 0 && <p>{book.authors.join(', ')}</p>}
+          <p className="book-meta">
+            {[book.publisher, book.year, book.pages && `${book.pages} pages`].filter(Boolean).join(' · ')}
+          </p>
+          {book.firstPublished && book.firstPublished !== book.year && (
+            <p className="book-meta">First published {book.firstPublished}</p>
+          )}
+          <p className="book-meta">
+            ISBN {scan.isbn} · from {book.sources.join(' and ')}
+            {book.unreachable.length ? ` (${book.unreachable.join(' and ')} didn't answer)` : ''}
+          </p>
+        </div>
+      </div>
+      {others.length > 0 && (
+        <div className="scan-editions">
+          <p>
+            <strong>You own {others.length === 1 ? 'another edition' : `${others.length} other editions`}:</strong>
+          </p>
+          <ul className="book-list">
+            {others.map((c) => (
+              <OwnedRow key={c.id} copy={c} note="Open my copy" onOpenBook={onOpenBook} />
+            ))}
+          </ul>
+        </div>
+      )}
+    </li>
+  )
+}
+
+// A copy you own, as in the main list, with a note before its gray line.
+function OwnedRow({ copy, note, onOpenBook }) {
+  return (
+    <li>
+      <button onClick={() => onOpenBook(copy.id)}>
+        <span className="thumb">{coverUrl(copy, 'M') && <img src={coverUrl(copy, 'M')} alt="" />}</span>
+        <span className="book-title">{copy.title}</span>
         <span className="book-meta">
-          {owned.length > 1 ? `You own ${owned.length} copies · ` : 'You own this · '}
-          {c.listLine}
+          {note} · {copy.listLine}
         </span>
       </button>
     </li>
-  ))
+  )
 }
 
 export default Scanner

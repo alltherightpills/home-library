@@ -2,16 +2,10 @@
 // ISBN: LC by title + author (finds other editions) and Google Books' best match
 // (its detail record has publisher labels like "Fiction / Short Stories").
 
+import { lookUpGoogle as lookUpGoogleWith, plain, shortTitle } from '../../src/bookLookups.js'
 import { USER_AGENT, fetchLoc, parseMarcRecords, sleep } from './lookup-tools.mjs'
 
-// "The Titan's Curse (Percy Jackson, Book 3)" or "Vernon God Little: A Novel" -> the title alone.
-export const shortTitle = (title) =>
-  title.replace(/\([^)]*\)|\[[^\]]*\]/g, ' ').split(/[:/]/)[0].replace(/\s+/g, ' ').trim()
-
-// Lower case, no accents or punctuation, so "Moby-Dick" and "MOBY DICK" compare equal.
-export const plain = (text) =>
-  text.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase().replace(/&/g, ' and ')
-    .replace(/['’]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+export { plain, shortTitle }
 
 // Records whose title starts with the book's title and that name the author.
 export async function lookUpLocByTitle(title, surname) {
@@ -68,32 +62,9 @@ async function fetchGoogle(path) {
   }
 }
 
-// The volume with this exact ISBN, else the first with this title and author.
-export function bestGoogleMatch(items, { title, surname, isbns }) {
-  const short = plain(shortTitle(title))
-  const hasIsbn = (it) => (it.volumeInfo?.industryIdentifiers ?? []).some((i) => isbns.includes(i.identifier))
-  const sameBook = (it) => {
-    const info = it.volumeInfo ?? {}
-    if (!plain(info.title ?? '').startsWith(short)) return false
-    return !surname || (info.authors ?? []).some((a) => plain(a).includes(plain(surname)))
-  }
-  const exact = items.find(hasIsbn)
-  if (exact?.volumeInfo.categories?.length) return { item: exact, matched_by: 'isbn' }
-  // Some editions carry no labels at all, so prefer one that has them.
-  const same = items.filter(sameBook)
-  const similar = same.find((it) => it.volumeInfo.categories?.length) ?? same[0]
-  if (similar?.volumeInfo.categories?.length || !exact) return similar ? { item: similar, matched_by: 'title_author' } : null
-  return { item: exact, matched_by: 'isbn' }
-}
-
-// Word search, then the matched volume's detail record: up to 2 calls per book.
-export async function lookUpGoogle({ title, author, surname, isbns }) {
-  const short = shortTitle(title)
-  if (!short) return null
-  const query = [short, author].filter(Boolean).join(' ')
-  const { items = [] } = await fetchGoogle(`?q=${encodeURIComponent(query)}&maxResults=10&`)
-  const match = bestGoogleMatch(items, { title, surname, isbns })
-  if (!match) return null
-  const detail = await fetchGoogle(`/${match.item.id}?`)
-  return { query, matched_by: match.matched_by, volume_id: detail.id, volumeInfo: detail.volumeInfo }
+// Google's best match for a book (the rules are in src/bookLookups.js). The
+// scripts always know the title, so they never fall back to an ISBN search.
+export function lookUpGoogle(book) {
+  if (!shortTitle(book.title)) return null
+  return lookUpGoogleWith(book, fetchGoogle)
 }

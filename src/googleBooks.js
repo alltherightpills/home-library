@@ -8,7 +8,14 @@ const API = 'https://www.googleapis.com/books/v1/volumes'
 export const hasGoogleKey = Boolean(GOOGLE_BOOKS_APP_KEY)
 
 // Google's image links come as http and with a page-curl effect; ask for neither.
-const tidyImage = (url) => url.replace(/^http:/, 'https:').replace('&edge=curl', '')
+export const tidyImage = (url) => url.replace(/^http:/, 'https:').replace('&edge=curl', '')
+
+// The fetcher that src/bookLookups.js expects, for a path such as "?q=...&" or "/<id>?".
+export async function fetchGoogleJson(path) {
+  const res = await fetch(`${API}${path}key=${GOOGLE_BOOKS_APP_KEY}`)
+  if (!res.ok) throw new Error(`Google Books: HTTP ${res.status}`)
+  return res.json()
+}
 
 // Volumes matching these words that have a cover image.
 export async function searchGoogleBooks(words) {

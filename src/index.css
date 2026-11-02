@@ -577,6 +577,43 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* A new book that was found: a bigger cover beside its details. */
+.scan-found {
+  padding: 12px 0;
+  border-bottom: 1px solid #e2ddd2;
+}
+
+.scan-preview {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.scan-preview p {
+  margin: 0 0 4px;
+}
+
+.thumb.large {
+  width: 72px;
+  height: 108px;
+}
+
+.scan-subtitle {
+  font-weight: normal;
+}
+
+.scan-editions {
+  margin-top: 12px;
+  padding: 4px 12px;
+  border-radius: 8px;
+  background: #f1ede4;
+}
+
+.scan-editions p {
+  margin: 8px 0 0;
+}
+
 .diagnostic {
   color: var(--muted);
   font-size: 13px;
