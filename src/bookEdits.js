@@ -102,7 +102,7 @@ function check(error, what) {
 }
 
 // Find the person with this exact name, or add them.
-async function findOrAddAuthor(libraryId, last, first) {
+export async function findOrAddAuthor(libraryId, last, first) {
   const sortName = first ? `${last}, ${first}` : last
   const { data: found, error } = await supabase
     .from('authors')
@@ -123,7 +123,7 @@ async function findOrAddAuthor(libraryId, last, first) {
 
 // An author with no books left would inflate the author count, so remove them.
 // If this fails the edit still stands; the extra author is harmless for now.
-async function removeAuthorIfUnused(authorId) {
+export async function removeAuthorIfUnused(authorId) {
   const { count, error } = await supabase
     .from('work_authors')
     .select('author_id', { count: 'exact', head: true })
@@ -237,6 +237,12 @@ async function saveLabels(copy, rows, kind, onCopy) {
   }
   onCopy(copy.id, { [kind.onCopy]: [...links.values()] })
   for (const label of dropped) await removeLabelIfUnused(kind, label)
+}
+
+// A new copy's series and publisher's series, from form rows like Edit a Book's.
+export async function saveNewCopyLabels(copy, form, onCopy) {
+  await saveLabels(copy, form.series, SERIES, onCopy)
+  await saveLabels(copy, form.publisherSeries, PUBLISHER_SERIES, onCopy)
 }
 
 // Saves what changed. `sharedWork` means another copy belongs to the same work.

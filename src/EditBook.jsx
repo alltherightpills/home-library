@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { formFromCopy, formProblem, removeBook, saveBookEdits } from './bookEdits.js'
+import { labelNames } from './series.js'
 
 // iPhones ignore autoComplete="off" on boxes labeled like a contact form, but
 // tend to skip autofill when a box's hidden name contains "search".
@@ -7,7 +8,7 @@ function useNoAutofillName() {
   return `search-${useId()}`
 }
 
-function Field({ label, value, onChange, numeric, list }) {
+export function Field({ label, value, onChange, numeric, list }) {
   const name = useNoAutofillName()
   return (
     <label>
@@ -27,7 +28,7 @@ function Field({ label, value, onChange, numeric, list }) {
 
 // A text box that grows to show all of a long title. Pressing return saves
 // rather than starting a new line, and a pasted line break becomes a space.
-function TitleField({ label, value, onChange }) {
+export function TitleField({ label, value, onChange }) {
   const box = useRef(null)
   const name = useNoAutofillName()
 
@@ -59,7 +60,7 @@ function TitleField({ label, value, onChange }) {
 
 // Series or publisher's series: a name (with suggestions from the shared list)
 // and the number printed on this book, with room for more than one.
-function LabelRows({ label, rows, names, onChange }) {
+export function LabelRows({ label, rows, names, onChange }) {
   const listId = useId()
   const setRow = (i, key) => (value) => onChange(rows.map((r, n) => (n === i ? { ...r, [key]: value } : r)))
   return (
@@ -82,8 +83,6 @@ function LabelRows({ label, rows, names, onChange }) {
   )
 }
 
-const labelNames = (copies, key) =>
-  [...new Set(copies.flatMap((c) => c[key].map((label) => label.name)))].sort((a, b) => a.localeCompare(b))
 
 function SubcategoryBoxes({ parentId, categories, subIds, onToggle }) {
   const subs = categories.filter((c) => c.parent_id === parentId)

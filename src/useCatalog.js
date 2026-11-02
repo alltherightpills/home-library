@@ -76,7 +76,17 @@ export function useCatalog() {
     setCopies((all) => all.filter((c) => c.id !== id))
   }
 
-  return { copies, categories, error, updateCopy, updateWork, removeCopy }
+  // Reads a just-added copy from the database, with everything the app shows,
+  // and adds it to the catalog on the screen.
+  async function addCopy(id) {
+    const { data, error } = await supabase.from('copies').select(COLUMNS).eq('id', id).single()
+    if (error) throw new Error(`Reading the new book back: ${error.message}`)
+    const copy = withDisplayFields(data)
+    setCopies((all) => [...all.filter((c) => c.id !== id), copy])
+    return copy
+  }
+
+  return { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy }
 }
 
 // Main roles shown as "by ..." on a book; others (Editor, Illustrator...) show on the book page.

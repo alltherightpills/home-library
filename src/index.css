@@ -642,3 +642,31 @@ body {
   color: var(--green);
   font-weight: 600;
 }
+
+/* "New books saved as [year · place]" above the camera, and its Change form. */
+.acquired-line {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.acquired-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.acquired-form p {
+  margin: 0;
+}
+
+.check-all {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.add-author-note {
+  margin: -4px 0 6px;
+  color: var(--muted);
+  font-size: 14px;
+}

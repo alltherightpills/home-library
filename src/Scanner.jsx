@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import AddCheck from './AddCheck.jsx'
+import { Field } from './EditBook.jsx'
+import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
 import { BarcodeDetector, setZXingModuleOverrides } from 'barcode-detector/ponyfill'
 import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'
 import { UPC_HINT, copiesWithIsbn, readTypedIsbn, toIsbn } from './isbn.js'
@@ -18,7 +21,7 @@ const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e'] })
 const SCAN_INTERVAL = 150
 
 // `scans` lives in App, so the list survives a visit to a book page.
-function Scanner({ copies, scans, setScans, onOpenBook }) {
+function Scanner({ copies, scans, setScans, onOpenBook, addCopy }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [status, setStatus] = useState('idle') // idle | starting | scanning | error
@@ -27,6 +30,38 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
   const [typed, setTyped] = useState('')
   // The last code the camera read, so a barcode held in view counts once.
   const lastCode = useRef(null)
+  // "New books saved as [year · place]", remembered on the phone.
+  const [acquired, setAcquired] = useState(loadAcquired)
+  const [changingAcquired, setChangingAcquired] = useState(false)
+  // The ISBNs being checked and added, in scan order, or null on the scan screen.
+  // The check screen is a step in the history, so swiping back returns here.
+  const [checking, setChecking] = useState(null)
+
+  useEffect(() => {
+    const onPop = () => {
+      if (!history.state?.checking) setChecking(null)
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  function openCheck(queue) {
+    stopCamera()
+    setStatus('idle')
+    history.pushState({ tab: 'scan', checking: true }, '')
+    setChecking(queue)
+    window.scrollTo(0, 0)
+  }
+
+  const markSkipped = (isbn) => setScans((prev) => prev.map((s) => (s.isbn === isbn ? { ...s, skipped: true } : s)))
+
+  // New books waiting to be checked, oldest scan first, so they match the pile.
+  const waiting = copies
+    ? [...scans]
+        .reverse()
+        .filter((s) => !s.skipped && !copiesWithIsbn(copies, s.isbn).length)
+        .filter((s) => s.lookup?.status === 'looking' || (s.lookup?.status === 'done' && s.lookup.book.found))
+    : []
 
   function stopCamera() {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -135,8 +170,55 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
     handleIsbn(isbn)
   }
 
+  if (checking) {
+    return (
+      <AddCheck
+        queue={checking}
+        scans={scans}
+        copies={copies}
+        acquired={acquired}
+        addCopy={addCopy}
+        onSkipped={markSkipped}
+        onDone={() => history.back()}
+      />
+    )
+  }
+
+  const setAcquiredPart = (key) => (value) => setAcquired((a) => ({ ...a, [key]: value }))
+
   return (
     <div className="scanner">
+      {changingAcquired ? (
+        <form
+          className="edit-book acquired-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            saveAcquired(acquired)
+            setChangingAcquired(false)
+          }}
+        >
+          <p>
+            <strong>New books saved as</strong>
+          </p>
+          <div className="edit-pair">
+            <Field label="Year acquired" value={acquired.year} onChange={setAcquiredPart('year')} numeric />
+            <Field label="City" value={acquired.city} onChange={setAcquiredPart('city')} />
+            <Field label="State / region" value={acquired.region} onChange={setAcquiredPart('region')} />
+            <Field label="Country" value={acquired.country} onChange={setAcquiredPart('country')} />
+          </div>
+          <button className="primary" type="submit">
+            Done
+          </button>
+        </form>
+      ) : (
+        <p className="acquired-line">
+          New books saved as <strong>{acquiredText(acquired)}</strong> ·{' '}
+          <button className="link" onClick={() => setChangingAcquired(true)}>
+            Change
+          </button>
+        </p>
+      )}
+
       <div className="viewfinder">
         <video ref={videoRef} playsInline muted />
         {status === 'scanning' && <div className="aim-box" />}
@@ -169,13 +251,25 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
       {hint && <p className="scan-hint">{hint}</p>}
 
       <h2>Scanned this session</h2>
+      {waiting.length > 0 && (
+        <button className="primary check-all" onClick={() => openCheck(waiting.map((s) => s.isbn))}>
+          Check and add {waiting.length} {waiting.length === 1 ? 'book' : 'books'}
+        </button>
+      )}
       {copies === null && <p className="placeholder">Loading your books…</p>}
       {scans.length === 0 ? (
         <p className="placeholder">Point the camera at a book's barcode.</p>
       ) : (
         <ul className="book-list scan-results">
           {scans.map((s) => (
-            <ScanResult key={s.isbn} scan={s} copies={copies} onOpenBook={onOpenBook} onRetry={() => lookUp(s.isbn)} />
+            <ScanResult
+              key={s.isbn}
+              scan={s}
+              copies={copies}
+              onOpenBook={onOpenBook}
+              onRetry={() => lookUp(s.isbn)}
+              onAdd={() => openCheck([s.isbn])}
+            />
           ))}
         </ul>
       )}
@@ -184,7 +278,7 @@ function Scanner({ copies, scans, setScans, onOpenBook }) {
 }
 
 // One scanned ISBN: the copies you own with it, or what the lookup found.
-function ScanResult({ scan, copies, onOpenBook, onRetry }) {
+function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
   if (owned.length > 0) {
     return owned.map((c) => (
@@ -236,6 +330,12 @@ function ScanResult({ scan, copies, onOpenBook, onRetry }) {
             ISBN {scan.isbn} · from {book.sources.join(' and ')}
             {book.unreachable.length ? ` (${book.unreachable.join(' and ')} didn't answer)` : ''}
           </p>
+          {copies && (
+            <button className="link strong" onClick={onAdd}>
+              {others.length ? 'Add this one too' : 'Add to library'}
+            </button>
+          )}
+          {scan.skipped && <span className="book-meta"> · skipped</span>}
         </div>
       </div>
       {others.length > 0 && (

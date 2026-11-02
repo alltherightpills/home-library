@@ -2,17 +2,10 @@
 // are now. Changes nothing itself. Fills blanks only: anything entered by hand
 // stays, so running the plan again after applying it finds nothing to do.
 
-import { cleanTitle } from '../../src/titles/cleanTitle.js'
+import { cleanTitle, splitPublisherSeries } from '../../src/titles/cleanTitle.js'
 import { PUBLISHER_SERIES_NAMES, SERIES_NAMES } from '../../src/titles/phrase-rulings.js'
 
 const same = (a, b) => a.toLowerCase() === b.toLowerCase()
-
-// "Penguin Epics 17" → name and number, as cleanTitle keeps them together.
-function splitPublisherSeries(text) {
-  const match = text.match(/^(.*\S)\s+(\d{1,3})$/)
-  const [name, number] = match ? [match[1], match[2]] : [text, '']
-  return { name: PUBLISHER_SERIES_NAMES[name.toLowerCase()] ?? name, number }
-}
 
 // One shared list (series or publisher's series): finds entries by name or alias,
 // and collects the entries the plan needs to add.

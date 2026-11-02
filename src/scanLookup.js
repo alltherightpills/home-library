@@ -89,17 +89,54 @@ const lastWord = (name) => plain(name).split(' ').at(-1)
 // "June 1999" or "1999-06-01" -> 1999
 const yearOf = (text) => Number(text?.match(/\b(1[5-9]|20)\d\d\b/)?.[0]) || null
 
+// "paperback", "Mass Market Paperback" -> Paperback; "Cloth" -> Hardcover. The
+// app's binding list has only those two, so anything else stays blank.
+function bindingOf(format) {
+  if (/paper|soft/i.test(format ?? '')) return 'Paperback'
+  if (/hard|cloth/i.test(format ?? '')) return 'Hardcover'
+  return null
+}
+
+// Open Library writes languages as "/languages/eng", Google as "en".
+const LANGUAGES = {
+  eng: 'English', en: 'English', fre: 'French', fra: 'French', fr: 'French', spa: 'Spanish', es: 'Spanish',
+  ger: 'German', deu: 'German', de: 'German', ita: 'Italian', it: 'Italian', jpn: 'Japanese', ja: 'Japanese',
+  lat: 'Latin', la: 'Latin', grc: 'Greek, Ancient', gre: 'Greek, Modern', rus: 'Russian', ru: 'Russian',
+  por: 'Portuguese', pt: 'Portuguese', chi: 'Chinese', zh: 'Chinese', dut: 'Dutch', nl: 'Dutch',
+}
+
+// Open Library often writes titles in library style ("African American
+// folktales"); Google usually has the same words in title case. Same words, so
+// take Google's capitals; otherwise keep Open Library's title.
+function betterCase(openLibrary, google) {
+  if (!openLibrary) return google ?? null
+  return google && plain(google) === plain(openLibrary) ? google : openLibrary
+}
+
 // What to show for the book, taking each detail from the best source that has it:
 // this edition's own Open Library record, then Google, then the work record.
 function makePreview(ol, edition, google) {
   const info = google?.volumeInfo ?? {}
   const editionCover = edition?.covers?.find((id) => id > 0) ?? null
   const coverId = editionCover ?? ol?.cover_i ?? null
-  const googleCover = info.imageLinks && tidyImage(info.imageLinks.thumbnail ?? info.imageLinks.smallThumbnail)
+  const links = info.imageLinks ?? {}
+  const googleCover = links.thumbnail || links.smallThumbnail ? tidyImage(links.thumbnail ?? links.smallThumbnail) : null
+  // The largest Google image, which is what's saved when Open Library has no cover.
+  const googleSize = ['large', 'extraLarge', 'medium', 'small', 'thumbnail', 'smallThumbnail'].find((s) => links[s])
+  const languageCodes = edition?.languages?.map((l) => l.key.split('/').pop()) ?? (info.language ? [info.language] : [])
   return {
+    isbn10: edition?.isbn_10?.[0] ?? null,
+    binding: bindingOf(edition?.physical_format),
+    languages: [...new Set(languageCodes.map((code) => LANGUAGES[code]).filter(Boolean))],
+    // What the copy's cover fields get when it's added.
+    cover: coverId
+      ? { cover_id: coverId, cover_source: editionCover ? 'openlibrary_edition' : 'openlibrary_work' }
+      : googleSize
+        ? { cover_url: tidyImage(links[googleSize]), cover_source: 'google' }
+        : null,
     found: Boolean(ol || edition || google),
-    title: edition?.title ?? ol?.title ?? info.title ?? null,
-    subtitle: edition ? (edition.subtitle ?? null) : (info.subtitle ?? null),
+    title: betterCase(edition?.title ?? ol?.title, info.title),
+    subtitle: edition ? betterCase(edition.subtitle, info.subtitle) : (info.subtitle ?? null),
     authors: ol?.author_name ?? info.authors ?? [],
     publisher: edition?.publishers?.[0] ?? info.publisher ?? null,
     year: yearOf(edition?.publish_date) ?? yearOf(info.publishedDate),

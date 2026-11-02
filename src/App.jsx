@@ -60,7 +60,7 @@ function SignedInApp({ session, notice, setNotice }) {
   // Books scanned since the app opened, newest first.
   const [scans, setScans] = useState([])
   const current = TABS.find((t) => t.id === tab)
-  const { copies, categories, error, updateCopy, updateWork, removeCopy } = useCatalog()
+  const { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy } = useCatalog()
 
   // Swiping back from a book opened by scanning returns to the Scan tab.
   useEffect(() => {
@@ -94,7 +94,9 @@ function SignedInApp({ session, notice, setNotice }) {
             removeCopy={removeCopy}
           />
         )}
-        {tab === 'scan' && <Scanner copies={copies} scans={scans} setScans={setScans} onOpenBook={openFromScan} />}
+        {tab === 'scan' && (
+          <Scanner copies={copies} scans={scans} setScans={setScans} onOpenBook={openFromScan} addCopy={addCopy} />
+        )}
         {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && changingPassword && (
           <PasswordForm

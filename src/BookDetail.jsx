@@ -16,6 +16,7 @@ const COVER_SOURCES = {
   openlibrary_work: 'Open Library (another edition)',
   picked_openlibrary: 'Open Library (picked by hand)',
   picked_google: 'Google Books (picked by hand)',
+  google: 'Google Books (when the book was added)',
   photo: 'your photo',
 }
 

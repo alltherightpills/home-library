@@ -2,7 +2,7 @@
 // publisher's series, form labels ("A Novel"), edition notes, and award or
 // promotional text. Shared by the report script and, later, Scan to add.
 
-import { BOOK_RULINGS, BOOK_SERIES, PHRASE_RULINGS, SERIES_NAMES, TITLE_SERIES } from './phrase-rulings.js'
+import { BOOK_RULINGS, BOOK_SERIES, PHRASE_RULINGS, PUBLISHER_SERIES_NAMES, SERIES_NAMES, TITLE_SERIES } from './phrase-rulings.js'
 
 // Award and promotional wording: always deleted.
 const PROMO = /\b(winner|finalist|prize|awards?|notable book|book of the year|book club|bestsell\w*|best[- ]selling|perfect for|must[- ]read|fans\b|christmas present|now a |major motion|netflix|tiktok|oprah|gma\b|reese'?s)/i
@@ -60,6 +60,13 @@ function seriesNamedBy(text, seriesNames) {
 }
 
 const tidy = (s) => s.replace(/\s+/g, ' ').replace(/\s+([,;:])/g, '$1').replace(/[\s,;:–—-]+$/, '').trim()
+
+// "Penguin Epics 17" → name and number, as cleanTitle keeps them together.
+export function splitPublisherSeries(text) {
+  const match = text.match(/^(.*\S)\s+(\d{1,3})$/)
+  const [name, number] = match ? [match[1], match[2]] : [text, '']
+  return { name: PUBLISHER_SERIES_NAMES[name.toLowerCase()] ?? name, number }
+}
 
 export function cleanTitle(title, knownSeries = []) {
   const result = { title: title.trim(), series: [], number: '', publisherSeries: [], editionNotes: [], removed: [], checks: [] }

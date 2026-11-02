@@ -48,3 +48,7 @@ export function labelBooks(copies, kind, id) {
   })
   return { name, sets: sets.map((set) => ({ ...set, books: set.books.map((book) => book.copy) })) }
 }
+
+// Every series (or publisher's series) name in the catalog, A–Z, for suggestions.
+export const labelNames = (copies, key) =>
+  [...new Set(copies.flatMap((c) => c[key].map((label) => label.name)))].sort((a, b) => a.localeCompare(b))
