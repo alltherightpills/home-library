@@ -39,9 +39,38 @@ function topMatches(items, words, start) {
     .slice(0, LIMIT)
 }
 
-// The Library search bar, with Google-style suggestions while typing.
+// The on-screen keyboard: how far up from the bottom of the window it reaches
+// (0 when it's closed), and the height of the part of the page still showing.
+// iPhone Safari doesn't shrink the page for the keyboard; it slides the visible
+// part (window.visualViewport) over it, so a bar pinned to the bottom of the
+// window would end up behind the keyboard without this.
+function useKeyboard() {
+  const [keyboard, setKeyboard] = useState({ inset: 0, visible: window.innerHeight })
+  useEffect(() => {
+    const view = window.visualViewport
+    if (!view) return
+    const update = () => {
+      const inset = document.documentElement.clientHeight - view.height - view.offsetTop
+      // Safari's toolbar coming and going moves things a little; that isn't the keyboard.
+      setKeyboard({ inset: inset > 80 ? Math.round(inset) : 0, visible: Math.round(view.height) })
+    }
+    update()
+    view.addEventListener('resize', update)
+    view.addEventListener('scroll', update)
+    return () => {
+      view.removeEventListener('resize', update)
+      view.removeEventListener('scroll', update)
+    }
+  }, [])
+  return keyboard
+}
+
+// The Library search bar, pinned to the bottom of the screen above the tabs
+// (or above the keyboard while typing), with Google-style suggestions that
+// open upward.
 function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
   const [suggesting, setSuggesting] = useState(false)
+  const keyboard = useKeyboard()
   const box = useRef(null)
   const input = useRef(null)
   const index = useMemo(() => buildIndex(copies), [copies])
@@ -82,6 +111,7 @@ function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
     <form
       className="search-box"
       ref={box}
+      style={keyboard.inset ? { bottom: keyboard.inset } : undefined}
       onSubmit={(e) => {
         e.preventDefault() // the keyboard's Search key just closes suggestions
         done()
@@ -118,7 +148,8 @@ function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
       )}
 
       {groups.length > 0 && (
-        <div className="suggestions">
+        // Room above the bar: the visible page, less the bar, the tabs when no keyboard covers them, and a margin.
+        <div className="suggestions" style={{ maxHeight: Math.max(160, keyboard.visible - (keyboard.inset ? 80 : 130)) }}>
           {groups.map(([label, kind, items]) => (
             <div key={kind}>
               <p className="suggestion-label">{label}</p>

@@ -111,9 +111,23 @@ body {
   font-size: 16px;
 }
 
-/* The search box holds the input, its ✕ button, and the suggestions dropdown. */
+/* The search box holds the input, its ✕ button, and the suggestions, which open
+   upward. It's pinned to the bottom of the window just above the tab bar (the
+   same 45px as .review-actions); SearchBox.jsx moves it above the keyboard. */
 .search-box {
-  position: relative;
+  position: fixed;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  bottom: calc(45px + env(safe-area-inset-bottom));
+  padding: 8px 16px;
+  background: var(--paper);
+  border-top: 1px solid #e2ddd2;
+}
+
+/* Room at the bottom of the Library tab, so the bar doesn't cover the last row. */
+.screen:has(.library:not([hidden])) {
+  padding-bottom: 72px;
 }
 
 .search-box .search {
@@ -127,10 +141,10 @@ body {
 
 .clear {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: 8px;
+  right: 16px;
   width: 40px;
-  height: 100%;
+  height: calc(100% - 16px);
   border: none;
   background: none;
   font: inherit;
@@ -140,10 +154,9 @@ body {
 .suggestions {
   position: absolute;
   z-index: 10;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  max-height: 60vh;
+  bottom: calc(100% + 4px);
+  left: 16px;
+  right: 16px;
   overflow-y: auto;
   background: #fff;
   border: 1px solid #ccc;
