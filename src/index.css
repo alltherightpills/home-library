@@ -367,6 +367,20 @@ body {
   padding-left: 48px;
 }
 
+.reading-list .edit-link {
+  margin: 6px 0 0 48px;
+}
+
+.reading-list .edit-reading {
+  margin-top: 10px;
+}
+
+/* The cover picked for a borrowed book. */
+.cover-grid button.picked img {
+  outline: 3px solid var(--green);
+  outline-offset: 2px;
+}
+
 .reading-history {
   padding-left: 20px;
   font-size: 14px;

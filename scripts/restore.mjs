@@ -100,6 +100,10 @@ for (const table of BOOK_TABLES) {
 const ADDED_COPY_COLUMNS = ['audience', 'audience_set_by', 'original_title', 'edition_note', 'notes', 'category_review']
 for (const copy of backup.copies) for (const column of ADDED_COPY_COLUMNS) copy[column] ??= null
 for (const row of backup.book_categories) row.tentative ??= false
+for (const row of backup.readings) {
+  row.cover_url ??= null
+  row.borrowed_from ??= null
+}
 console.log(`Backup ${snapshot}: ${backup.copies.length} books.\n`)
 
 const { supabase, libraryId } = await signIn()
