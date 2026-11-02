@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { shelfText } from './categories/review.js'
 import CoverPicker from './CoverPicker.jsx'
 import EditBook from './EditBook.jsx'
-import { coverUrl } from './useCatalog.js'
+import { coverUrl, normalize } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
 function formatMarcField({ tag, ind1, ind2, sub }) {
@@ -20,9 +20,27 @@ const COVER_SOURCES = {
   photo: 'your photo',
 }
 
+// A title's words, ignoring punctuation, quotes and a leading article, so
+// "The Voyage of the 'Dawn Treader'" matches "The Voyage of the "Dawn Treader"".
+const titleWords = (title) =>
+  normalize(title)
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .replace(/^(the|a|an) /, '')
+
+// What tells another copy of the same work apart: "Paperback · Collier Books · 1970",
+// with its title first when that really differs.
+function editionLabel(other, copy) {
+  const facts = [other.binding, other.publisher, other.edition_year, other.edition_note].filter(Boolean)
+  const sameFacts = facts.join() === [copy.binding, copy.publisher, copy.edition_year, copy.edition_note].filter(Boolean).join()
+  const sameTitle = titleWords(other.title) === titleWords(copy.title)
+  if (sameTitle && sameFacts) return 'another copy of this edition'
+  return [!sameTitle && other.title, ...facts].filter(Boolean).join(' · ')
+}
+
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, copies, categories, onBack, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+function BookDetail({ copy, copies, categories, onBack, onOpenBook, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
   // The cover picker and edit screen are steps in the browser history too, so
   // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
@@ -91,6 +109,9 @@ function BookDetail({ copy, copies, categories, onBack, onOpenLabel, onCoverChan
       </span>
     ))
 
+  // Other copies of the same work: another edition, or a second copy of this one.
+  const alsoOwn = copies.filter((c) => c.id !== copy.id && c.work && c.work.id === copy.work?.id)
+
   const firstPublished = copy.work?.first_published_year
   const shelved = shelfText(copy, categories)
   const rows = [
@@ -141,6 +162,20 @@ function BookDetail({ copy, copies, categories, onBack, onOpenLabel, onCoverChan
       </div>
       <h2>{copy.title}</h2>
       <p className="book-meta">{copy.byline}</p>
+
+      {alsoOwn.length > 0 && (
+        <p className="also-own">
+          You also own:{' '}
+          {alsoOwn.map((other, i) => (
+            <span key={other.id}>
+              {i > 0 && '; '}
+              <button className="link" onClick={() => onOpenBook(other.id)}>
+                {editionLabel(other, copy)}
+              </button>
+            </span>
+          ))}
+        </p>
+      )}
 
       {copy.needs_review && <p className="review-note">⚠︎ Needs checking{copy.review_note && `: ${copy.review_note}`}</p>}
 

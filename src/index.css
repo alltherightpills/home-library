@@ -538,6 +538,10 @@ body {
   background: var(--paper);
 }
 
+.also-own {
+  font-size: 14px;
+}
+
 .flag,
 .review-note {
   color: #a35b00;

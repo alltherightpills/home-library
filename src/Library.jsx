@@ -96,6 +96,7 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
         <BookDetail
           copy={open}
           onBack={() => history.back()}
+          onOpenBook={openBook}
           onOpenLabel={openPlace}
           onCoverChange={(changes) => updateCopy(open.id, changes)}
           copies={copies}
