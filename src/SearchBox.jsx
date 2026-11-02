@@ -71,6 +71,12 @@ function useKeyboard() {
 function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
   const [suggesting, setSuggesting] = useState(false)
   const keyboard = useKeyboard()
+  // While typing on a phone, the tab bar steps aside so the search bar sits on
+  // the keyboard (the `search-typing` rule in index.css). Safari may shrink the
+  // page for the keyboard instead of covering it, so `keyboard` can't tell;
+  // being focused can.
+  const [typing, setTyping] = useState(false)
+  const blurTimer = useRef(null)
   const box = useRef(null)
   const input = useRef(null)
   const index = useMemo(() => buildIndex(copies), [copies])
@@ -87,6 +93,11 @@ function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
       ['Subjects', 'subject', topMatches(index.subjects, words, start)],
     ].filter(([, , items]) => items.length)
   }, [index, query, suggesting])
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('search-typing', typing)
+  }, [typing])
+  useEffect(() => () => document.documentElement.classList.remove('search-typing'), [])
 
   // Tapping anywhere outside the search box closes the suggestions.
   useEffect(() => {
@@ -131,7 +142,16 @@ function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
           setQuery(e.target.value)
           setSuggesting(true)
         }}
-        onFocus={() => setSuggesting(true)}
+        onFocus={() => {
+          clearTimeout(blurTimer.current)
+          setTyping(true)
+          setSuggesting(true)
+        }}
+        // A tap on a suggestion takes the focus first; bringing the tabs back at
+        // once would move the suggestions out from under that tap.
+        onBlur={() => {
+          blurTimer.current = setTimeout(() => setTyping(false), 300)
+        }}
       />
       {query && (
         <button
@@ -148,8 +168,8 @@ function SearchBox({ copies, query, setQuery, onOpenBook, onOpenLabel }) {
       )}
 
       {groups.length > 0 && (
-        // Room above the bar: the visible page, less the bar, the tabs when no keyboard covers them, and a margin.
-        <div className="suggestions" style={{ maxHeight: Math.max(160, keyboard.visible - (keyboard.inset ? 80 : 130)) }}>
+        // Room above the bar: the visible page, less the bar, the tabs unless typing hid them, and a margin.
+        <div className="suggestions" style={{ maxHeight: Math.max(160, keyboard.visible - (keyboard.inset || typing ? 80 : 130)) }}>
           {groups.map(([label, kind, items]) => (
             <div key={kind}>
               <p className="suggestion-label">{label}</p>

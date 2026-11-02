@@ -126,6 +126,17 @@ body {
 }
 
 /* Room at the bottom of the Library tab, so the bar doesn't cover the last row. */
+/* Typing a search on a phone: the tab bar steps aside and the search bar takes
+   its place, on top of the keyboard (set by SearchBox.jsx). */
+@media (pointer: coarse) {
+  .search-typing .tab-bar {
+    display: none;
+  }
+  .search-typing .search-box {
+    bottom: 0;
+  }
+}
+
 /* Room for the search bar, wherever it shows. */
 .app:has(> .search-box) .screen {
   padding-bottom: 72px;
