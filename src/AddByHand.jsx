@@ -26,7 +26,9 @@ function Pick({ coverUrl, title, lines, onPick, disabled }) {
 // Add by hand, for a book with no ISBN or no record: search by title, author
 // and year, pick the closest edition (or none), then the usual check form.
 // `isbn` is set when a scanned book had no record; the new copy gets it.
-function AddByHand({ isbn, copies, categories, acquired, addCopy, onOpenBook, onDone }) {
+// With `onAdded` (the shelf walk), a saved book goes straight to it as
+// { id, warning } instead of to the Added screen.
+function AddByHand({ isbn, copies, categories, acquired, addCopy, onOpenBook, onDone, onAdded, backLabel = 'Back to scanning' }) {
   const [typed, setTyped] = useState(BLANK)
   const [step, setStep] = useState('search') // search | pick | form | done
   const [search, setSearch] = useState(null)
@@ -68,6 +70,7 @@ function AddByHand({ isbn, copies, categories, acquired, addCopy, onOpenBook, on
 
   // The book is saved; show it in the catalog, then say so.
   async function saved({ id, warning }) {
+    if (onAdded) return onAdded({ id, warning })
     let title = book.title
     let problem = warning
     try {
@@ -90,7 +93,7 @@ function AddByHand({ isbn, copies, categories, acquired, addCopy, onOpenBook, on
   const header = (
     <div className="pinned-back">
       <button className="link" onClick={onDone}>
-        ‹ Back to scanning
+        ‹ {backLabel}
       </button>
       {isbn && <span className="book-meta"> · ISBN {isbn}</span>}
     </div>

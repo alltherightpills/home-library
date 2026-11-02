@@ -100,3 +100,25 @@ export async function saveWalk(copy, form, readings) {
   }
   return changes
 }
+
+// A book not in the catalog: the card comes first, then the Check and add form,
+// which starts from the card's year and place (country only with a place, as above).
+export function acquiredFrom(form) {
+  const { city, region } = parsePlace(form.place)
+  return {
+    year: form.year,
+    city: city ?? '',
+    region: region ?? '',
+    country: city || region ? form.country.trim() : '',
+  }
+}
+
+// Once that book is added (year and place went in with it): today's walk date,
+// then a past read if the card said yes. `copy` needs only id and library_id.
+export async function finishNewBook(copy, form, readings) {
+  const changes = { shelf_walked_on: today() }
+  const { error } = await supabase.from('copies').update(changes).eq('id', copy.id)
+  if (error) throw new Error(`marking it walked: ${error.message}`)
+  if (form.read === 'yes') await readings.markRead(copy)
+  return changes
+}

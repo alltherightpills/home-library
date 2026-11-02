@@ -115,6 +115,7 @@ function SignedInApp({ session, notice, setNotice }) {
             updateCopy={updateCopy}
             updateWork={updateWork}
             removeCopy={removeCopy}
+            addCopy={addCopy}
             query={query}
             nav={libraryNav}
           />

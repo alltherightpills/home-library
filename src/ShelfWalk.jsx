@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react'
+import AddByHand from './AddByHand.jsx'
+import { CheckBook } from './AddCheck.jsx'
 import { Field } from './EditBook.jsx'
 import IsbnReader from './IsbnReader.jsx'
 import { copiesWithIsbn } from './isbn.js'
 import { dateText, readingsOf } from './readings.js'
-import { checkForm, saveWalk, startForm, titleMatches, walkSuggestions } from './shelfWalk.js'
+import { lookUpNewBook } from './scanLookup.js'
+import { acquiredFrom, checkForm, finishNewBook, saveWalk, startForm, titleMatches, walkSuggestions } from './shelfWalk.js'
 import { coverUrl } from './useCatalog.js'
 
 const SHORTCUTS = 5 // one-tap buttons under the year and place boxes
@@ -12,8 +15,9 @@ const THIS_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: THIS_YEAR - 1995 + 1 }, (_, i) => String(THIS_YEAR - i))
 
 // The shelf walk: scan a book (or find it by title), fill in its card, Save
-// and scan next. `copies` carry `read` (see Library.jsx).
-function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
+// and scan next. `copies` carry `read` (see Library.jsx). A book not in the
+// catalog gets the card first, then the Check and add form (or Add by hand).
+function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPlace, onBack }) {
   // The card being filled in (a copy id), or null while scanning.
   const [cardId, setCardId] = useState(null)
   // What the last scan found, while scanning: { isbn, owned: [copies] }.
@@ -24,6 +28,11 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
   const matches = useMemo(() => (finding ? titleMatches(copies, finding) : []), [copies, finding])
   // The last book saved, to change it if it was a slip.
   const [lastId, setLastId] = useState(null)
+  // Adding a book not in the catalog: { isbn (null for none), lookup, answers
+  // (the card's form, once Continue is tapped) }, or null.
+  const [adding, setAdding] = useState(null)
+  // Something to say about the last book added, shown until the next scan.
+  const [notice, setNotice] = useState('')
   const suggestions = useMemo(() => walkSuggestions(copies), [copies])
 
   const walked = copies.filter((c) => c.shelf_walked_on).length
@@ -31,6 +40,7 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
   const last = copies.find((c) => c.id === lastId)
 
   function handleIsbn(isbn) {
+    setNotice('')
     const owned = copiesWithIsbn(copies, isbn)
     if (owned.length === 1) {
       setScan(null)
@@ -38,6 +48,103 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
     } else {
       setScan({ isbn, owned })
     }
+  }
+
+  // Looks the book up while its card is filled in.
+  function startAdding(isbn) {
+    setNotice('')
+    setAdding({ isbn, lookup: isbn ? { status: 'looking' } : null, answers: null })
+    if (!isbn) return
+    const setLookup = (lookup) => setAdding((a) => (a?.isbn === isbn ? { ...a, lookup } : a))
+    lookUpNewBook(isbn, copies[0].library_id)
+      .then((book) => setLookup({ status: 'done', book }))
+      .catch((err) => setLookup({ status: 'error', message: err.message }))
+  }
+
+  // The new book is saved, with the card's year and place: show it, mark it
+  // walked (and read), and go back to the camera.
+  async function added({ id, warning }) {
+    const { answers } = adding
+    const problems = [warning]
+    let copy = { id, library_id: copies[0].library_id }
+    try {
+      copy = await addCopy(id)
+    } catch (err) {
+      problems.push(`The app couldn't show it yet (${err.message}). Close and reopen the app to see it.`)
+    }
+    try {
+      updateCopy(id, await finishNewBook(copy, answers, readings))
+    } catch (err) {
+      problems.push(`It's in your library, but saving the walk failed (${err.message}). Use Change below to try again.`)
+    }
+    setAdding(null)
+    setScan(null)
+    setFinding(null)
+    setLastId(id)
+    setNotice(problems.filter(Boolean).join(' '))
+    window.scrollTo(0, 0)
+  }
+
+  // After the card: the Check and add form, or Add by hand with no record.
+  if (adding?.answers) {
+    const acquired = acquiredFrom(adding.answers)
+    const cancel = () => setAdding(null)
+    const { lookup } = adding
+    if (lookup?.status === 'done' && lookup.book.found) {
+      return (
+        <div className="series-view shelf-walk">
+          <div className="pinned-back">
+            <button className="link" onClick={cancel}>
+              ‹ Back to the walk
+            </button>
+          </div>
+          <h2>Check and add</h2>
+          <CheckBook
+            book={lookup.book}
+            isbn={adding.isbn}
+            copies={copies}
+            categories={categories}
+            acquired={acquired}
+            onSaved={added}
+            onSkip={cancel}
+            skipLabel="Don't add"
+          />
+        </div>
+      )
+    }
+    if (lookup?.status === 'looking') {
+      return (
+        <div className="series-view shelf-walk">
+          <div className="pinned-back">
+            <button className="link" onClick={cancel}>
+              ‹ Back to the walk
+            </button>
+          </div>
+          <p className="placeholder">Looking it up…</p>
+        </div>
+      )
+    }
+    return (
+      <div className="shelf-walk">
+        {lookup && (
+          <p className="scan-hint">
+            {lookup.status === 'error'
+              ? `Couldn't look up ISBN ${adding.isbn}: check your connection (${lookup.message}). You can still add it by hand.`
+              : `No record was found for ISBN ${adding.isbn}. Search for it by title instead.`}
+          </p>
+        )}
+        <AddByHand
+          isbn={adding.isbn}
+          copies={copies}
+          categories={categories}
+          acquired={acquired}
+          addCopy={addCopy}
+          onDone={cancel}
+          onAdded={added}
+          backLabel="Back to the walk"
+        />
+      </div>
+    )
   }
 
   return (
@@ -60,7 +167,18 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
         )}
       </p>
 
-      {card ? (
+      {adding ? (
+        <WalkCard
+          key={`new:${adding.isbn}`}
+          copy={newBookCard(adding)}
+          readings={readings}
+          suggestions={suggestions}
+          submit={async (form) => form}
+          submitLabel="Continue"
+          onSaved={(answers) => setAdding((a) => ({ ...a, answers }))}
+          onCancel={() => setAdding(null)}
+        />
+      ) : card ? (
         <WalkCard
           key={card.id}
           copy={card}
@@ -77,6 +195,7 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
         />
       ) : (
         <>
+          {notice && <p className="scan-hint">{notice}</p>}
           {last && (
             <p className="book-meta walk-last">
               Saved <strong>{last.title}</strong> ·{' '}
@@ -103,6 +222,13 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
               </button>
               {finding.trim() && matches.length === 0 && <p className="placeholder">No title in your library matches.</p>}
               <CopyPicks copies={matches} onPick={setCardId} />
+              {finding.trim() && (
+                <p className="by-hand-link">
+                  <button className="link" onClick={() => startAdding(null)}>
+                    Not in your library? Add it
+                  </button>
+                </p>
+              )}
             </div>
           ) : (
             <IsbnReader onIsbn={handleIsbn} startNow>
@@ -121,7 +247,10 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
           )}
           {finding === null && scan && scan.owned.length === 0 && (
             <p className="review-note">
-              {scan.isbn} isn't in your library. Adding it from the walk comes next; for now, use the Scan tab.
+              {scan.isbn} isn't in your library.{' '}
+              <button className="link strong" onClick={() => startAdding(scan.isbn)}>
+                Add it
+              </button>
             </p>
           )}
           {finding === null && scan && scan.owned.length > 1 && (
@@ -134,6 +263,20 @@ function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
       )}
     </div>
   )
+}
+
+// What the card shows for a book not in the catalog, as it's looked up.
+function newBookCard({ isbn, lookup }) {
+  const book = lookup?.status === 'done' && lookup.book.found ? lookup.book : null
+  let title = 'New book (no ISBN)'
+  if (book) title = book.title
+  else if (lookup?.status === 'looking') title = 'Looking it up…'
+  else if (isbn) title = `ISBN ${isbn}`
+  return {
+    title,
+    listLine: [book?.authors.join(', '), 'Not in your library yet'].filter(Boolean).join(' · '),
+    cover_url: book?.coverUrl ?? null,
+  }
 }
 
 // Books to pick from (copies with one ISBN, or titles found), each saying
@@ -157,8 +300,17 @@ function CopyPicks({ copies, onPick }) {
   )
 }
 
-// One book's card: year, place, country, and Read? yes or no.
-function WalkCard({ copy, readings, suggestions, onSaved, onCancel }) {
+// One book's card: year, place, country, and Read? yes or no. `submit` saves
+// it (a new book's card just hands its answers on, with Continue).
+function WalkCard({
+  copy,
+  readings,
+  suggestions,
+  onSaved,
+  onCancel,
+  submit = (form) => saveWalk(copy, form, readings),
+  submitLabel = 'Save and scan next',
+}) {
   const [form, setForm] = useState(() => startForm(copy))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -178,7 +330,7 @@ function WalkCard({ copy, readings, suggestions, onSaved, onCancel }) {
     setBusy(true)
     setError('')
     try {
-      onSaved(await saveWalk(copy, form, readings))
+      onSaved(await submit(form))
     } catch (err) {
       // The year and place may have gone in even though the read didn't:
       // show them, and stay on the card so Save can try the read again.
@@ -231,7 +383,7 @@ function WalkCard({ copy, readings, suggestions, onSaved, onCancel }) {
       {error && <p className="error">{error}</p>}
       <div className="walk-actions">
         <button className="primary" type="submit" disabled={busy}>
-          {busy ? 'Saving…' : 'Save and scan next'}
+          {busy ? 'Saving…' : submitLabel}
         </button>
         <button className="link" type="button" disabled={busy} onClick={onCancel}>
           Skip
