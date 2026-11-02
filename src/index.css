@@ -550,16 +550,33 @@ body {
   color: #a3261b;
 }
 
-.scan-list {
-  padding-left: 24px;
+/* The typing box and its Find button, side by side under the camera. */
+.typed-isbn {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 
-.scan-list li {
-  margin-bottom: 6px;
+.typed-isbn .search {
+  flex: 1;
+}
+
+.scan-hint {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff4d6;
+}
+
+/* A scanned book you don't own: the ISBN, with a note under it. */
+.scan-new {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2ddd2;
   font-variant-numeric: tabular-nums;
 }
 
-.scan-list span,
 .diagnostic {
   color: var(--muted);
   font-size: 13px;

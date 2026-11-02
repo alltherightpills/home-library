@@ -57,8 +57,27 @@ function SignedInApp({ session, notice, setNotice }) {
   // Which tab is showing right now.
   const [tab, setTab] = useState('library')
   const [changingPassword, setChangingPassword] = useState(false)
+  // Books scanned since the app opened, newest first.
+  const [scans, setScans] = useState([])
   const current = TABS.find((t) => t.id === tab)
   const { copies, categories, error, updateCopy, updateWork, removeCopy } = useCatalog()
+
+  // Swiping back from a book opened by scanning returns to the Scan tab.
+  useEffect(() => {
+    const onPop = (e) => {
+      if (e.state?.tab === 'scan') setTab('scan')
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  // Opens a book's page in the Library tab, marking the step before it as the
+  // Scan tab. The Library tab reads the open book from the history when it starts.
+  function openFromScan(id) {
+    history.replaceState({ tab: 'scan' }, '')
+    history.pushState({ book: id }, '')
+    setTab('library')
+  }
 
   return (
     <div className="app">
@@ -75,7 +94,7 @@ function SignedInApp({ session, notice, setNotice }) {
             removeCopy={removeCopy}
           />
         )}
-        {tab === 'scan' && <Scanner />}
+        {tab === 'scan' && <Scanner copies={copies} scans={scans} setScans={setScans} onOpenBook={openFromScan} />}
         {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && changingPassword && (
           <PasswordForm
@@ -107,7 +126,12 @@ function SignedInApp({ session, notice, setNotice }) {
           <button
             key={t.id}
             className={t.id === tab ? 'tab active' : 'tab'}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              // Picking a tab by hand clears a Scan tab marker left by openFromScan,
+              // so swiping back later doesn't jump to the Scan tab.
+              if (history.state?.tab) history.replaceState(null, '')
+              setTab(t.id)
+            }}
           >
             {t.label}
           </button>
