@@ -6,6 +6,21 @@ export const USER_AGENT = 'HomeLibrary/0.1 (personal catalog; github.com/allther
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
+// The file at this address, trying three times; null if it's missing or won't load.
+export async function download(url) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(60_000) })
+      if (res.ok) return Buffer.from(await res.arrayBuffer())
+      if (res.status === 404) return null
+    } catch {
+      // A slow or dropped answer: try again.
+    }
+    await sleep(2000 * attempt)
+  }
+  return null
+}
+
 export function pacer(minGapMs) {
   let next = 0
   return async function fetchPolitely(url) {

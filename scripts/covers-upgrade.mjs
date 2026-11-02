@@ -19,7 +19,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BACKUP_ROOT, BOOK_TABLES, SNAPSHOT_NAME, csvCell, fetchTable } from './lib/catalog.mjs'
 import { imageSize } from './lib/image-size.mjs'
-import { USER_AGENT } from './lib/lookup-tools.mjs'
+import { download } from './lib/lookup-tools.mjs'
 import { ask, signIn } from './lib/session.mjs'
 
 const applying = process.argv.includes('--apply')
@@ -40,20 +40,6 @@ const sizes = JSON.parse(await readFile(cacheFile, 'utf8').catch(() => '{}'))
 // ---------------------------------------------------------------------------
 // Measuring
 // ---------------------------------------------------------------------------
-
-async function download(url) {
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(60_000) })
-      if (res.ok) return Buffer.from(await res.arrayBuffer())
-      if (res.status === 404) return null
-    } catch {
-      // A slow or dropped answer: try again.
-    }
-    await new Promise((r) => setTimeout(r, 2000 * attempt))
-  }
-  return null
-}
 
 // { width, height } of the image at this address, or null if it won't load.
 // Google's "image not available" picture is marked as a placeholder.
