@@ -311,6 +311,12 @@ body {
   line-height: 1.3;
 }
 
+/* The cover's full size, on its own line under the source. */
+.cover-size {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
 .book-title {
   font-weight: 600;
 }
@@ -353,6 +359,82 @@ body {
 
 .label-index .book-meta {
   flex-shrink: 0;
+}
+
+/* List / Gallery, beside the sort. */
+.view-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+/* Gallery: covers three across, in a book's 2:3 shape, title and author under each. */
+.book-gallery {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.book-gallery button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.gallery-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 4px;
+  background: #e2ddd2;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* No cover: the title on a plain tile. */
+.gallery-blank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 8px;
+  font-size: 13px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.gallery-title,
+.gallery-meta {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.gallery-title {
+  -webkit-line-clamp: 2;
+  font-weight: 600;
+}
+
+.gallery-meta {
+  -webkit-line-clamp: 1;
+  color: var(--muted);
 }
 
 /* The dashboard's categories and a category's subcategories, in a white card. */

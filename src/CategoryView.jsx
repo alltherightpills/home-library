@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import BookList, { SortSelect } from './BookList.jsx'
+import BookList, { SortSelect, ViewToggle } from './BookList.jsx'
 import { booksOn, shelfCounts } from './categories/browse.js'
 import { SORTS } from './useCatalog.js'
 
@@ -48,22 +48,23 @@ export function CategoryRows({ copies, categories, onOpenPlace }) {
 }
 
 // A list of books on a shelf, with the sort control.
-function ShelfList({ entries, sort, setSort, onOpenBook, alsoInName }) {
+function ShelfList({ entries, sort, setSort, view, setView, onOpenBook, alsoInName }) {
   const alsoIn = new Set(entries.filter((e) => e.alsoIn).map((e) => e.copy.id))
   const books = entries.map((e) => e.copy).sort(SORTS[sort])
   return (
     <>
       <div className="controls">
         <SortSelect sort={sort} setSort={setSort} />
+        <ViewToggle view={view} setView={setView} />
       </div>
-      <BookList books={books} onOpenBook={onOpenBook} noteFor={(c) => alsoIn.has(c.id) && `Also in ${alsoInName}`} />
+      <BookList books={books} onOpenBook={onOpenBook} view={view} noteFor={(c) => alsoIn.has(c.id) && `Also in ${alsoInName}`} />
     </>
   )
 }
 
 // A main category: its count, Browse all, and its subcategories, most books
 // first. A category with no subcategories goes straight to its books.
-function CategoryPage({ id, copies, categories, sort, setSort, onOpenPlace, onOpenBook, onBack }) {
+function CategoryPage({ id, copies, categories, sort, setSort, view, setView, onOpenPlace, onOpenBook, onBack }) {
   const counts = useMemo(() => shelfCounts(copies, categories), [copies, categories])
   const category = categories.find((c) => c.id === id)
   const subs = categories
@@ -100,7 +101,7 @@ function CategoryPage({ id, copies, categories, sort, setSort, onOpenPlace, onOp
           <p className="book-meta">A book can be in several subcategories, but {category.name} counts it once.</p>
         </>
       ) : (
-        <ShelfList entries={entries} sort={sort} setSort={setSort} onOpenBook={onOpenBook} alsoInName={category.name} />
+        <ShelfList entries={entries} sort={sort} setSort={setSort} view={view} setView={setView} onOpenBook={onOpenBook} alsoInName={category.name} />
       )}
     </div>
   )
@@ -108,7 +109,7 @@ function CategoryPage({ id, copies, categories, sort, setSort, onOpenPlace, onOp
 
 // The books on one shelf: a main category (with its "also in" books), a
 // subcategory, or (noSub) a main category's books with no subcategory.
-function ShelfBooks({ id, noSub, copies, categories, sort, setSort, onOpenBook, onBack }) {
+function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setView, onOpenBook, onBack }) {
   const entries = useMemo(() => booksOn(copies, categories, id, { noSub }), [copies, categories, id, noSub])
   const category = categories.find((c) => c.id === id)
   if (!category) return <BackBar onBack={onBack} />
@@ -127,6 +128,8 @@ function ShelfBooks({ id, noSub, copies, categories, sort, setSort, onOpenBook, 
         entries={entries}
         sort={sort}
         setSort={setSort}
+        view={view}
+        setView={setView}
         onOpenBook={onOpenBook}
         alsoInName={parent ? `${parent.name} › ${category.name}` : category.name}
       />
@@ -136,7 +139,7 @@ function ShelfBooks({ id, noSub, copies, categories, sort, setSort, onOpenBook, 
 
 // Every book, with the Needs checking filter (kept in the place, so it's still
 // on after visiting a book).
-function AllBooks({ flagged, copies, sort, setSort, onOpenBook, onReplacePlace, onBack }) {
+function AllBooks({ flagged, copies, sort, setSort, view, setView, onOpenBook, onReplacePlace, onBack }) {
   const books = useMemo(() => copies.filter((c) => !flagged || c.needs_review).sort(SORTS[sort]), [copies, flagged, sort])
   const flaggedCount = copies.filter((c) => c.needs_review).length
   return (
@@ -146,6 +149,7 @@ function AllBooks({ flagged, copies, sort, setSort, onOpenBook, onReplacePlace, 
       <p className="book-meta">{countText(books.length)}</p>
       <div className="controls">
         <SortSelect sort={sort} setSort={setSort} />
+        <ViewToggle view={view} setView={setView} />
         {flaggedCount > 0 && (
           <button
             className={flagged ? 'chip active' : 'chip'}
@@ -155,7 +159,7 @@ function AllBooks({ flagged, copies, sort, setSort, onOpenBook, onReplacePlace, 
           </button>
         )}
       </div>
-      <BookList books={books} onOpenBook={onOpenBook} />
+      <BookList books={books} onOpenBook={onOpenBook} view={view} />
     </div>
   )
 }

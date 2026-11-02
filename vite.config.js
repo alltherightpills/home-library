@@ -15,6 +15,23 @@ export default defineConfig({
       // Store the app's files on the phone, including the barcode engine (.wasm), for offline use.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,wasm,webmanifest}'],
+        // Keep each cover on the phone the first time it's shown, and show that
+        // copy from then on. Open Library's take 1–4 seconds each to arrive (two
+        // hops through archive.org). The images come from other sites without
+        // permission to read them (status 0), which is fine for showing them.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              ['covers.openlibrary.org', 'books.google.com', 'books.googleusercontent.com'].includes(url.hostname) ||
+              url.pathname.includes('/storage/v1/object/public/covers/'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'covers',
+              expiration: { maxEntries: 8000, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Home Library',

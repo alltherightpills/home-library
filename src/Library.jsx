@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
-import BookList, { SortSelect } from './BookList.jsx'
+import BookList, { SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
@@ -9,9 +9,17 @@ import SeriesView from './SeriesView.jsx'
 import { labelIndex } from './series.js'
 import { SORTS, searchWords } from './useCatalog.js'
 
+const VIEW_KEY = 'library.view'
+
 function Library({ copies, categories, error, updateCopy, updateWork, removeCopy }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('author')
+  // List or Gallery, for every list of books, remembered on the phone.
+  const [view, setViewState] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'list')
+  const setView = (v) => {
+    localStorage.setItem(VIEW_KEY, v)
+    setViewState(v)
+  }
   // The open book lives in the browser history, so swiping back (or the
   // Back button) returns to the list.
   const [openId, setOpenId] = useState(() => history.state?.book ?? null)
@@ -122,6 +130,8 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
           categories={categories}
           sort={sort}
           setSort={setSort}
+          view={view}
+          setView={setView}
           onOpenPlace={openPlace}
           onReplacePlace={replacePlace}
           onOpenBook={openBook}
@@ -132,6 +142,8 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
         <SeriesView
           place={place}
           copies={copies}
+          view={view}
+          setView={setView}
           onOpenLabel={openPlace}
           onOpenBook={openBook}
           onBack={() => history.back()}
@@ -148,9 +160,10 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
           <>
             <div className="controls">
               <SortSelect sort={sort} setSort={setSort} />
-              <span className="diagnostic">{shown.length} matching</span>
+              <ViewToggle view={view} setView={setView} />
             </div>
-            <BookList books={shown} onOpenBook={openBook} />
+            <p className="diagnostic">{shown.length} matching</p>
+            <BookList books={shown} onOpenBook={openBook} view={view} />
           </>
         ) : (
           <>

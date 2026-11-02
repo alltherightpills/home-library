@@ -23,7 +23,8 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 |---|---|---|---|
 | Fill in publisher's series from LC and Open Library | Ready | Both | Separate pass: at least 100 copies have one listed that LibraryThing doesn't. |
 | Fix over-trimmed work titles | Ready | Claude | The import cut work titles at the colon, which drops real subtitles. |
-| Raise the photo size limit | Next cover work | Claude | Photos shrink to 1,000px, too small for a large cover. |
+| Hide other books in the cover picker | Owner's decision | Claude | Google is searched by title words plus author, so the picker also shows the author's other books (*They Can't Kill Us…* showed *A Little Devil in America*). Could hide covers whose short title doesn't match, but a retitled or translated edition would then be hidden too. |
+| Show photos at list and gallery size | First cover photos | Claude | Photos are stored at up to 2,000px and loaded at that size in lists and the gallery too (the free plan can't resize stored images). Save a small copy alongside each photo when it's taken. |
 | Remove the duplicate Lumberjanes Vol. 12 | Owner | Owner | The owner thinks the second copy is an error; remove it in the app. |
 | Check possible duplicate copies | Book in hand | Owner | *The Battle of the Labyrinth*, the Whitman Illuminated, *Anne of Green Gables*, *The Changeling*. Also check whether the first Harry Potter is missing. |
 | Add optional series numbers | Owner's decision | Owner | Hunger Games, Hyperion Cantos, Redwall, Dory Fantasmagory, and Skandar have none so far. |

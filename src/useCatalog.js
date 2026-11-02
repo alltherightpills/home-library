@@ -179,11 +179,24 @@ function titleSortKey(title, languages) {
   return key
 }
 
-// The cover image for a copy, or null. A picked cover or photo (cover_url) wins;
-// otherwise the Open Library cover in size S, M, or L.
+// The cover image for a copy, or null, at a size for where it's shown:
+// 'M' a list thumbnail, 'G' a gallery tile, 'L' the book page. A picked cover
+// or photo (cover_url) wins; otherwise Open Library's. Its "L" is about 330px
+// wide, enough for a gallery tile; the book page gets the original upload,
+// which is sometimes much larger (907 x 1360 against L's 333 x 500).
+const OL_SIZES = { M: '-M', G: '-L', L: '' }
+// Google shrinks its images on request; a cover it has only as a thumbnail
+// (zoom=1, 128px) would just get blurrier, so that one stays as it is.
+const GOOGLE_WIDTHS = { M: 120, G: 400 }
+
 export function coverUrl(copy, size) {
-  if (copy.cover_url) return copy.cover_url
-  return copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}-${size}.jpg` : null
+  const url = copy.cover_url
+  if (url) {
+    const width = GOOGLE_WIDTHS[size]
+    if (!width || !url.includes('books.google') || /[?&]zoom=1\b/.test(url)) return url
+    return `${url.replace(/&fife=[^&]*/, '')}&fife=w${width}`
+  }
+  return copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}${OL_SIZES[size]}.jpg` : null
 }
 
 // The words of a search, ignoring punctuation like "--".
