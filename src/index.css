@@ -144,9 +144,9 @@ body {
 
 /* Screens with their own buttons at the bottom, or a form to fill in, hide the
    search bar: Review categories, Edit a Book, the cover picker, and the Reading
-   tab's camera, whose ISBN box is a different search. (A book opened from
+   tab's camera and the shelf walk, whose ISBN boxes are a different search. (A book opened from
    Review categories keeps the review screen hidden, not gone.) */
-.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *), .reading-scan) > .search-box {
+.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *), .reading-scan, .shelf-walk) > .search-box {
   display: none;
 }
 
@@ -969,4 +969,36 @@ body {
 .read-mark {
   color: var(--green);
   font-weight: bold;
+}
+
+/* The shelf walk's card: one-tap year and place buttons under their boxes,
+   Read? yes or no, and Save and scan next. */
+.walk-shortcuts {
+  justify-content: flex-start;
+  margin: -4px 0 12px;
+}
+
+/* The dashboard's Shelf walk button: the review banner's shape, without its warning colors. */
+.review-banner.walk-banner {
+  border-color: #ccc;
+  background: #fff;
+  color: inherit;
+}
+
+.walk-read {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.walk-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 12px 0 4px;
+}
+
+.walk-last {
+  margin-bottom: 8px;
 }

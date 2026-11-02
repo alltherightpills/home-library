@@ -8,21 +8,30 @@ import { supabase } from './supabase.js'
 import { cleanTitle, splitPublisherSeries } from './titles/cleanTitle.js'
 
 // ---------------------------------------------------------------------------
-// "New books saved as [year · place]": kept on the phone until changed.
+// "New books saved as [year · place]". The place is kept on the phone until
+// changed. The year is this year each time the app opens (a new book is bought
+// the year it's added); a change lasts only while the app stays open.
 // ---------------------------------------------------------------------------
 
 const ACQUIRED_KEY = 'scan.acquired'
+const YEAR_KEY = 'scan.acquiredYear' // in sessionStorage: gone when the app closes
 
 export function loadAcquired() {
-  const blank = { year: String(new Date().getFullYear()), city: '', region: '', country: '' }
+  const year = sessionStorage.getItem(YEAR_KEY) ?? String(new Date().getFullYear())
+  const blank = { city: '', region: '', country: 'USA' }
   try {
-    return { ...blank, ...JSON.parse(localStorage.getItem(ACQUIRED_KEY)) }
+    const saved = { ...blank, ...JSON.parse(localStorage.getItem(ACQUIRED_KEY)) }
+    // Almost every book is bought in the US, so a blank country means USA.
+    return { ...saved, year, country: saved.country || 'USA' }
   } catch {
-    return blank
+    return { ...blank, year }
   }
 }
 
-export const saveAcquired = (acquired) => localStorage.setItem(ACQUIRED_KEY, JSON.stringify(acquired))
+export function saveAcquired({ year, ...place }) {
+  sessionStorage.setItem(YEAR_KEY, year)
+  localStorage.setItem(ACQUIRED_KEY, JSON.stringify(place))
+}
 
 // "2026 · Decorah, Iowa, USA"
 export const acquiredText = ({ year, city, region, country }) =>

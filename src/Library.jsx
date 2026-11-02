@@ -6,6 +6,7 @@ import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
 import { byRead, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
+import ShelfWalk from './ShelfWalk.jsx'
 import { labelIndex } from './series.js'
 import { SORTS, searchWords } from './useCatalog.js'
 
@@ -99,6 +100,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
   }
 
   const reviewCount = copies?.filter((c) => c.category_review).length ?? 0
+  const walkedCount = copies?.filter((c) => c.shelf_walked_on).length ?? 0
   const seriesCount = useMemo(() => (copies ? labelIndex(copies, 'series').length : 0), [copies])
   const publisherSeriesCount = useMemo(() => (copies ? labelIndex(copies, 'publisherSeries').length : 0), [copies])
 
@@ -182,6 +184,9 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
           onBack={() => history.back()}
         />
       )}
+      {!open && place?.kind === 'walk' && (
+        <ShelfWalk copies={copies} readings={readings} updateCopy={updateCopy} onBack={() => history.back()} />
+      )}
       <div className="library" hidden={!!open || !!place}>
         <p className="total">
           <strong>{copies.length.toLocaleString()}</strong> books
@@ -229,6 +234,9 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
             <CategoryRows copies={copies} categories={categories} onOpenPlace={openPlace} />
             <button className="primary browse-all" onClick={() => openPlace('all')}>
               Browse all {copies.length.toLocaleString()} books ›
+            </button>
+            <button className="review-banner walk-banner" onClick={() => openPlace('walk')}>
+              <strong>Shelf walk</strong> · {walkedCount.toLocaleString()} of {copies.length.toLocaleString()} walked ›
             </button>
             <div className="controls">
               {seriesCount > 0 && (
