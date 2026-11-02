@@ -12,7 +12,7 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies, categories, error, updateCopy, updateWork, removeCopy, query, nav }) {
+function Library({ copies, categories, readings, error, updateCopy, updateWork, removeCopy, query, nav }) {
   const [sort, setSort] = useState('author')
   // List or Gallery, for every list of books, remembered on the phone.
   const [view, setViewState] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'list')
@@ -114,11 +114,13 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
           onCoverChange={(changes) => updateCopy(open.id, changes)}
           copies={copies}
           categories={categories}
+          readings={readings}
           sharedWork={copies.some((c) => c.id !== open.id && c.work?.id === open.work?.id)}
           updateCopy={updateCopy}
           updateWork={updateWork}
           onRemoved={() => {
             removeCopy(open.id)
+            readings.reload() // the database moved the book's title onto its readings
             history.go(-2) // past the edit screen and the book page, back to the list
           }}
         />

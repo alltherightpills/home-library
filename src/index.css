@@ -283,6 +283,46 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
+/* The read checkmark sits on the cover's top-right corner. */
+.cover-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.read-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+  line-height: 28px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.book-reading {
+  margin: 16px 0;
+}
+
+.book-reading h3 {
+  margin: 0 0 8px;
+}
+
+.reading-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.reading-history {
+  padding-left: 20px;
+  font-size: 14px;
+}
+
 .photo-button {
   display: inline-block;
   margin: 12px 0;

@@ -23,6 +23,8 @@ export const BOOK_TABLES = [
   { name: 'publisher_series', key: ['id'], primaryKey: 'id' },
   { name: 'copy_series', key: ['copy_id', 'series_id'], primaryKey: 'copy_id,series_id' },
   { name: 'copy_publisher_series', key: ['copy_id', 'publisher_series_id'], primaryKey: 'copy_id,publisher_series_id' },
+  // Only the signed-in person's readings: the database shows nobody else's.
+  { name: 'readings', key: ['id'], primaryKey: 'id' },
 ]
 
 // Backed up for reference; a restore leaves these as they are.

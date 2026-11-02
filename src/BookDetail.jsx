@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import BookReading from './BookReading.jsx'
 import { shelfText } from './categories/review.js'
 import CoverPicker from './CoverPicker.jsx'
 import EditBook from './EditBook.jsx'
+import { hasRead, readingsOf } from './readings.js'
 import { coverUrl, normalize } from './useCatalog.js'
 
 // "650 _0 African Americans ‡x Folklore." from a stored LC subject field.
@@ -40,7 +42,7 @@ function editionLabel(other, copy) {
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, copies, categories, onBack, onOpenBook, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+function BookDetail({ copy, copies, categories, readings, onBack, onOpenBook, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
   // The cover picker and edit screen are steps in the browser history too, so
   // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
@@ -155,7 +157,16 @@ function BookDetail({ copy, copies, categories, onBack, onOpenBook, onOpenLabel,
         </button>
       </div>
       <div className="cover-area">
-        {coverUrl(copy, 'L') && <img className="cover" src={coverUrl(copy, 'L')} alt="" />}
+        {coverUrl(copy, 'L') && (
+          <span className="cover-wrap">
+            <img className="cover" src={coverUrl(copy, 'L')} alt="" />
+            {hasRead(readingsOf(readings.list, copy.id)) && (
+              <span className="read-badge" title="You've read this">
+                ✓
+              </span>
+            )}
+          </span>
+        )}
         <button className="link" onClick={pickCover}>
           {coverUrl(copy, 'L') ? 'Change cover' : 'Add a cover'}
         </button>
@@ -178,6 +189,8 @@ function BookDetail({ copy, copies, categories, onBack, onOpenBook, onOpenLabel,
       )}
 
       {copy.needs_review && <p className="review-note">⚠︎ Needs checking{copy.review_note && `: ${copy.review_note}`}</p>}
+
+      <BookReading copy={copy} readings={readings} />
 
       <dl>
         {rows

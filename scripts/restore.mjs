@@ -55,7 +55,7 @@ function compare(wanted, current) {
 
 // The snapshot's rows moved into another library: every id is replaced with a
 // new one (ids are shared by all libraries, so the originals are taken).
-function copyIntoLibrary(tables, libraryId) {
+function copyIntoLibrary(tables, libraryId, userId) {
   const newIds = new Map()
   const newId = (old) => {
     if (!newIds.has(old)) newIds.set(old, randomUUID())
@@ -74,6 +74,8 @@ function copyIntoLibrary(tables, libraryId) {
     publisher_series: tables.publisher_series.map((r) => moved(r, { id: newId(r.id) })),
     copy_series: tables.copy_series.map((r) => moved(r, { copy_id: newId(r.copy_id), series_id: newId(r.series_id) })),
     copy_publisher_series: tables.copy_publisher_series.map((r) => moved(r, { copy_id: newId(r.copy_id), publisher_series_id: newId(r.publisher_series_id) })),
+    // The readings become the signed-in person's, in the new library.
+    readings: tables.readings.map((r) => moved(r, { id: newId(r.id), copy_id: r.copy_id && newId(r.copy_id), user_id: userId })),
   }
 }
 
@@ -115,7 +117,8 @@ if (!sameLibrary && BOOK_TABLES.some((t) => current[t.name].length)) {
       `Restoring into a different library only works when that library is empty.`,
   )
 }
-const wanted = sameLibrary ? backup : copyIntoLibrary(backup, libraryId)
+const { data: signedIn } = await supabase.auth.getUser()
+const wanted = sameLibrary ? backup : copyIntoLibrary(backup, libraryId, signedIn.user.id)
 
 // Cover photos: each photo cover's file must be in this library's folder, and
 // its web address must point there (it changes with the library or project).
@@ -199,12 +202,12 @@ async function removeRows({ name, key }, rows) {
   }
 }
 
-for (const name of ['book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
 for (const { local, path } of photosToUpload) {
   const { error } = await bucket.upload(path, await readFile(local), { contentType: 'image/jpeg', upsert: true })
   if (error) throw new Error(`Uploading photo ${path}: ${error.message}`)
 }
-for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series']) {
+for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings']) {
   await putRows(byName[name], plan[name].put)
   console.log(`${name}: done`)
 }

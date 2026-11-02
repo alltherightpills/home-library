@@ -4,6 +4,7 @@ import PasswordForm from './PasswordForm.jsx'
 import Scanner from './Scanner.jsx'
 import SearchBox from './SearchBox.jsx'
 import SignIn from './SignIn.jsx'
+import { useReadings } from './readings.js'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
 
@@ -62,6 +63,7 @@ function SignedInApp({ session, notice, setNotice }) {
   const [scans, setScans] = useState([])
   const current = TABS.find((t) => t.id === tab)
   const { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy } = useCatalog()
+  const readings = useReadings()
 
   // The Library search, kept here so the bar can show on other tabs too.
   const [query, setQuery] = useState('')
@@ -107,6 +109,7 @@ function SignedInApp({ session, notice, setNotice }) {
           <Library
             copies={copies}
             categories={categories}
+            readings={readings}
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}

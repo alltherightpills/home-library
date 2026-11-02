@@ -15,8 +15,9 @@ import { bookSheet } from '../src/export/bookSheet.js'
 import { BACKUP_ROOT, BOOK_TABLES, SNAPSHOT_NAME, fetchTable } from './lib/catalog.mjs'
 import { signIn } from './lib/session.mjs'
 
-// Every book table except lookups, the saved answers from Open Library, LC and Google.
-const TABLES = BOOK_TABLES.filter((t) => t.name !== 'lookups')
+// Every book table except lookups (the saved answers from Open Library, LC and
+// Google) and readings, which the spreadsheet doesn't show yet.
+const TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings'].includes(t.name))
 
 const tables = {}
 let madeFrom
