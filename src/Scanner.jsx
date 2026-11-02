@@ -5,7 +5,7 @@ import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
 import { BarcodeDetector, setZXingModuleOverrides } from 'barcode-detector/ponyfill'
 import wasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url'
 import { UPC_HINT, copiesWithIsbn, readTypedIsbn, toIsbn } from './isbn.js'
-import { lookUpNewBook, otherEditions } from './scanLookup.js'
+import { listText, lookUpNewBook, otherEditions } from './scanLookup.js'
 import { coverUrl } from './useCatalog.js'
 
 // Load the barcode engine from the app's own files instead of the internet,
@@ -21,7 +21,7 @@ const detector = new BarcodeDetector({ formats: ['ean_13', 'upc_a', 'upc_e'] })
 const SCAN_INTERVAL = 150
 
 // `scans` lives in App, so the list survives a visit to a book page.
-function Scanner({ copies, scans, setScans, onOpenBook, addCopy }) {
+function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [status, setStatus] = useState('idle') // idle | starting | scanning | error
@@ -176,6 +176,7 @@ function Scanner({ copies, scans, setScans, onOpenBook, addCopy }) {
         queue={checking}
         scans={scans}
         copies={copies}
+        categories={categories}
         acquired={acquired}
         addCopy={addCopy}
         onSkipped={markSkipped}
@@ -294,7 +295,7 @@ function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd }) {
         {status === 'done' && (
           <span className="book-meta">
             Not in your library, and no record found in Open Library or Google Books
-            {book.unreachable.length ? ` (${book.unreachable.join(' and ')} didn't answer)` : ''}.
+            {book.unreachable.length ? ` (${listText(book.unreachable)} didn't answer)` : ''}.
           </span>
         )}
         {status === 'error' && (
@@ -327,8 +328,8 @@ function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd }) {
             <p className="book-meta">First published {book.firstPublished}</p>
           )}
           <p className="book-meta">
-            ISBN {scan.isbn} · from {book.sources.join(' and ')}
-            {book.unreachable.length ? ` (${book.unreachable.join(' and ')} didn't answer)` : ''}
+            ISBN {scan.isbn} · from {listText(book.sources)}
+            {book.unreachable.length ? ` (${listText(book.unreachable)} didn't answer)` : ''}
           </p>
           {copies && (
             <button className="link strong" onClick={onAdd}>

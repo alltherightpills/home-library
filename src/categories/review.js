@@ -108,13 +108,15 @@ export function planShelfDecision(copy, categories, mainId, subIds) {
 
 // What saving Edit a Book's choices writes. Changing the main category or its
 // subcategories is a decision on the book, as on the review list. "Also in" alone
-// isn't: the vote goes on looking after the main shelf. No change writes nothing.
-export function planShelfEdit(copy, categories, { mainId, alsoIds, subIds }) {
+// isn't: the vote goes on looking after the main shelf. No change writes nothing,
+// unless `decide` says the owner accepts the shelves as they are (Scan to add's
+// "Looks right").
+export function planShelfEdit(copy, categories, { mainId, alsoIds, subIds }, { decide = false } = {}) {
   const byId = new Map(categories.map((c) => [c.id, c]))
   const start = shelfChoices(copy, categories)
   const parentOf = (id) => byId.get(id)?.parent_id
   const mainSubs = (ids, main) => [...ids].filter((id) => parentOf(id) === main).sort().join()
-  const decided = Boolean(mainId) && (mainId !== start.mainId || mainSubs(subIds, mainId) !== mainSubs(start.subIds, start.mainId))
+  const decided = Boolean(mainId) && (decide || mainId !== start.mainId || mainSubs(subIds, mainId) !== mainSubs(start.subIds, start.mainId))
   const base = decided ? planShelfDecision(copy, categories, mainId, subIds) : { demote: null, rows: [] }
 
   const rows = new Map(base.rows.map((r) => [r.category_id, r]))

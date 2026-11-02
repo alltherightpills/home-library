@@ -95,7 +95,7 @@ function SignedInApp({ session, notice, setNotice }) {
           />
         )}
         {tab === 'scan' && (
-          <Scanner copies={copies} scans={scans} setScans={setScans} onOpenBook={openFromScan} addCopy={addCopy} />
+          <Scanner copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={openFromScan} addCopy={addCopy} />
         )}
         {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && changingPassword && (

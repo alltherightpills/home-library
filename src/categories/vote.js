@@ -126,6 +126,14 @@ function voteAudience(sources) {
   return { audience: total(teen) >= 2 ? 'Teen' : 'Kids', votes }
 }
 
+// Google's main category from its first label ("Fiction / Fantasy / Epic"), or
+// null when the label has no "/" to go on.
+export function googleMain(labels) {
+  const first = labels[0]
+  if (!first?.includes('/')) return null
+  return MAIN_LABELS.find((m) => labelMatch(m.labels, [first]))?.main ?? 'Nonfiction'
+}
+
 // Main category per LC and Google, to catch the rules' misfires. Open Library's
 // subjects are pooled across editions, too noisy to overrule anything.
 function otherMains(main, sources) {
@@ -134,10 +142,7 @@ function otherMains(main, sources) {
   const lcMains = new Set(sources.lc.clues.map((clues) => mainFromClues(clues).main))
   // LC's editions count only when they agree with one another.
   if (lcMains.size === 1) add([...lcMains][0], WEIGHTS.lc)
-  const first = sources.google.labels[0]
-  if (first?.includes('/')) {
-    add(MAIN_LABELS.find((m) => labelMatch(m.labels, [first]))?.main ?? 'Nonfiction', WEIGHTS.google)
-  }
+  add(googleMain(sources.google.labels), WEIGHTS.google)
   add(mainFromClues(sources.own.clues[0]).main, WEIGHTS.own)
   const mine = scores.get(main) ?? 0
   return [...scores].filter(([name, score]) => name !== main && score > mine && score >= WEIGHTS.lc + WEIGHTS.google)
@@ -156,7 +161,8 @@ export function voteCategories(copy, answers = {}) {
   if (!main) review.push('no main category')
   else if ((SUBCATEGORY_RULES[main] ?? LABEL_RULES[main]) && !subs.length) review.push('no subcategory')
   else if (subs.some((s) => s.tentative)) review.push('tentative subcategory')
-  for (const [name, score] of otherMains(main, sources)) review.push(`sources lean ${name} (${score})`)
+  const leans = otherMains(main, sources)
+  for (const [name, score] of leans) review.push(`sources lean ${name} (${score})`)
 
-  return { main, mainBecause, subs, nearMisses: considered.filter((s) => !subs.some((t) => t.sub === s.sub)), audience, audienceVotes, review, clues }
+  return { main, mainBecause, subs, nearMisses: considered.filter((s) => !subs.some((t) => t.sub === s.sub)), audience, audienceVotes, review, leans, clues }
 }

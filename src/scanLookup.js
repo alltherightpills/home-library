@@ -1,7 +1,9 @@
 // Scan to add: looking up a book you don't own, and finding other editions you do.
+import { splitName } from './addBook.js'
 import { lookUpGoogle, lookUpOpenLibrary, lookUpOpenLibraryEdition, plain, shortTitle } from './bookLookups.js'
 import { fetchGoogleJson, tidyImage } from './googleBooks.js'
 import { isbn13To10 } from './isbn.js'
+import { locCallNumber, locDewey, locOriginalYear, locPages, locSubjects, lookUpLocByIsbn, lookUpLocByTitle } from './locLookups.js'
 import { supabase } from './supabase.js'
 
 async function fetchText(url) {
@@ -10,13 +12,24 @@ async function fetchText(url) {
   return res.text()
 }
 
-const SOURCES = ['openlibrary', 'openlibrary_edition', 'google']
-const SOURCE_NAMES = { openlibrary: 'Open Library', openlibrary_edition: 'Open Library', google: 'Google Books' }
+// Asks the Library of Congress through the relay (supabase/functions/loc),
+// since the phone can't reach LC's catalog itself.
+async function askLoc(query, max) {
+  const { data, error } = await supabase.functions.invoke('loc', { body: { query, max } })
+  if (error) throw new Error(error.message)
+  return data
+}
 
-// Looks up a new ISBN-13 in Open Library, then Google (which needs the title
-// Open Library gives). Answers already saved in `lookups` are used instead of
-// asking again; new ones are saved, as `npm run enrich` does, so adding the
-// book and the category vote won't need to ask again either.
+const SOURCES = ['openlibrary', 'openlibrary_edition', 'loc', 'google', 'loc_search']
+const SOURCE_NAMES = {
+  openlibrary: 'Open Library', openlibrary_edition: 'Open Library', loc: 'Library of Congress',
+  google: 'Google Books', loc_search: 'Library of Congress',
+}
+
+// Looks up a new ISBN-13 in Open Library and LC, then Google and LC's other
+// editions (which need the title Open Library gives). Answers already saved in
+// `lookups` are used instead of asking again; new ones are saved, as `npm run
+// enrich` does, so `npm run categories:save` sees the same answers the vote did.
 // Throws only when no source could be reached at all.
 export async function lookUpNewBook(isbn13, libraryId) {
   const isbn10 = isbn13To10(isbn13)
@@ -53,22 +66,29 @@ export async function lookUpNewBook(isbn13, libraryId) {
     return data
   }
 
-  const [ol, edition] = await Promise.all([
+  const [ol, edition, lc] = await Promise.all([
     ask('openlibrary', () => lookUpOpenLibrary(isbn13, fetchText)),
     ask('openlibrary_edition', () => lookUpOpenLibraryEdition(isbn13, fetchText)),
+    ask('loc', () => lookUpLocByIsbn(isbn10, isbn13, askLoc)),
   ])
   const title = edition?.title ?? ol?.title ?? null
   const author = ol?.author_name?.[0]
   // With no title, Google is searched by ISBN. A miss then isn't saved, so
   // `npm run enrich -- --votes` can still try by title once the book has one.
-  const google = await ask(
-    'google',
-    () => lookUpGoogle({ title, author, surname: author && lastWord(author), isbns: keys }, fetchGoogleJson),
-    Boolean(title),
-  )
-  if (unreachable.length === SOURCES.length) throw new Error('No source could be reached.')
+  // LC's other editions need a title, so with none they aren't asked at all.
+  const [google, locSearch] = await Promise.all([
+    ask(
+      'google',
+      () => lookUpGoogle({ title, author, surname: author && lastWord(author), isbns: keys }, fetchGoogleJson),
+      Boolean(title),
+    ),
+    title ? ask('loc_search', () => lookUpLocByTitle(title, author && splitName(author).last, askLoc)) : null,
+  ])
+  if (unreachable.length === SOURCES.length - (title ? 0 : 1)) throw new Error('No source could be reached.')
 
-  const book = makePreview(ol, edition, google)
+  const book = makePreview(ol, edition, google, lc)
+  // What the category vote reads, as `npm run categories:save` would.
+  book.answers = { locSearch, google, openlibrary: ol }
   book.unreachable = [...new Set(unreachable.map((s) => SOURCE_NAMES[s]))]
 
   // Other editions you own of the same Open Library work, by the ISBNs they were looked up under.
@@ -83,6 +103,9 @@ export async function lookUpNewBook(isbn13, libraryId) {
   }
   return book
 }
+
+// ['A', 'B', 'C'] -> "A, B and C"
+export const listText = (items) => (items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : (items[0] ?? ''))
 
 const lastWord = (name) => plain(name).split(' ').at(-1)
 
@@ -113,9 +136,21 @@ function betterCase(openLibrary, google) {
   return google && plain(google) === plain(openLibrary) ? google : openLibrary
 }
 
+// The earliest first-published year from Open Library and LC's reprint date,
+// as `npm run enrich` picks it; a year after this edition's can't be right.
+function firstPublished(ol, lc, year) {
+  return [
+    { year: ol?.first_publish_year, source: 'Open Library' },
+    { year: locOriginalYear(lc), source: 'LC catalog (008 reprint date)' },
+  ]
+    .filter((c) => c.year && (!year || c.year <= year))
+    .sort((a, b) => a.year - b.year)[0] ?? { year: null, source: null }
+}
+
 // What to show for the book, taking each detail from the best source that has it:
 // this edition's own Open Library record, then Google, then the work record.
-function makePreview(ol, edition, google) {
+// LC's record of this edition adds its cataloging, which the category vote reads.
+function makePreview(ol, edition, google, lc) {
   const info = google?.volumeInfo ?? {}
   const editionCover = edition?.covers?.find((id) => id > 0) ?? null
   const coverId = editionCover ?? ol?.cover_i ?? null
@@ -124,6 +159,11 @@ function makePreview(ol, edition, google) {
   // The largest Google image, which is what's saved when Open Library has no cover.
   const googleSize = ['large', 'extraLarge', 'medium', 'small', 'thumbnail', 'smallThumbnail'].find((s) => links[s])
   const languageCodes = edition?.languages?.map((l) => l.key.split('/').pop()) ?? (info.language ? [info.language] : [])
+  const year = yearOf(edition?.publish_date) ?? yearOf(info.publishedDate)
+  const first = firstPublished(ol, lc, year)
+  // Open Library's edition records sometimes carry a Dewey or LC number when LC has none.
+  const olDewey = edition?.dewey_decimal_class?.find((d) => /^\d{3}/.test(d)) ?? null
+  const olLcc = edition?.lc_classifications?.find((c) => /^[A-Z]{1,3}\s*\d/.test(c)) ?? null
   return {
     isbn10: edition?.isbn_10?.[0] ?? null,
     binding: bindingOf(edition?.physical_format),
@@ -139,12 +179,20 @@ function makePreview(ol, edition, google) {
     subtitle: edition ? betterCase(edition.subtitle, info.subtitle) : (info.subtitle ?? null),
     authors: ol?.author_name ?? info.authors ?? [],
     publisher: edition?.publishers?.[0] ?? info.publisher ?? null,
-    year: yearOf(edition?.publish_date) ?? yearOf(info.publishedDate),
-    pages: edition?.number_of_pages ?? info.pageCount ?? ol?.number_of_pages_median ?? null,
-    firstPublished: ol?.first_publish_year ?? null,
+    year,
+    pages: edition?.number_of_pages ?? info.pageCount ?? locPages(lc) ?? ol?.number_of_pages_median ?? null,
+    firstPublished: first.year,
+    firstPublishedSource: first.source,
+    // The copy's cataloging fields: LC's own record first, else Open Library's numbers.
+    catalog: {
+      lc_subjects: locSubjects(lc),
+      lc_call_number: locCallNumber(lc),
+      dewey: locDewey(lc) ?? olDewey,
+      lcc: olLcc,
+    },
     coverUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : googleCover,
     workKey: ol?.key ?? null,
-    sources: [ol || edition ? 'Open Library' : null, google ? 'Google Books' : null].filter(Boolean),
+    sources: [ol || edition ? 'Open Library' : null, lc ? 'Library of Congress' : null, google ? 'Google Books' : null].filter(Boolean),
   }
 }
 

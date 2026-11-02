@@ -3,25 +3,14 @@
 // (its detail record has publisher labels like "Fiction / Short Stories").
 
 import { lookUpGoogle as lookUpGoogleWith, plain, shortTitle } from '../../src/bookLookups.js'
-import { USER_AGENT, fetchLoc, parseMarcRecords, sleep } from './lookup-tools.mjs'
+import { lookUpLocByTitle as lookUpLocByTitleWith } from '../../src/locLookups.js'
+import { USER_AGENT, askLoc, sleep } from './lookup-tools.mjs'
 
 export { plain, shortTitle }
 
-// Records whose title starts with the book's title and that name the author.
-export async function lookUpLocByTitle(title, surname) {
-  const short = shortTitle(title).replace(/"/g, '')
-  if (!short) return null
-  const query = `dc.title="${short}"` + (surname ? ` and bath.author="${surname.replace(/"/g, '')}"` : '')
-  const url =
-    'http://lx2.loc.gov:210/lcdb?version=1.1&operation=searchRetrieve' +
-    `&query=${encodeURIComponent(query)}&maximumRecords=10&recordSchema=marcxml`
-  const records = parseMarcRecords(await fetchLoc(url)).filter((r) => {
-    const f245 = r.fields.find((f) => f.tag === '245')
-    const heading = f245?.sub.filter(([c]) => c === 'a' || c === 'b').map(([, v]) => v).join(' ') ?? ''
-    return plain(heading).startsWith(plain(short))
-  })
-  return records.length ? { query, records } : null
-}
+// Records whose title starts with the book's title and that name the author
+// (the rules are in src/locLookups.js).
+export const lookUpLocByTitle = (title, surname) => lookUpLocByTitleWith(title, surname, askLoc)
 
 // Thrown when Google says today's allowance is used up, so the run can stop asking.
 export class GoogleCapReached extends Error {}

@@ -95,7 +95,7 @@ function SubcategoryBoxes({ parentId, categories, subIds, onToggle }) {
 }
 
 // The main category, its subcategories, and any others the book is also in.
-function CategoryFields({ shelves, categories, onChange }) {
+export function CategoryFields({ shelves, categories, onChange }) {
   const { mainId, alsoIds, subIds } = shelves
   const mains = categories.filter((c) => !c.parent_id)
   const flipped = (ids, id) => {

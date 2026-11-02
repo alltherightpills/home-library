@@ -14,9 +14,10 @@
 // exception: a cover from enrichment is upgraded to this edition's own when found.)
 
 import { fetchAll, signIn } from './lib/session.mjs'
-import { fetchLoc, pacer, parseMarcXml } from './lib/lookup-tools.mjs'
+import { askLoc, pacer } from './lib/lookup-tools.mjs'
 import { GoogleCapReached, googleCalls, lookUpGoogle, lookUpLocByTitle } from './lib/vote-lookups.mjs'
 import * as openLibrary from '../src/bookLookups.js'
+import { locCallNumber, locOriginalYear, locPages, locSubjects, lookUpLocByIsbn } from '../src/locLookups.js'
 
 const fetchOpenLibrary = pacer(1000)
 
@@ -28,39 +29,12 @@ const fetchOpenLibrary = pacer(1000)
 const lookUpOpenLibrary = (isbn) => openLibrary.lookUpOpenLibrary(isbn, fetchOpenLibrary)
 const lookUpOpenLibraryEdition = (isbn) => openLibrary.lookUpOpenLibraryEdition(isbn, fetchOpenLibrary)
 
-// Returns the LC catalog's MARC record for this book, or null. LC's catalog
-// often indexes only the ISBN-10, so try that first, then the ISBN-13.
-async function lookUpLoc(isbn10, isbn13) {
-  for (const isbn of [isbn10, isbn13].filter(Boolean)) {
-    const url =
-      'http://lx2.loc.gov:210/lcdb?version=1.1&operation=searchRetrieve' +
-      `&query=bath.isbn=${isbn}&maximumRecords=1&recordSchema=marcxml`
-    const record = parseMarcXml(await fetchLoc(url))
-    if (record) return record
-  }
-  return null
-}
+// This edition's LC record, or null (the rules are in src/locLookups.js).
+const lookUpLoc = (isbn10, isbn13) => lookUpLocByIsbn(isbn10, isbn13, askLoc)
 
 // ---------------------------------------------------------------------------
 // Deciding what to fill in for one copy
 // ---------------------------------------------------------------------------
-
-const SUBJECT_TAGS = ['600', '610', '611', '630', '650', '651', '655']
-
-// The original publication year LC records in 008 for reprints ("r19991985").
-function locOriginalYear(lc) {
-  const f008 = lc?.control['008'] ?? ''
-  if (f008[6] !== 'r') return null
-  const year = f008.slice(11, 15)
-  return /^\d{4}$/.test(year) ? Number(year) : null
-}
-
-// "xxii, 327 p. : ill. ; 24 cm." -> 327
-function locPages(lc) {
-  const extent = lc?.fields.find((f) => f.tag === '300')?.sub.find(([c]) => c === 'a')?.[1] ?? ''
-  const nums = [...extent.matchAll(/(\d+)\s*(?:p\b|pages)/g)].map((m) => Number(m[1]))
-  return nums.length ? Math.max(...nums) : null
-}
 
 // Candidate first-published years from each source, earliest first.
 // A year after this edition's own year can't be right, so it's ignored.
@@ -93,12 +67,9 @@ export function copyChanges(copy, ol, lc, edition) {
     Object.assign(changes, cover)
   }
   if (lc) {
-    const subjects = lc.fields
-      .filter((f) => SUBJECT_TAGS.includes(f.tag))
-      .map(({ tag, ind1, ind2, sub }) => ({ tag, ind1, ind2, sub }))
+    const subjects = locSubjects(lc)
     if (!copy.lc_subjects?.length && subjects.length) changes.lc_subjects = subjects
-    const f050 = lc.fields.find((f) => f.tag === '050')
-    const callNumber = f050?.sub.filter(([c]) => c === 'a' || c === 'b').map(([, v]) => v).join(' ')
+    const callNumber = locCallNumber(lc)
     if (copy.lc_call_number == null && callNumber) changes.lc_call_number = callNumber
     const pages = locPages(lc)
     if (copy.pages == null && pages) changes.pages = pages

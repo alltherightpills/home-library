@@ -1,6 +1,9 @@
 // Scan to add: the check form's starting values, and saving a new book.
 import { plain } from './bookLookups.js'
-import { findOrAddAuthor, nameParts, removeAuthorIfUnused, saveNewCopyLabels } from './bookEdits.js'
+import { findOrAddAuthor, nameParts, removeAuthorIfUnused, saveNewCopyLabels, saveShelfEdit } from './bookEdits.js'
+import { shelfChoices } from './categories/review.js'
+import { googleMain, voteCategories } from './categories/vote.js'
+import { categoryIds, voteReview, voteShelves } from './categories/voteResults.js'
 import { supabase } from './supabase.js'
 import { cleanTitle, splitPublisherSeries } from './titles/cleanTitle.js'
 
@@ -76,6 +79,41 @@ export function authorMatches(authors, { last, first }) {
 }
 
 // ---------------------------------------------------------------------------
+// The category vote
+// ---------------------------------------------------------------------------
+
+const NO_MAIN = { flags: ['no main category'], suggestions: [] }
+
+// The vote on a new book, judged as the backlog was: its own record is what LC
+// and Open Library say about this edition, and the other sources are the
+// lookups' answers. `title` and `originalTitle` are the form's starting ones.
+// -> { result, shelves, review, audience, guess }; `problem` if the vote couldn't run.
+export function voteOnNewBook(book, { title, originalTitle }, categories) {
+  const copy = { title, original_title: originalTitle, subjects: [], lt_genres: [], ...book.catalog }
+  try {
+    const result = voteCategories(copy, book.answers)
+    const idOf = categoryIds(categories)
+    const shelves = voteShelves(result, idOf).map((s) => ({ ...s, removed: false }))
+    return { result, shelves, review: voteReview(result), audience: result.audience, guess: mainGuess(result, book.answers, idOf) }
+  } catch (err) {
+    return { result: null, shelves: [], review: NO_MAIN, audience: 'Adult', problem: err.message }
+  }
+}
+
+// With no main category from the rules, what the other sources suggest, to
+// offer as one tap: { id, main, because }, or null. Tested on the backlog's
+// books looked up as new: when LC's other editions and Google agree it matched
+// the owner's main category 93% of the time; Google alone, 66%.
+function mainGuess(result, answers, idOf) {
+  if (result.main) return null
+  const [lean] = result.leans
+  if (lean) return { id: idOf(lean[0]), main: lean[0], because: "LC's other editions and Google agree" }
+  const labels = answers.google?.volumeInfo?.categories ?? []
+  const main = googleMain(labels)
+  return main ? { id: idOf(main), main, because: `Google only, a weaker guess: "${labels[0]}"` } : null
+}
+
+// ---------------------------------------------------------------------------
 // The form
 // ---------------------------------------------------------------------------
 
@@ -84,15 +122,18 @@ const blankRow = { name: '', number: '' }
 // The check form for one looked-up book. The title goes through the same cleanup
 // as the catalog's titles did; series it finds move to their own fields.
 // `others` are copies you own of another edition; the new copy joins their work
-// unless that's unticked.
-export function formFromLookup(book, acquired, others, knownSeries) {
+// unless that's unticked. Categories and audience start as the vote has them.
+// -> { form, vote }
+export function formFromLookup(book, acquired, others, knownSeries, categories) {
   const raw = book.subtitle ? `${book.title}: ${book.subtitle}` : book.title
   const clean = cleanTitle(raw, knownSeries)
   const series = clean.series.map((name, i) => ({ name, number: i === clean.series.length - 1 ? clean.number : '' }))
   const people = book.authors.length ? book.authors.map(splitName) : [{ last: '', first: '' }]
-  return {
+  const originalTitle = clean.changed ? raw : null
+  const vote = voteOnNewBook(book, { title: clean.title, originalTitle }, categories)
+  const form = {
     title: clean.title,
-    originalTitle: clean.changed ? raw : null,
+    originalTitle,
     people,
     series: series.length ? series : [blankRow],
     publisherSeries: clean.publisherSeries.length ? clean.publisherSeries.map(splitPublisherSeries) : [blankRow],
@@ -102,7 +143,11 @@ export function formFromLookup(book, acquired, others, knownSeries) {
     region: acquired.region,
     country: acquired.country,
     workId: others[0]?.work?.id ?? '',
+    shelves: shelfChoices({ shelves: vote.shelves }, categories),
+    audience: vote.audience,
+    looksRight: false,
   }
+  return { form, vote }
 }
 
 // What's wrong with the form, in plain words, or '' if it can be saved.
@@ -132,10 +177,10 @@ function check(error, what) {
 // Today on the phone's calendar (the database's would be tomorrow on a late evening).
 const today = () => new Date().toLocaleDateString('en-CA')
 
-// Saves a new copy: its work (or the other edition's), authors, and series.
-// Until the category vote comes to Scan to add, a new book goes on the review
-// list with no main category. Returns { id, warning }; throws if nothing was kept.
-export async function saveNewBook({ form, book, isbn13, libraryId, knownAuthorIds }) {
+// Saves a new copy: its work (or the other edition's), authors, series, and
+// categories: the vote's shelves first, then the form's changes to them, saved
+// as Edit a Book saves them. Returns { id, warning }; throws if nothing was kept.
+export async function saveNewBook({ form, book, vote, categories, isbn13, libraryId, knownAuthorIds }) {
   const title = form.title.trim()
   const text = (value) => value.trim() || null
   let workId = form.workId
@@ -147,15 +192,14 @@ export async function saveNewBook({ form, book, isbn13, libraryId, knownAuthorId
       for (const person of form.people) {
         if (person.last.trim()) people.push(await findOrAddAuthor(libraryId, person.last.trim(), person.first.trim()))
       }
-      // A first-published year after this edition's can't be right.
-      const firstYear = book.firstPublished && (!book.year || book.firstPublished <= book.year) ? book.firstPublished : null
+      // The lookup has already left out a first-published year after this edition's.
       const { data: work, error } = await supabase
         .from('works')
         .insert({
           library_id: libraryId,
           title,
-          first_published_year: firstYear,
-          first_published_source: firstYear ? 'Open Library' : null,
+          first_published_year: book.firstPublished,
+          first_published_source: book.firstPublishedSource,
         })
         .select('id')
         .single()
@@ -192,24 +236,46 @@ export async function saveNewBook({ form, book, isbn13, libraryId, knownAuthorId
         acquired_region: text(form.region),
         acquired_country: text(form.country),
         ...book.cover,
-        category_review: { flags: ['no main category'], suggestions: [] },
+        ...book.catalog,
+        audience: form.audience,
+        audience_set_by: form.audience === vote.audience ? 'vote' : 'owner',
+        // Until its shelves are saved below, the book waits on the review list.
+        category_review: NO_MAIN,
         added_on: today(),
       })
       .select('id')
       .single()
     check(error, 'Adding the book')
 
-    // The book is saved; a series that fails to save is only a warning.
+    // The book is saved; series or categories that fail to save are only warnings.
+    const warnings = []
     try {
       await saveNewCopyLabels({ id: copy.id, library_id: libraryId, series: [], publisherSeries: [] }, form, () => {})
-      return { id: copy.id, warning: '' }
     } catch (err) {
-      return { id: copy.id, warning: `The book was added, but not its series (${err.message}). Add it with Edit a Book.` }
+      warnings.push(`The book was added, but not its series (${err.message}). Add it with Edit a Book.`)
     }
+    try {
+      await saveCategories(copy.id, libraryId, vote, categories, form)
+    } catch (err) {
+      warnings.push(`The book was added, but not all its categories (${err.message}). It's on Review categories to finish.`)
+    }
+    return { id: copy.id, warning: warnings.join(' ') }
   } catch (err) {
     // Take back what this save added, so trying again doesn't leave a stray work or person.
     if (newWorkId) await supabase.from('works').delete().eq('id', newWorkId)
     for (const author of people) if (!knownAuthorIds.has(author.id)) await removeAuthorIfUnused(author.id)
     throw err
   }
+}
+
+// The vote's shelves and review notes, then the owner's changes on the form.
+// A failure partway leaves the book on the review list.
+async function saveCategories(copyId, libraryId, vote, categories, form) {
+  const rows = vote.shelves.map((s) => ({ ...s, library_id: libraryId, copy_id: copyId, set_by: 'vote' }))
+  if (rows.length) check((await supabase.from('book_categories').insert(rows)).error, 'Saving the categories')
+  if (vote.review !== NO_MAIN) {
+    check((await supabase.from('copies').update({ category_review: vote.review }).eq('id', copyId)).error, 'Saving the review notes')
+  }
+  const voted = { id: copyId, library_id: libraryId, shelves: rows, category_review: vote.review }
+  await saveShelfEdit(voted, categories, form.shelves, form.looksRight, () => {})
 }

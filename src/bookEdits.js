@@ -335,6 +335,13 @@ async function saveShelves(copy, { demote, rows, remove = [] }, clearReview, onC
   }
 }
 
+// Saves the Categories choices for a just-added book, as Edit a Book would.
+// `decide` makes the shelves the owner's even if nothing changed.
+export function saveShelfEdit(copy, categories, shelves, decide, onCopy) {
+  const plan = planShelfEdit(copy, categories, shelves, { decide })
+  return saveShelves(copy, plan, plan.decided, onCopy)
+}
+
 // Saves the owner's decision from the review list, which takes the book off the list.
 export function saveShelfDecision(copy, categories, mainId, subIds, onCopy) {
   return saveShelves(copy, planShelfDecision(copy, categories, mainId, subIds), true, onCopy)
