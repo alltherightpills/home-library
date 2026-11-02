@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# The Supabase CLI's own scratch files
+supabase/.temp/
+
 # Personal data (LibraryThing exports, backups). Never publish.
 data/
