@@ -121,7 +121,17 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 8. Scan to add, with duplicate/edition detection and Quick add.
 9. Backup and spreadsheet export.
 
-**Phase 2:** offline queue, reading tracking (current/finished/set aside, borrowed books), wishlist, lending, Manage screens (authors, places, borrowers, rules), year/place stats, bookplate backfill mode.
+**Phase 2** (order agreed 2026-11-02; details in section 15, "Phase 2 plan"):
+0. Short end-to-end pass of Phase 1 in the iPhone home-screen app.
+1. Reading tracking (current/finished/set aside, borrowed books).
+2. Shelf walk: bookplate backfill (year, place) and "read it?" in one pass.
+3. Year/place stats on the dashboard.
+4. Manage, part one: hub, Authors, Places, Export in the app.
+5. Lending + Borrowers.
+6. Wishlist.
+7. Offline: (a) catalog saved on the phone, (b) scan queue.
+
+Deferred to later ideas: the Category rules editor (screen 13).
 
 **Phase 3:** recommender, location autofill, photo reading, and the AI-guessed recommender attributes.
 
@@ -262,6 +272,15 @@ Order of lookup for each ISBN: **LibraryThing export data → Open Library → L
 - "You also own" and `works:split` pushed in `71cf458`.
 - **Search bar on every screen (2026-11-02, the owner's request).** The bar moved from the Library dashboard to `App.jsx`, which now holds the search text (`query`) and shows one `SearchBox` above the tab bar on every Library screen and on Reading and Pick for me. It stays off the Scan tab (its ISBN box and Add by hand are a different search, and the owner had just mixed the two up), the password form, and, by a CSS rule in `index.css`, screens with their own bottom buttons or a form: Review categories (`.review-place`), Edit a Book (`.edit-book`) and the cover picker. Typing on any other screen shows the results on the Library's main screen as a history step (`showResults`, handed to App with `useImperativeHandle` through `nav`), so Back returns to where you were; from another tab, `goToLibrary` marks the step before as that tab (generalized from the Scan tab's `openFromScan`). One bar for all tabs means it isn't rebuilt when typing jumps to the Library tab, so the keyboard stays up. The search text now survives switching tabs. Lint and build clean. The owner tested it on the iPhone (`npm run dev -- --host`) on 2026-11-02: everything works as expected, but cluttered while typing: Safari's address pill (only when opened by network address), Safari's ⌃ ⌄ ✓ form bar, and our tab bar staying up with a slice of page below it. Pushed in `e502db9`.
 - **Tab bar steps aside while typing a search (2026-11-02).** On the iPhone, Safari shrank the page for the keyboard rather than covering it, so the sticky tab bar rode up with the search bar and `useKeyboard` likely read no keyboard. Instead `SearchBox` marks `<html>` with `search-typing` while its box is focused, and on touch screens (`@media (pointer: coarse)` in `index.css`) the tab bar hides and the search bar takes its place (`bottom: 0`). The mark clears 300ms after the box loses focus, because tapping a suggestion takes the focus first and the tabs coming back at once would move the suggestions out from under the tap. Edit a Book's fields don't hide the tabs. The owner tested it in iPhone Safari via `npm run dev -- --host` on 2026-11-02: tabs hide, suggestions open the right thing, tabs return when the keyboard closes, Edit a Book unaffected. In the home-screen app, Safari's ⌃ ⌄ ✓ form bar still shows above the keyboard (checked by the owner 2026-11-02): it's part of iOS's keyboard for web pages and a web app can't remove it, so leave it.
+
+**Phase 2 plan (agreed 2026-11-02)**
+- **iPhone testing:** the owner tested every Phase 1 change on the iPhone after it was pushed (stated 2026-11-02), so the "not yet tried on the iPhone" notes in this log are out of date. Step 0 is a short end-to-end pass in the home-screen app, mainly for what only the live app shows (covers kept on the phone with no signal) and how the pieces work together.
+- **Order:** shakedown → reading tracking → shelf walk → year/place stats → Manage part one → lending + borrowers → wishlist → offline. Reading comes first because it fills the Reading tab, the read badge, "books read" and the Read/Unread filter, and Phase 3's recommender only picks unread books.
+- **Shelf walk (owner's choice):** bookplate backfill and past reading are one pass, one book at a time: year acquired, place acquired, and Read yes/no. LibraryThing's Date Read was empty, so without this every book starts unread. **No "finished in year" field** for past reads; a past read is just marked read.
+- **Manage part one:** the hub (sliders button on Library), Authors (rename everywhere, merge duplicates; clears several cleanup.md jobs), Places (rename and merge; after the shelf walk, when there are places to tidy), and Export in the app (`src/export/bookSheet.js` was built for this). Manage shows backups and restore as Mac-only; Import from LibraryThing is dropped (done).
+- **Wishlist (owner's choice): its own list**, separate from the library, so it never counts in totals (like borrowed books in reading). Buying one moves it into the library through the normal check form. Scan gets Add to wishlist and notices a scanned book that's on the wishlist.
+- **Offline (owner's choice): only 7a and 7b**, since offline use should be rare. 7a: the catalog saved on the phone, so the owned check works with no signal. 7b: scanned ISBNs saved with no signal and looked up later. Reading, lending and other edits stay online-only.
+- **Deferred:** the Category rules editor (screen 13). Rules stay in `src/categories/category-rules.js`, changed with Claude; the review list handles exceptions.
 
 **Passwords (2026-10-30)**
 - `src/PasswordForm.jsx`: Change password (asks for the current one) and the form a reset email's link opens. "Forgot password?" is on the sign-in screen. Supabase's URL Configuration must allow `https://alltherightpills.github.io/home-library/`. Test on the test account, not the real one. The app never creates a library; only the terminal scripts do (via `my_library()`), so a new account has no library until a script signs in with it.
