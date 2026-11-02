@@ -342,6 +342,75 @@ body {
   flex-shrink: 0;
 }
 
+/* The dashboard's categories and a category's subcategories, in a white card. */
+.section-label {
+  margin: 20px 0 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.category-rows {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #e2ddd2;
+  border-radius: 12px;
+}
+
+.category-rows li + li {
+  border-top: 1px solid #eeebe4;
+}
+
+.category-rows button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 14px;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.category-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.category-rows .book-meta {
+  flex-shrink: 0;
+}
+
+.browse-all {
+  display: block;
+  width: 100%;
+  margin: 12px 0;
+  text-align: left;
+}
+
+/* "12 books need a category check", above the categories. */
+.review-banner {
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #ebd3ae;
+  border-radius: 12px;
+  background: #fdf3e4;
+  font: inherit;
+  font-size: 15px;
+  color: #6b3d0b;
+  text-align: left;
+}
+
 .book-meta {
   color: var(--muted);
   font-size: 14px;

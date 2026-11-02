@@ -1,27 +1,23 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
-import BookList from './BookList.jsx'
+import BookList, { SortSelect } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
+import CategoryView, { CategoryRows } from './CategoryView.jsx'
+import { BROWSE_KINDS } from './categories/browse.js'
 import SearchBox from './SearchBox.jsx'
 import SeriesView from './SeriesView.jsx'
 import { labelIndex } from './series.js'
-import { searchWords } from './useCatalog.js'
-
-const SORTS = {
-  author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.titleSort.localeCompare(b.titleSort),
-  title: (a, b) => a.titleSort.localeCompare(b.titleSort) || a.authorSort.localeCompare(b.authorSort),
-  added: (a, b) => b.added_on.localeCompare(a.added_on) || a.titleSort.localeCompare(b.titleSort),
-}
+import { SORTS, searchWords } from './useCatalog.js'
 
 function Library({ copies, categories, error, updateCopy, updateWork, removeCopy }) {
   const [query, setQuery] = useState('')
   const [sort, setSort] = useState('author')
-  const [onlyFlagged, setOnlyFlagged] = useState(false)
   // The open book lives in the browser history, so swiping back (or the
   // Back button) returns to the list.
   const [openId, setOpenId] = useState(() => history.state?.book ?? null)
-  // A series screen is also a step in the history: { kind } lists them all, and
-  // { kind, id } shows the books in one.
+  // Series, category and review screens are also steps in the history: for
+  // series, { kind } lists them all and { kind, id } shows the books in one;
+  // the category screens are listed in CategoryView.jsx.
   const [place, setPlace] = useState(() => history.state?.place ?? null)
   const listScroll = useRef({})
   const viewName = place ? `${place.kind}:${place.id ?? ''}` : 'all'
@@ -52,9 +48,10 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
     window.scrollTo(0, 0)
   }
 
-  function openPlace(kind, id) {
+  // `extra` is anything more the screen needs, such as Review categories' filter.
+  function openPlace(kind, id, extra) {
     rememberScroll()
-    const next = id ? { kind, id } : { kind }
+    const next = { kind, ...(id && { id }), ...extra }
     listScroll.current[`${kind}:${id ?? ''}`] = 0
     history.pushState({ place: next }, '')
     setOpenId(null)
@@ -67,7 +64,6 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
     setPlace(next)
   }
 
-  const flaggedCount = copies?.filter((c) => c.needs_review).length ?? 0
   const reviewCount = copies?.filter((c) => c.category_review).length ?? 0
   const seriesCount = useMemo(() => (copies ? labelIndex(copies, 'series').length : 0), [copies])
   const publisherSeriesCount = useMemo(() => (copies ? labelIndex(copies, 'publisherSeries').length : 0), [copies])
@@ -75,11 +71,9 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
   const shown = useMemo(() => {
     if (!copies) return []
     const words = searchWords(query)
-    return copies
-      .filter((c) => !onlyFlagged || c.needs_review)
-      .filter((c) => words.every((w) => c.searchText.includes(w)))
-      .sort(SORTS[sort])
-  }, [copies, query, sort, onlyFlagged])
+    if (!words.length) return []
+    return copies.filter((c) => words.every((w) => c.searchText.includes(w))).sort(SORTS[sort])
+  }, [copies, query, sort])
 
   if (error) return <p className="error">Couldn't load the catalog: {error}</p>
   if (!copies) return <p className="placeholder">Loading your books…</p>
@@ -121,7 +115,20 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
           />
         </div>
       )}
-      {!open && place && place.kind !== 'review' && (
+      {!open && place && BROWSE_KINDS.includes(place.kind) && (
+        <CategoryView
+          place={place}
+          copies={copies}
+          categories={categories}
+          sort={sort}
+          setSort={setSort}
+          onOpenPlace={openPlace}
+          onReplacePlace={replacePlace}
+          onOpenBook={openBook}
+          onBack={() => history.back()}
+        />
+      )}
+      {!open && place && ['series', 'publisherSeries'].includes(place.kind) && (
         <SeriesView
           place={place}
           copies={copies}
@@ -137,43 +144,40 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
 
         <SearchBox copies={copies} query={query} setQuery={setQuery} onOpenBook={openBook} onOpenLabel={openPlace} />
 
-        <div className="controls">
-          <label>
-            Sort{' '}
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="author">Author A–Z</option>
-              <option value="title">Title A–Z</option>
-              <option value="added">Date cataloged</option>
-            </select>
-          </label>
-          {flaggedCount > 0 && (
-            <button
-              className={onlyFlagged ? 'chip active' : 'chip'}
-              onClick={() => setOnlyFlagged(!onlyFlagged)}
-            >
-              Needs checking ({flaggedCount})
+        {query.trim() ? (
+          <>
+            <div className="controls">
+              <SortSelect sort={sort} setSort={setSort} />
+              <span className="diagnostic">{shown.length} matching</span>
+            </div>
+            <BookList books={shown} onOpenBook={openBook} />
+          </>
+        ) : (
+          <>
+            {reviewCount > 0 && (
+              <button className="review-banner" onClick={() => openPlace('review')}>
+                <strong>{reviewCount} {reviewCount === 1 ? 'book needs' : 'books need'}</strong> a category check ›
+              </button>
+            )}
+            <h3 className="section-label">Categories</h3>
+            <CategoryRows copies={copies} categories={categories} onOpenPlace={openPlace} />
+            <button className="primary browse-all" onClick={() => openPlace('all')}>
+              Browse all {copies.length.toLocaleString()} books ›
             </button>
-          )}
-          {reviewCount > 0 && (
-            <button className="chip" onClick={() => openPlace('review')}>
-              Review categories ({reviewCount})
-            </button>
-          )}
-          {seriesCount > 0 && (
-            <button className="chip" onClick={() => openPlace('series')}>
-              Series ({seriesCount})
-            </button>
-          )}
-          {publisherSeriesCount > 0 && (
-            <button className="chip" onClick={() => openPlace('publisherSeries')}>
-              Publisher's series ({publisherSeriesCount})
-            </button>
-          )}
-        </div>
-
-        {(query || onlyFlagged) && <p className="diagnostic">{shown.length} matching</p>}
-
-        <BookList books={shown} onOpenBook={openBook} />
+            <div className="controls">
+              {seriesCount > 0 && (
+                <button className="chip" onClick={() => openPlace('series')}>
+                  Series ({seriesCount})
+                </button>
+              )}
+              {publisherSeriesCount > 0 && (
+                <button className="chip" onClick={() => openPlace('publisherSeries')}>
+                  Publisher's series ({publisherSeriesCount})
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </>
   )

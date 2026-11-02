@@ -59,7 +59,7 @@ export function shelfText(copy, categories) {
 }
 
 // Main categories the book appears in besides its main shelf.
-function otherMainIds(copy, categories) {
+export function otherMainIds(copy, categories) {
   const byId = new Map(categories.map((c) => [c.id, c]))
   const { mainShelf, alsoIn, allSubs } = shelfParts(copy, categories)
   const ids = new Set([...alsoIn.map((s) => s.category_id), ...allSubs.map((s) => byId.get(s.category_id).parent_id)])

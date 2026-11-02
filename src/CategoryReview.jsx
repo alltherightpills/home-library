@@ -125,7 +125,8 @@ function ReviewBook({ copy, categories, onOpenBook, onSkip, onSaved, updateCopy 
 // Stays on the page (hidden) while a book page is open, so the chosen filter and
 // any unsaved ticks are still there on coming back.
 function CategoryReview({ place, copies, categories, onOpenPlace, onReplacePlace, onOpenBook, onBack, updateCopy }) {
-  const [filterId, setFilterId] = useState('all')
+  // The dashboard's "No main category yet" opens it on that filter.
+  const [filterId, setFilterId] = useState(place.filter ?? 'all')
   const filter = REVIEW_FILTERS.find((f) => f.id === filterId)
   const reviewable = useMemo(() => copies.filter((c) => c.category_review), [copies])
   const books = useMemo(

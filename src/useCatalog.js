@@ -89,6 +89,13 @@ export function useCatalog() {
   return { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy }
 }
 
+// The list orders, by the keys withDisplayFields adds.
+export const SORTS = {
+  author: (a, b) => a.authorSort.localeCompare(b.authorSort) || a.titleSort.localeCompare(b.titleSort),
+  title: (a, b) => a.titleSort.localeCompare(b.titleSort) || a.authorSort.localeCompare(b.authorSort),
+  added: (a, b) => b.added_on.localeCompare(a.added_on) || a.titleSort.localeCompare(b.titleSort),
+}
+
 // Main roles shown as "by ..." on a book; others (Editor, Illustrator...) show on the book page.
 const MAIN_ROLES = ['Author', 'Creator', 'Primary Contributor', 'Original Author']
 
