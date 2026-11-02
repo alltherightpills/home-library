@@ -487,6 +487,19 @@ body {
   margin: 0;
 }
 
+.edit-book h4 {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.edit-also-subs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0 32px;
+}
+
 .edit-label {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 80px;

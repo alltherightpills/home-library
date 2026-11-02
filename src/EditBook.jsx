@@ -85,9 +85,72 @@ function LabelRows({ label, rows, names, onChange }) {
 const labelNames = (copies, key) =>
   [...new Set(copies.flatMap((c) => c[key].map((label) => label.name)))].sort((a, b) => a.localeCompare(b))
 
-// Edit one copy (mockup screen 8). Categories and Use my location come later.
-function EditBook({ copy, copies, sharedWork, onCancel, onSaved, onRemoved, updateCopy, updateWork }) {
-  const [form, setForm] = useState(() => formFromCopy(copy))
+function SubcategoryBoxes({ parentId, categories, subIds, onToggle }) {
+  const subs = categories.filter((c) => c.parent_id === parentId)
+  return subs.map((sub) => (
+    <label className="edit-check" key={sub.id}>
+      <input type="checkbox" checked={subIds.has(sub.id)} onChange={() => onToggle(sub.id)} />
+      {sub.name}
+    </label>
+  ))
+}
+
+// The main category, its subcategories, and any others the book is also in.
+function CategoryFields({ shelves, categories, onChange }) {
+  const { mainId, alsoIds, subIds } = shelves
+  const mains = categories.filter((c) => !c.parent_id)
+  const flipped = (ids, id) => {
+    const next = new Set(ids)
+    if (!next.delete(id)) next.add(id)
+    return next
+  }
+  const toggleSub = (id) => onChange({ ...shelves, subIds: flipped(subIds, id) })
+  function chooseMain(id) {
+    const next = new Set(alsoIds)
+    next.delete(id)
+    onChange({ ...shelves, mainId: id, alsoIds: next })
+  }
+  return (
+    <>
+      <label>
+        Main category
+        <select value={mainId} onChange={(e) => chooseMain(e.target.value)}>
+          {!mainId && <option value="">Choose one…</option>}
+          {mains.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <SubcategoryBoxes parentId={mainId} categories={categories} subIds={subIds} onToggle={toggleSub} />
+      <h4>Also in</h4>
+      {mains
+        .filter((c) => c.id !== mainId)
+        .map((c) => (
+          <div className="edit-also" key={c.id}>
+            <label className="edit-check">
+              <input
+                type="checkbox"
+                checked={alsoIds.has(c.id)}
+                onChange={() => onChange({ ...shelves, alsoIds: flipped(alsoIds, c.id) })}
+              />
+              {c.name}
+            </label>
+            {alsoIds.has(c.id) && (
+              <div className="edit-also-subs">
+                <SubcategoryBoxes parentId={c.id} categories={categories} subIds={subIds} onToggle={toggleSub} />
+              </div>
+            )}
+          </div>
+        ))}
+    </>
+  )
+}
+
+// Edit one copy (mockup screen 8). Use my location comes later.
+function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onRemoved, updateCopy, updateWork }) {
+  const [form, setForm] = useState(() => formFromCopy(copy, categories))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmingRemove, setConfirmingRemove] = useState(false)
@@ -109,7 +172,7 @@ function EditBook({ copy, copies, sharedWork, onCancel, onSaved, onRemoved, upda
     setBusy(true)
     setError('')
     try {
-      await saveBookEdits(copy, form, sharedWork, { onCopy: updateCopy, onWork: updateWork })
+      await saveBookEdits(copy, form, sharedWork, categories, { onCopy: updateCopy, onWork: updateWork })
       onSaved()
     } catch (err) {
       setError(`Couldn't save everything: ${err.message} Tap Save to try again.`)
@@ -160,6 +223,18 @@ function EditBook({ copy, copies, sharedWork, onCancel, onSaved, onRemoved, upda
         <Field label="Pages" value={form.pages} onChange={set('pages')} numeric />
       </div>
       <LabelRows label="Series" rows={form.series} names={seriesNames} onChange={set('series')} />
+
+      <h3>Categories</h3>
+      <CategoryFields shelves={form.shelves} categories={categories} onChange={set('shelves')} />
+      <label>
+        Audience
+        <select value={form.audience} onChange={(e) => set('audience')(e.target.value)}>
+          {!form.audience && <option value="">Not set</option>}
+          <option>Adult</option>
+          <option>Teen</option>
+          <option>Kids</option>
+        </select>
+      </label>
 
       <h3>This edition</h3>
       <Field label="Publisher" value={form.publisher} onChange={set('publisher')} />

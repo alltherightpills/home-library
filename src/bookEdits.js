@@ -1,4 +1,4 @@
-import { planShelfDecision } from './categories/review.js'
+import { planShelfDecision, planShelfEdit, shelfChoices } from './categories/review.js'
 import { toIsbn, toIsbn10 } from './isbn.js'
 import { supabase } from './supabase.js'
 import { SHELF_COLUMNS } from './useCatalog.js'
@@ -14,7 +14,7 @@ export function nameParts(sortName) {
 const labelRows = (labels) => (labels.length ? labels.map(({ name, number }) => ({ name, number })) : [{ name: '', number: '' }])
 
 // The form's starting values. Everything is text, as typed in a field.
-export function formFromCopy(copy) {
+export function formFromCopy(copy, categories) {
   const text = (value) => (value === null || value === undefined ? '' : String(value))
   // A book with no author yet gets one blank row to fill in.
   const people = copy.people.length
@@ -41,6 +41,8 @@ export function formFromCopy(copy) {
     notes: text(copy.notes),
     needsReview: copy.needs_review,
     reviewNote: text(copy.review_note),
+    audience: text(copy.audience),
+    shelves: shelfChoices(copy, categories),
   }
 }
 
@@ -238,7 +240,7 @@ async function saveLabels(copy, rows, kind, onCopy) {
 }
 
 // Saves what changed. `sharedWork` means another copy belongs to the same work.
-export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) {
+export async function saveBookEdits(copy, form, sharedWork, categories, { onCopy, onWork }) {
   const title = form.title.trim()
 
   const copyChanges = differences(
@@ -262,6 +264,11 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
     },
     copy,
   )
+  // The vote leaves an audience alone once it's the owner's.
+  if (form.audience && form.audience !== copy.audience) {
+    copyChanges.audience = form.audience
+    copyChanges.audience_set_by = 'owner'
+  }
   const languages = form.languages.split(',').map((l) => l.trim()).filter(Boolean)
   if (languages.join() !== copy.languages.join()) copyChanges.languages = languages
   if (Object.keys(copyChanges).length) {
@@ -286,13 +293,15 @@ export async function saveBookEdits(copy, form, sharedWork, { onCopy, onWork }) 
   await saveAuthors(copy, form, onWork)
   await saveLabels(copy, form.series, SERIES, onCopy)
   await saveLabels(copy, form.publisherSeries, PUBLISHER_SERIES, onCopy)
+
+  const shelfPlan = planShelfEdit(copy, categories, form.shelves)
+  await saveShelves(copy, shelfPlan, shelfPlan.decided, onCopy)
 }
 
-// Saves the owner's decision from the review list, which takes the book off the
-// list. Reads the shelves back either way, so after a failure partway the screen
-// matches the database and Save can simply be tapped again.
-export async function saveShelfDecision(copy, categories, mainId, subIds, onCopy) {
-  const { demote, rows } = planShelfDecision(copy, categories, mainId, subIds)
+// Writes a plan from categories/review.js. Reads the shelves back either way, so
+// after a failure partway the screen matches the database and Save can simply be
+// tapped again.
+async function saveShelves(copy, { demote, rows, remove = [] }, clearReview, onCopy) {
   try {
     if (demote) {
       const { error } = await supabase
@@ -301,15 +310,28 @@ export async function saveShelfDecision(copy, categories, mainId, subIds, onCopy
         .match({ copy_id: copy.id, category_id: demote })
       check(error, 'Changing the main category')
     }
-    const { error } = await supabase.from('book_categories').upsert(rows)
-    check(error, 'Saving the categories')
-    const { error: reviewError } = await supabase.from('copies').update({ category_review: null }).eq('id', copy.id)
-    check(reviewError, 'Taking the book off the review list')
-    onCopy(copy.id, { category_review: null })
+    if (rows.length) {
+      const { error } = await supabase.from('book_categories').upsert(rows)
+      check(error, 'Saving the categories')
+    }
+    if (remove.length) {
+      const { error } = await supabase.from('book_categories').delete().eq('copy_id', copy.id).in('category_id', remove)
+      check(error, 'Removing a category')
+    }
+    if (clearReview && copy.category_review) {
+      const { error } = await supabase.from('copies').update({ category_review: null }).eq('id', copy.id)
+      check(error, 'Taking the book off the review list')
+      onCopy(copy.id, { category_review: null })
+    }
   } finally {
     const { data } = await supabase.from('book_categories').select(SHELF_COLUMNS).eq('copy_id', copy.id)
     if (data) onCopy(copy.id, { shelves: data })
   }
+}
+
+// Saves the owner's decision from the review list, which takes the book off the list.
+export function saveShelfDecision(copy, categories, mainId, subIds, onCopy) {
+  return saveShelves(copy, planShelfDecision(copy, categories, mainId, subIds), true, onCopy)
 }
 
 // Deletes this copy, plus anything only it was using: a photo of its cover, and

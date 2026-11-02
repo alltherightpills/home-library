@@ -53,6 +53,7 @@ function BookDetail({ copy, copies, categories, onBack, onOpenLabel, onCoverChan
       <EditBook
         copy={copy}
         copies={copies}
+        categories={categories}
         sharedWork={sharedWork}
         onCancel={() => history.back()}
         onSaved={() => history.back()}
@@ -94,6 +95,7 @@ function BookDetail({ copy, copies, categories, onBack, onOpenLabel, onCoverChan
   const rows = [
     ['Shelved in', shelved.main || 'No main category yet'],
     ['Also in', shelved.alsoIn.join('; ')],
+    ['Audience', copy.audience],
     ['Contributors', copy.people.map((p) => `${p.author.display_name} (${p.role})`).join('; ')],
     ['Work', copy.work?.title],
     ['Series', labelLinks('series')],
