@@ -156,28 +156,38 @@ function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setVie
   )
 }
 
-// Every book, with the Needs checking filter (kept in the place, so it's still
-// on after visiting a book).
-function AllBooks({ flagged, copies, sort, setSort, view, setView, readFilter, setReadFilter, onOpenBook, onReplacePlace, onBack }) {
-  const books = useMemo(() => copies.filter((c) => !flagged || c.needs_review).sort(SORTS[sort]), [copies, flagged, sort])
-  const flaggedCount = copies.filter((c) => c.needs_review).length
+// Every book, with the Needs checking and Not walked yet filters, one at a time
+// (kept in the place, so it's still on after visiting a book).
+const ALL_FILTERS = {
+  flagged: { label: 'Needs checking', keep: (c) => c.needs_review },
+  unwalked: { label: 'Not walked yet', keep: (c) => !c.shelf_walked_on },
+}
+
+function AllBooks({ filter, copies, sort, setSort, view, setView, readFilter, setReadFilter, onOpenBook, onReplacePlace, onBack }) {
+  const keep = ALL_FILTERS[filter]?.keep
+  const books = useMemo(() => (keep ? copies.filter(keep) : [...copies]).sort(SORTS[sort]), [copies, keep, sort])
   return (
     <div className="series-view">
       <BackBar onBack={onBack} label="My Library" />
-      <h2>All books</h2>
+      <h2>{ALL_FILTERS[filter] ? `All books: ${ALL_FILTERS[filter].label.toLowerCase()}` : 'All books'}</h2>
       <p className="book-meta">{countText(books.length, readFilter)}</p>
       <div className="controls">
         <SortSelect sort={sort} setSort={setSort} />
         <ViewToggle view={view} setView={setView} />
         <ReadFilter filter={readFilter} setFilter={setReadFilter} />
-        {flaggedCount > 0 && (
-          <button
-            className={flagged ? 'chip active' : 'chip'}
-            onClick={() => onReplacePlace(flagged ? { kind: 'all' } : { kind: 'all', id: 'flagged' })}
-          >
-            Needs checking ({flaggedCount})
-          </button>
-        )}
+        {Object.entries(ALL_FILTERS).map(([id, { label, keep: test }]) => {
+          const count = copies.filter(test).length
+          if (!count && filter !== id) return null
+          return (
+            <button
+              key={id}
+              className={filter === id ? 'chip active' : 'chip'}
+              onClick={() => onReplacePlace(filter === id ? { kind: 'all' } : { kind: 'all', id })}
+            >
+              {label} ({count})
+            </button>
+          )
+        })}
       </div>
       <BookList books={books} onOpenBook={onOpenBook} view={view} />
     </div>
@@ -189,7 +199,7 @@ function AllBooks({ flagged, copies, sort, setSort, view, setView, readFilter, s
 function CategoryView({ place, copies: all, ...rest }) {
   const copies = useMemo(() => byRead(all, rest.readFilter), [all, rest.readFilter])
   const props = { copies, ...rest }
-  if (place.kind === 'all') return <AllBooks flagged={place.id === 'flagged'} {...props} />
+  if (place.kind === 'all') return <AllBooks filter={place.id} {...props} />
   if (place.kind === 'category') return <CategoryPage id={place.id} {...props} />
   return <ShelfBooks id={place.id} noSub={place.kind === 'noSub'} {...props} />
 }

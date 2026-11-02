@@ -3,7 +3,7 @@ import { Field } from './EditBook.jsx'
 import IsbnReader from './IsbnReader.jsx'
 import { copiesWithIsbn } from './isbn.js'
 import { dateText, readingsOf } from './readings.js'
-import { checkForm, saveWalk, startForm, walkSuggestions } from './shelfWalk.js'
+import { checkForm, saveWalk, startForm, titleMatches, walkSuggestions } from './shelfWalk.js'
 import { coverUrl } from './useCatalog.js'
 
 const SHORTCUTS = 5 // one-tap buttons under the year and place boxes
@@ -11,13 +11,17 @@ const SHORTCUTS = 5 // one-tap buttons under the year and place boxes
 const THIS_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: THIS_YEAR - 1995 + 1 }, (_, i) => String(THIS_YEAR - i))
 
-// The shelf walk: scan a book, fill in its card, Save and scan next.
-// `copies` carry `read` (see Library.jsx).
-function ShelfWalk({ copies, readings, updateCopy, onBack }) {
+// The shelf walk: scan a book (or find it by title), fill in its card, Save
+// and scan next. `copies` carry `read` (see Library.jsx).
+function ShelfWalk({ copies, readings, updateCopy, onOpenPlace, onBack }) {
   // The card being filled in (a copy id), or null while scanning.
   const [cardId, setCardId] = useState(null)
   // What the last scan found, while scanning: { isbn, owned: [copies] }.
   const [scan, setScan] = useState(null)
+  // Find by title: the words typed, or null while the camera is showing. Kept
+  // while a found book's card is open, so Skip returns to the results.
+  const [finding, setFinding] = useState(null)
+  const matches = useMemo(() => (finding ? titleMatches(copies, finding) : []), [copies, finding])
   // The last book saved, to change it if it was a slip.
   const [lastId, setLastId] = useState(null)
   const suggestions = useMemo(() => walkSuggestions(copies), [copies])
@@ -46,6 +50,14 @@ function ShelfWalk({ copies, readings, updateCopy, onBack }) {
       <h2>Shelf walk</h2>
       <p className="book-meta">
         {walked.toLocaleString()} of {copies.length.toLocaleString()} books walked
+        {walked < copies.length && (
+          <>
+            {' · '}
+            <button className="link" onClick={() => onOpenPlace('all', 'unwalked')}>
+              Not walked yet ›
+            </button>
+          </>
+        )}
       </p>
 
       {card ? (
@@ -59,6 +71,7 @@ function ShelfWalk({ copies, readings, updateCopy, onBack }) {
             if (stay) return
             setLastId(card.id)
             setCardId(null)
+            setFinding(null) // back to the camera for the next book
           }}
           onCancel={() => setCardId(null)}
         />
@@ -72,33 +85,75 @@ function ShelfWalk({ copies, readings, updateCopy, onBack }) {
               </button>
             </p>
           )}
-          <IsbnReader onIsbn={handleIsbn} startNow />
-          {scan && scan.owned.length === 0 && (
+          {finding !== null ? (
+            <div className="walk-find">
+              <input
+                className="search"
+                value={finding}
+                onChange={(e) => setFinding(e.target.value)}
+                placeholder="Title"
+                aria-label="Title"
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck="false"
+              />
+              <button className="link" onClick={() => setFinding(null)}>
+                Back to scanning
+              </button>
+              {finding.trim() && matches.length === 0 && <p className="placeholder">No title in your library matches.</p>}
+              <CopyPicks copies={matches} onPick={setCardId} />
+            </div>
+          ) : (
+            <IsbnReader onIsbn={handleIsbn} startNow>
+              <p className="by-hand-link">
+                <button
+                  className="link"
+                  onClick={() => {
+                    setScan(null)
+                    setFinding('')
+                  }}
+                >
+                  Can't scan it? Find by title
+                </button>
+              </p>
+            </IsbnReader>
+          )}
+          {finding === null && scan && scan.owned.length === 0 && (
             <p className="review-note">
               {scan.isbn} isn't in your library. Adding it from the walk comes next; for now, use the Scan tab.
             </p>
           )}
-          {scan && scan.owned.length > 1 && (
+          {finding === null && scan && scan.owned.length > 1 && (
             <>
               <p>You own {scan.owned.length} copies with this ISBN. Which one is this?</p>
-              <ul className="book-list">
-                {scan.owned.map((c) => (
-                  <li key={c.id}>
-                    <button onClick={() => setCardId(c.id)}>
-                      <span className="thumb">{coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" />}</span>
-                      <span className="book-title">{c.title}</span>
-                      <span className="book-meta">
-                        {[c.listLine, c.shelf_walked_on && `walked ${dateText(c.shelf_walked_on)}`].filter(Boolean).join(' · ')}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <CopyPicks copies={scan.owned} onPick={setCardId} />
             </>
           )}
         </>
       )}
     </div>
+  )
+}
+
+// Books to pick from (copies with one ISBN, or titles found), each saying
+// whether it's been walked.
+function CopyPicks({ copies, onPick }) {
+  if (!copies.length) return null
+  return (
+    <ul className="book-list">
+      {copies.map((c) => (
+        <li key={c.id}>
+          <button onClick={() => onPick(c.id)}>
+            <span className="thumb">{coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" />}</span>
+            <span className="book-title">{c.title}</span>
+            <span className="book-meta">
+              {[c.listLine, c.shelf_walked_on && `walked ${dateText(c.shelf_walked_on)}`].filter(Boolean).join(' · ')}
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
   )
 }
 

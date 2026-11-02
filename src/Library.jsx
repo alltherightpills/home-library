@@ -185,7 +185,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
         />
       )}
       {!open && place?.kind === 'walk' && (
-        <ShelfWalk copies={copies} readings={readings} updateCopy={updateCopy} onBack={() => history.back()} />
+        <ShelfWalk copies={copies} readings={readings} updateCopy={updateCopy} onOpenPlace={openPlace} onBack={() => history.back()} />
       )}
       <div className="library" hidden={!!open || !!place}>
         <p className="total">

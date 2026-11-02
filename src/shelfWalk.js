@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { SORTS, normalize, searchWords } from './useCatalog.js'
 
 // The shelf walk: one book at a time, the bookplate's year and place (city,
 // state) and whether you've read it. Country is kept too, USA unless changed.
@@ -6,6 +7,20 @@ import { supabase } from './supabase.js'
 export const DEFAULT_COUNTRY = 'USA'
 
 const today = () => new Date().toLocaleDateString('en-CA')
+
+// Find by title: copies whose title (or original title, before the title
+// cleanup) has every word typed, A–Z, at most `limit`.
+export function titleMatches(copies, text, limit = 30) {
+  const words = searchWords(text)
+  if (!words.length) return []
+  return copies
+    .filter((c) => {
+      const title = normalize(`${c.title} ${c.original_title ?? ''}`)
+      return words.every((w) => title.includes(w))
+    })
+    .sort(SORTS.title)
+    .slice(0, limit)
+}
 
 // "Decorah, IA" from a copy's city and state (the country is its own field).
 export const placeText = (copy) => [copy.acquired_city, copy.acquired_region].filter(Boolean).join(', ')
