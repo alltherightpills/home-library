@@ -69,6 +69,12 @@ async function shrinkPhoto(file) {
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85))
 }
 
+// Google Images for this book's cover, large images only. Google's own image
+// search can't be built in: its API takes no new sign-ups and closes on
+// January 1, 2027. A saved image comes back in through Photo Library.
+const googleImagesUrl = (copy) =>
+  `https://www.google.com/search?tbm=isch&tbs=isz:l&q=${encodeURIComponent(`${copy.title.split(/[:(]/)[0]} ${copy.byline.split(',')[0]} book cover`)}`
+
 // "907 × 1360", "measuring…" until it's known, or "size unknown".
 function sizeText(sizes, key) {
   if (!(key in sizes)) return 'measuring…'
@@ -171,6 +177,13 @@ function CoverPicker({ copy, onPicked, onCancel }) {
           onChange={(e) => e.target.files[0] && save(() => uploadPhoto(e.target.files[0]))}
         />
       </label>
+
+      <p className="book-meta">
+        <a href={googleImagesUrl(copy)} target="_blank" rel="noreferrer">
+          Search Google Images ↗
+        </a>{' '}
+        Long-press a cover there and Save to Photos, then use Photo of your copy › Photo Library. It's stored in your library, not linked.
+      </p>
 
       {saving && <p className="placeholder">Saving…</p>}
       {error && <p className="error">{error}</p>}

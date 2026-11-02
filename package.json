@@ -17,7 +17,8 @@
     "categories:setup": "node scripts/categories-setup.mjs",
     "categories:save": "node scripts/categories-save.mjs",
     "titles:report": "node scripts/titles-report.mjs",
-    "titles:apply": "node scripts/titles-apply.mjs"
+    "titles:apply": "node scripts/titles-apply.mjs",
+    "covers:upgrade": "node scripts/covers-upgrade.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
