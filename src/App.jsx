@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Library from './Library.jsx'
 import PasswordForm from './PasswordForm.jsx'
 import Scanner from './Scanner.jsx'
+import SearchBox from './SearchBox.jsx'
 import SignIn from './SignIn.jsx'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
@@ -62,22 +63,40 @@ function SignedInApp({ session, notice, setNotice }) {
   const current = TABS.find((t) => t.id === tab)
   const { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy } = useCatalog()
 
-  // Swiping back from a book opened by scanning returns to the Scan tab.
+  // The Library search, kept here so the bar can show on other tabs too.
+  const [query, setQuery] = useState('')
+  // The Library tab's own ways of moving between its screens (while it's showing).
+  const libraryNav = useRef(null)
+
+  // Swiping back from the Library tab, after leaving another tab for it, returns there.
   useEffect(() => {
     const onPop = (e) => {
-      if (e.state?.tab === 'scan') setTab('scan')
+      if (e.state?.tab) setTab(e.state.tab)
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
-  // Opens a book's page in the Library tab, marking the step before it as the
-  // Scan tab. The Library tab reads the open book from the history when it starts.
-  function openFromScan(id) {
-    history.replaceState({ tab: 'scan' }, '')
-    history.pushState({ book: id }, '')
+  // Goes to a Library screen from another tab, marking the step before it as
+  // that tab. The Library tab reads where to start from the history.
+  function goToLibrary(state) {
+    history.replaceState({ tab }, '')
+    history.pushState(state, '')
     setTab('library')
   }
+
+  // The search bar's moves: within the Library tab, or over to it from another.
+  const nav = () => (tab === 'library' ? libraryNav.current : null)
+  const searchOpenBook = (id) => (nav() ? nav().openBook(id) : goToLibrary({ book: id }))
+  const searchOpenLabel = (kind, id) => (nav() ? nav().openPlace(kind, id) : goToLibrary({ place: { kind, id } }))
+  // Typing shows the matching books on the Library's main screen, wherever you are.
+  function search(text) {
+    setQuery(text)
+    if (!text.trim()) return
+    if (nav()) nav().showResults()
+    else goToLibrary({})
+  }
+  const showSearch = copies && tab !== 'scan' && !(tab === 'library' && changingPassword)
 
   return (
     <div className="app">
@@ -92,10 +111,12 @@ function SignedInApp({ session, notice, setNotice }) {
             updateCopy={updateCopy}
             updateWork={updateWork}
             removeCopy={removeCopy}
+            query={query}
+            nav={libraryNav}
           />
         )}
         {tab === 'scan' && (
-          <Scanner copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={openFromScan} addCopy={addCopy} />
+          <Scanner copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
         )}
         {(tab === 'reading' || tab === 'pick') && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && changingPassword && (
@@ -123,14 +144,18 @@ function SignedInApp({ session, notice, setNotice }) {
         )}
       </main>
 
+      {showSearch && (
+        <SearchBox copies={copies} query={query} setQuery={search} onOpenBook={searchOpenBook} onOpenLabel={searchOpenLabel} />
+      )}
+
       <nav className="tab-bar">
         {TABS.map((t) => (
           <button
             key={t.id}
             className={t.id === tab ? 'tab active' : 'tab'}
             onClick={() => {
-              // Picking a tab by hand clears a Scan tab marker left by openFromScan,
-              // so swiping back later doesn't jump to the Scan tab.
+              // Picking a tab by hand clears a tab marker left by goToLibrary,
+              // so swiping back later doesn't jump to that tab.
               if (history.state?.tab) history.replaceState(null, '')
               setTab(t.id)
             }}

@@ -126,8 +126,16 @@ body {
 }
 
 /* Room at the bottom of the Library tab, so the bar doesn't cover the last row. */
-.screen:has(.library:not([hidden])) {
+/* Room for the search bar, wherever it shows. */
+.app:has(> .search-box) .screen {
   padding-bottom: 72px;
+}
+
+/* Screens with their own buttons at the bottom, or a form to fill in, hide the
+   search bar: Review categories, Edit a Book, the cover picker. (A book opened
+   from Review categories keeps the review screen hidden, not gone.) */
+.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *)) > .search-box {
+  display: none;
 }
 
 .search-box .search {

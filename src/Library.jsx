@@ -1,18 +1,18 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import BookDetail from './BookDetail.jsx'
 import BookList, { SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
-import SearchBox from './SearchBox.jsx'
 import SeriesView from './SeriesView.jsx'
 import { labelIndex } from './series.js'
 import { SORTS, searchWords } from './useCatalog.js'
 
 const VIEW_KEY = 'library.view'
 
-function Library({ copies, categories, error, updateCopy, updateWork, removeCopy }) {
-  const [query, setQuery] = useState('')
+// The search bar itself belongs to App.jsx, which shows it on other tabs too;
+// `query` is what's typed in it, and `nav` hands it this tab's moves.
+function Library({ copies, categories, error, updateCopy, updateWork, removeCopy, query, nav }) {
   const [sort, setSort] = useState('author')
   // List or Gallery, for every list of books, remembered on the phone.
   const [view, setViewState] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'list')
@@ -66,6 +66,19 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
     setPlace(next)
   }
 
+  // Typing a search on another screen shows the results on the main screen,
+  // as a step to swipe back from.
+  function showResults() {
+    if (openId === null && place === null) return
+    rememberScroll()
+    history.pushState({}, '')
+    setOpenId(null)
+    setPlace(null)
+    window.scrollTo(0, 0)
+  }
+
+  useImperativeHandle(nav, () => ({ openBook, openPlace, showResults }))
+
   // Moves on without leaving a step to swipe back to.
   function replacePlace(next) {
     history.replaceState({ place: next }, '')
@@ -111,7 +124,7 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
         />
       )}
       {place?.kind === 'review' && (
-        <div hidden={!!open}>
+        <div className="review-place" hidden={!!open}>
           <CategoryReview
             place={place}
             copies={copies}
@@ -154,8 +167,6 @@ function Library({ copies, categories, error, updateCopy, updateWork, removeCopy
         <p className="total">
           <strong>{copies.length.toLocaleString()}</strong> books
         </p>
-
-        <SearchBox copies={copies} query={query} setQuery={setQuery} onOpenBook={openBook} onOpenLabel={openPlace} />
 
         {query.trim() ? (
           <>
