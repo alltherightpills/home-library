@@ -3,6 +3,7 @@
 
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { creditsByWork as creditsByWorkFor, labelsByCopy } from '../../src/export/bookSheet.js'
 
 export const BACKUP_ROOT = join(homedir(), 'Documents', 'Home Library Backups')
 export const SNAPSHOT_NAME = /^\d{4}-\d{2}-\d{2}_\d{4}$/
@@ -46,7 +47,8 @@ export async function fetchTable(supabase, { name, key, libraryColumn = 'library
 export const PHOTO_PATH = '/storage/v1/object/public/covers/'
 
 // ---------------------------------------------------------------------------
-// books.csv: one row per book, in words a person can check at a glance
+// books.csv: one row per book, in words a person can check at a glance (the
+// fuller spreadsheet is `npm run export`, in src/export/bookSheet.js)
 // ---------------------------------------------------------------------------
 
 export function csvCell(value) {
@@ -56,26 +58,7 @@ export function csvCell(value) {
 
 export function booksCsv({ works, authors, work_authors, copies, series, publisher_series, copy_series, copy_publisher_series }) {
   const workById = new Map(works.map((w) => [w.id, w]))
-  const authorById = new Map(authors.map((a) => [a.id, a]))
-  const creditsByWork = new Map()
-  const creditName = (credit) => authorById.get(credit.author_id)?.display_name ?? '?'
-  // Names settle ties in position, which a restore into another library would reorder.
-  const inOrder = [...work_authors].sort((a, b) => a.position - b.position || creditName(a).localeCompare(creditName(b)))
-  for (const credit of inOrder) {
-    const name = creditName(credit)
-    const label = credit.role === 'Author' ? name : `${name} (${credit.role})`
-    creditsByWork.set(credit.work_id, [...(creditsByWork.get(credit.work_id) ?? []), label])
-  }
-
-  const labelsByCopy = (links, lists, idColumn) => {
-    const nameById = new Map(lists.map((l) => [l.id, l.name]))
-    const byCopy = new Map()
-    for (const link of [...links].sort((a, b) => a.position - b.position)) {
-      const label = [nameById.get(link[idColumn]) ?? '?', link.number].filter(Boolean).join(' ')
-      byCopy.set(link.copy_id, [...(byCopy.get(link.copy_id) ?? []), label])
-    }
-    return byCopy
-  }
+  const creditsByWork = creditsByWorkFor(authors, work_authors)
   const seriesByCopy = labelsByCopy(copy_series, series, 'series_id')
   const publisherSeriesByCopy = labelsByCopy(copy_publisher_series, publisher_series, 'publisher_series_id')
 
