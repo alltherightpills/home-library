@@ -20,7 +20,6 @@ Small data and app jobs found during the build, to deal with later. Add a job wh
 | Add ISBNs to no-ISBN records | ~40 | Owner | Needs the books in hand. Run `npm run enrich` afterward. Many are Ebook and audiobook records that also need checking as physical copies. |
 | One shared set of form rules | Small | Claude | From the 2026-11-03 audit. Year, pages, and series-number checks are written three times: `formProblem` (bookEdits.js), `addProblem` (addBook.js), `checkForm` (shelfWalk.js). Steps 4–6 add more forms, so share them first. |
 | Tests for the text rules | Medium | Claude | From the 2026-11-03 audit. Title cleanup, ISBNs, name splitting, title sorting, and the category vote have no automated checks, so a rule change can quietly change other books. Use Node's built-in test tool (no new packages). Do before the all-or-nothing save below. |
-| Retire finished one-time scripts | Small | Both | From the 2026-11-03 audit. 17 terminal commands, some for jobs that are done (the LibraryThing import, the title cleanup). The owner says which are finished; remove those (git keeps them). |
 
 ## Waiting on something
 

@@ -106,12 +106,12 @@ Every script signs in with the app's account (email and password) unless it read
 | `npm run export` | Spreadsheet to `~/Downloads/Home Library <date>.xlsx`; `-- --backup` reads the newest backup instead. |
 | `npm run enrich` | Fills blanks from Open Library and LC (hand edits stay). `-- --votes` also saves LC title searches and Google matches for the vote. Rerunnable. Needed after typing an ISBN into an existing book. |
 | `npm run categories:save` | Saves the vote's shelves, audience and review notes; never touches the owner's. |
-| `npm run categories:report` / `categories:vote` | Reports on the newest backup to `data/reports/`; changes nothing. |
+| `npm run categories:report` / `categories:vote` | Reports on the newest backup to `data/reports/`; changes nothing. How to preview a rule change across the library before `categories:save`. |
 | `npm run categories:setup` | Loads the category list and manual choices; adds only what's missing. |
 | `npm run covers:upgrade` | Moves covers to a sharper image of the same edition; lists small covers to photograph. |
 | `npm run works:split -- "<title>"` | Gives a copy its own work, for two books wrongly filed as one. |
-| `npm run titles:report` / `titles:apply` | The title cleanup (applied 2026-11-01). Rerunning re-adds series removed by hand, so only to finish a stopped run. |
-| `npm run import:lt` | The LibraryThing import (done 2026-10-26). |
+
+**Retired 2026-11-03** (finished one-time jobs; get them back from git history if ever needed): `import:lt` (the LibraryThing import, 2026-10-26), and `titles:report` / `titles:apply` with `scripts/lib/title-plan.mjs` (the title cleanup, applied 2026-11-01; rerunning would re-add series removed by hand). The title cleanup itself still runs on every new book.
 
 ## 8. Known limits and gotchas
 
