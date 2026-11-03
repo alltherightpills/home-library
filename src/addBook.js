@@ -4,6 +4,17 @@ import { findOrAddAuthor, nameParts, removeAuthorIfUnused, saveNewCopyLabels, sa
 import { shelfChoices } from './categories/review.js'
 import { googleMain, voteCategories } from './categories/vote.js'
 import { categoryIds, voteReview, voteShelves } from './categories/voteResults.js'
+import {
+  acquiredYearProblem,
+  editionYearProblem,
+  firstProblem,
+  firstPublishedProblem,
+  pagesProblem,
+  peopleProblem,
+  publisherSeriesProblem,
+  seriesProblem,
+  titleProblem,
+} from './formChecks.js'
 import { supabase } from './supabase.js'
 import { cleanTitle, splitPublisherSeries } from './titles/cleanTitle.js'
 
@@ -169,28 +180,19 @@ export function formFromLookup(book, acquired, others, knownSeries, categories) 
   return { form, vote }
 }
 
-// What's wrong with the form, in plain words, or '' if it can be saved.
+// What's wrong with the form, in plain words, or '' if it can be saved. Joining
+// another edition's work hides the names, so they aren't checked then.
 export function addProblem(form) {
-  if (!form.title.trim()) return 'A book needs a title.'
-  if (!form.workId && form.people.some((p) => p.first.trim() && !p.last.trim())) {
-    return 'Each person needs a last name (or a single name, like Homer).'
-  }
-  // Ancient works can have a year before 0, stored as a negative number.
-  if (form.firstPublished.trim() && !/^-?\d{1,4}$/.test(form.firstPublished.trim())) {
-    return 'First published should be a year, like 1914.'
-  }
-  if (form.editionYear.trim() && !/^\d{4}$/.test(form.editionYear.trim())) {
-    return 'Edition year should be a four-digit year, like 2008.'
-  }
-  if (form.pages.trim() && !/^[1-9]\d{0,4}$/.test(form.pages.trim())) return 'Pages should be a whole number, like 224.'
-  if ([...form.series, ...form.publisherSeries].some((s) => s.number.trim() && !s.name.trim())) {
-    return 'A series number needs a series name.'
-  }
-  const year = form.acquiredYear.trim()
-  if (year && (!/^\d{4}$/.test(year) || Number(year) > new Date().getFullYear())) {
-    return 'Year acquired should be a four-digit year, not in the future.'
-  }
-  return ''
+  return firstProblem(
+    titleProblem(form.title),
+    form.workId ? '' : peopleProblem(form.people),
+    firstPublishedProblem(form.firstPublished),
+    editionYearProblem(form.editionYear),
+    pagesProblem(form.pages),
+    seriesProblem(form.series),
+    publisherSeriesProblem(form.publisherSeries),
+    acquiredYearProblem(form.acquiredYear),
+  )
 }
 
 // ---------------------------------------------------------------------------

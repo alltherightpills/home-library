@@ -1,3 +1,4 @@
+import { acquiredYearProblem, firstProblem } from './formChecks.js'
 import { supabase } from './supabase.js'
 import { SORTS, normalize, searchWords } from './useCatalog.js'
 
@@ -62,12 +63,7 @@ export function startForm(copy) {
 }
 
 export function checkForm(form, askRead) {
-  const year = form.year.trim()
-  if (year && (!/^\d{4}$/.test(year) || Number(year) > new Date().getFullYear())) {
-    return 'Year acquired should be a four-digit year, not in the future.'
-  }
-  if (askRead && !form.read) return 'Answer Read: yes or no.'
-  return ''
+  return firstProblem(acquiredYearProblem(form.year), askRead && !form.read ? 'Answer Read: yes or no.' : '')
 }
 
 // The copy's changes: year, place, and today's walk date. With no place the

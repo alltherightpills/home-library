@@ -170,7 +170,7 @@ const ARTICLES = {
 }
 
 // "The Hobbit" → "hobbit", ignoring opening quotes or brackets too.
-function titleSortKey(title, languages) {
+export function titleSortKey(title, languages) {
   const langs = languages.length ? languages : ['English']
   const articles = langs.flatMap((lang) => ARTICLES[lang] ?? [])
   let key = normalize(title).replace(/^[^\p{L}\p{N}]+/u, '').replace(/’/g, "'")

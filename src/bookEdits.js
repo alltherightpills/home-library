@@ -1,5 +1,17 @@
 import { planShelfDecision, planShelfEdit, shelfChoices } from './categories/review.js'
-import { toIsbn, toIsbn10 } from './isbn.js'
+import {
+  acquiredYearProblem,
+  cleanIsbn,
+  editionYearProblem,
+  firstProblem,
+  firstPublishedProblem,
+  isbnProblem,
+  pagesProblem,
+  peopleProblem,
+  publisherSeriesProblem,
+  seriesProblem,
+  titleProblem,
+} from './formChecks.js'
 import { supabase } from './supabase.js'
 import { SHELF_COLUMNS } from './useCatalog.js'
 
@@ -46,45 +58,21 @@ export function formFromCopy(copy, categories) {
   }
 }
 
-// "0-375-70539-2" → "0375705392", as ISBNs are stored. Removes everything but
-// letters and digits, since text pasted from a website can hide odd hyphens and
-// invisible characters. A stray letter stays, so the check can catch it.
-const cleanIsbn = (value) => value.replace(/[^\p{L}\p{N}]/gu, '').toUpperCase() || null
-
-// What's wrong with the form, in plain words, or '' if it can be saved.
+// What's wrong with the form, in plain words, or '' if it can be saved. Older
+// records may hold odd edition years and ISBNs, so those are checked once changed.
 export function formProblem(form, copy) {
-  if (!form.title.trim()) return 'A book needs a title.'
-  for (const [i, person] of form.people.entries()) {
-    if (person.last.trim()) continue
-    if (person.first.trim() || copy.people[i]) return 'Each person needs a last name (or a single name, like Homer).'
-  }
-  // Ancient works can have a year before 0, stored as a negative number.
-  if (form.firstPublished.trim() && !/^-?\d{1,4}$/.test(form.firstPublished.trim())) {
-    return 'First published should be a year, like 1914.'
-  }
-  if (form.pages.trim() && !/^[1-9]\d{0,4}$/.test(form.pages.trim())) return 'Pages should be a whole number, like 224.'
-  // Older records may hold odd values, so these are only checked once changed.
-  const editionYear = form.editionYear.trim()
-  if (editionYear && editionYear !== String(copy.edition_year) && !/^\d{4}$/.test(editionYear)) {
-    return 'Edition year should be a four-digit year, like 2008.'
-  }
-  const isbn13 = cleanIsbn(form.isbn13)
-  if (isbn13 && isbn13 !== copy.isbn13 && !toIsbn(isbn13)) {
-    return "That ISBN-13 isn't valid. Check for a mistyped digit."
-  }
-  const isbn10 = cleanIsbn(form.isbn10)
-  if (isbn10 && isbn10 !== copy.isbn10 && !toIsbn10(isbn10)) {
-    return "That ISBN-10 isn't valid. Check for a mistyped digit."
-  }
-  if (form.series.some((s) => s.number.trim() && !s.name.trim())) return 'A series number needs a series name.'
-  if (form.publisherSeries.some((s) => s.number.trim() && !s.name.trim())) {
-    return "A publisher's series number needs a name."
-  }
-  const year = form.acquiredYear.trim()
-  if (year && (!/^\d{4}$/.test(year) || Number(year) > new Date().getFullYear())) {
-    return 'Year acquired should be a four-digit year, not in the future.'
-  }
-  return ''
+  return firstProblem(
+    titleProblem(form.title),
+    peopleProblem(form.people, (i) => Boolean(copy.people[i])),
+    firstPublishedProblem(form.firstPublished),
+    pagesProblem(form.pages),
+    editionYearProblem(form.editionYear, copy.edition_year),
+    isbnProblem(form.isbn13, copy.isbn13, 13),
+    isbnProblem(form.isbn10, copy.isbn10, 10),
+    seriesProblem(form.series),
+    publisherSeriesProblem(form.publisherSeries),
+    acquiredYearProblem(form.acquiredYear),
+  )
 }
 
 const textOrNull = (value) => value.trim() || null

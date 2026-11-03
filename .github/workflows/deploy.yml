@@ -1,4 +1,4 @@
-# Builds the app and publishes it to GitHub Pages every time code is pushed to main.
+# Tests and builds the app, and publishes it to GitHub Pages, every time code is pushed to main.
 name: Deploy to GitHub Pages
 
 on:
@@ -25,6 +25,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # A failing test stops here, so the live app keeps its last working version.
+      - run: npm test
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

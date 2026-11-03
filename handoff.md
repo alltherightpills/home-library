@@ -17,6 +17,7 @@ A phone-first web app (installed on the owner's iPhone home screen) for catalogi
 - **Build in small, testable steps.** Agree each step's slices with the owner before building. After each slice, tell the owner how to see it working.
 - **Database change first, then the code.** Run a new migration in Supabase before pushing code that uses it. The catalog loads in one request naming every column it needs, so a column the database doesn't have yet means the app shows no books at all.
 - **Back up before any bulk data change** (`npm run backup`).
+- **Run `npm test` before pushing,** and add tests when adding or changing a rule. Form checks go in `src/formChecks.js`, shared by every form. Test examples must be well-known or made-up books, never the owner's catalog (the repo is public).
 - The owner tests every change on the iPhone after it's pushed.
 - **Function first.** The look of the screens waits for a later design pass.
 - **The repo is public.** No personal data in it: lists of the owner's books go in `data/` (git-ignored), and keys and passwords in `.env.local` (git-ignored).
@@ -101,6 +102,7 @@ Every script signs in with the app's account (email and password) unless it read
 | `npm run dev` | Live preview on the Mac. `-- --host` opens it on the phone too, but there the camera won't work (needs https) and Google refuses the key (wrong address). Test those on the live site. |
 | `npm run build` | Builds the app (GitHub does this on every push). |
 | `npm run lint` | Checks the code for common mistakes. |
+| `npm test` | Runs the tests in `tests/` (Node's built-in test tool). GitHub runs them before every deploy; a failure stops the deploy and the live app keeps its last version. |
 | `npm run backup` | Dated snapshot to `~/Documents/Home Library Backups` (iCloud): every table as JSON, `books.csv`, plus shared `photos/` and `covers/` folders that only grow. Keeps the newest 30 runs. |
 | `npm run restore [-- <snapshot>]` | Shows a plan; writes nothing until RESTORE is typed. Into the same library it undoes changes since the snapshot; into an empty one it copies everything (how to rebuild in a new Supabase project). |
 | `npm run export` | Spreadsheet to `~/Downloads/Home Library <date>.xlsx`; `-- --backup` reads the newest backup instead. |
