@@ -9,7 +9,7 @@ import { useReadings } from './readings.js'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
 
-// The four tabs in the bottom bar (handoff section 4).
+// The four tabs in the bottom bar (handoff.md, "The screens").
 const TABS = [
   { id: 'library', label: 'Library' },
   { id: 'reading', label: 'Reading' },

@@ -1,6 +1,6 @@
 # Home Library
 
-A phone-first web app for cataloging a personal library. See [handoff.md](handoff.md) for the full plan.
+A phone-first web app for cataloging a personal library. See [handoff.md](handoff.md) for how it works and what's next, and [decisions-log.md](decisions-log.md) for the history behind it.
 
 Live at: https://alltherightpills.github.io/home-library/
 
