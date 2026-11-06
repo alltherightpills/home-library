@@ -150,11 +150,24 @@ function Circles({ circles, onOpen }) {
     ))
 }
 
-function Labels({ circles, width, height }) {
+// A place's name opens its books too. The invisible box behind it is a little
+// taller than the text, so it's easy to hit with a finger.
+const NAME_PAD = 5
+
+function Labels({ circles, width, height, onOpen }) {
   return placeLabels(circles, width, height).map((c) => (
-    <text key={c.key} x={c.labelX} y={c.labelY} textAnchor={c.labelAnchor} dominantBaseline="central" className="map-label">
-      {c.name}
-    </text>
+    <g key={c.key} className="map-place" onClick={() => onOpen(c.place)} role="button" aria-label={`${c.title}: ${c.count}`}>
+      <rect
+        x={c.box.x1 - 2}
+        y={c.box.y1 - NAME_PAD}
+        width={c.box.x2 - c.box.x1 + 4}
+        height={c.box.y2 - c.box.y1 + 2 * NAME_PAD}
+        className="map-hit"
+      />
+      <text x={c.labelX} y={c.labelY} textAnchor={c.labelAnchor} dominantBaseline="central" className="map-label">
+        {c.name}
+      </text>
+    </g>
   ))
 }
 
@@ -195,7 +208,7 @@ function Inset({ code, name, places, most, onOpen }) {
           <path key={f.properties.code} d={path(f) ?? ''} className={f === shape ? 'map-land' : 'map-land other'} />
         ))}
         <Circles circles={circles} onOpen={onOpen} />
-        <Labels circles={circles} width={INSET} height={INSET} />
+        <Labels circles={circles} width={INSET} height={INSET} onOpen={onOpen} />
       </svg>
       <figcaption>{name}</figcaption>
     </figure>
@@ -290,7 +303,7 @@ export default function PlaceMap({ copies, onOpenPlace }) {
             ))}
           </g>
           <Circles circles={circles} onOpen={open} />
-          <Labels circles={circles} width={W} height={H} />
+          <Labels circles={circles} width={W} height={H} onOpen={open} />
         </svg>
         <div className="map-buttons">
           <button onClick={() => zoomBy(2)} aria-label="Zoom in">

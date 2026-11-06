@@ -89,7 +89,8 @@ export function radius(count, most) {
 
 // Which circles get a name beside them: biggest first, each name only if it
 // fits without covering another name or circle. `circles`: [{ x, y, r, name }].
-// Returns [{ ...circle, labelX, labelY }] for the ones that fit.
+// Returns [{ ...circle, labelX, labelY, labelAnchor, box }] for the ones that
+// fit; `box` ({ x1, x2, y1, y2 }) is the space the name takes, for tapping it.
 const CHAR_WIDTH = 6.2
 const LABEL_HEIGHT = 13
 
@@ -109,7 +110,7 @@ export function placeLabels(circles, width, height) {
       if (boxes.some((b) => overlaps(b, box))) continue
       if (discs.some((d, i) => circles[i] !== c && overlaps(d, box))) continue
       boxes.push(box)
-      placed.push({ ...c, labelX: left ? box.x2 : box.x1, labelAnchor: left ? 'end' : 'start', labelY: c.y })
+      placed.push({ ...c, labelX: left ? box.x2 : box.x1, labelAnchor: left ? 'end' : 'start', labelY: c.y, box })
       break
     }
   }

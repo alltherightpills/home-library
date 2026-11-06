@@ -61,6 +61,12 @@ describe('circles and names', () => {
       ['Bigtown', 'Faraway'],
     )
   })
+  test("a name's tap box sits beside its circle, covering the name", () => {
+    const [label] = placeLabels([{ x: 100, y: 100, r: 10, name: 'Midtown' }], 360, 300)
+    assert.equal(label.box.x1, label.labelX) // starts where the name starts
+    assert.ok(label.box.x1 > 110 && label.box.x2 > label.box.x1 + 30)
+    assert.ok(label.box.y1 < 100 && label.box.y2 > 100)
+  })
   test('a name at the right edge goes to the left of its circle', () => {
     const [label] = placeLabels([{ x: 350, y: 100, r: 4, name: 'Edgeville' }], 360, 300)
     assert.equal(label.labelAnchor, 'end')
