@@ -59,6 +59,9 @@ function App() {
 function SignedInApp({ session, notice, setNotice }) {
   // Which tab is showing right now.
   const [tab, setTab] = useState('library')
+  // Bumped when a tab is tapped, so that tab's screens start over at its start
+  // screen (React rebuilds a component whose `key` changes).
+  const [restarts, setRestarts] = useState({})
   const [changingPassword, setChangingPassword] = useState(false)
   // Books scanned since the app opened, newest first.
   const [scans, setScans] = useState([])
@@ -108,6 +111,7 @@ function SignedInApp({ session, notice, setNotice }) {
         {notice && <p>{notice}</p>}
         {tab === 'library' && !changingPassword && (
           <Library
+            key={restarts.library}
             copies={copies}
             categories={categories}
             readings={readings}
@@ -121,9 +125,9 @@ function SignedInApp({ session, notice, setNotice }) {
           />
         )}
         {tab === 'scan' && (
-          <Scanner copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
+          <Scanner key={restarts.scan} copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
         )}
-        {tab === 'reading' && <ReadingTab copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
+        {tab === 'reading' && <ReadingTab key={restarts.reading} copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
         {tab === 'pick' && <p className="placeholder">Coming soon.</p>}
         {tab === 'library' && changingPassword && (
           <PasswordForm
@@ -163,7 +167,17 @@ function SignedInApp({ session, notice, setNotice }) {
               // Picking a tab by hand clears a tab marker left by goToLibrary,
               // so swiping back later doesn't jump to that tab.
               if (history.state?.tab) history.replaceState(null, '')
+              // A tab always opens on its start screen, even when it's the one
+              // showing (owner's request). Anything half-typed there is dropped.
+              // The Library reads where to start from the history, so it gets a
+              // fresh step: swiping back from its start returns to where you were.
+              if (t.id === 'library') {
+                if (history.state?.book || history.state?.place) history.pushState({}, '')
+                setChangingPassword(false)
+              }
+              setRestarts((r) => ({ ...r, [t.id]: (r[t.id] ?? 0) + 1 }))
               setTab(t.id)
+              window.scrollTo(0, 0)
             }}
           >
             {t.label}
