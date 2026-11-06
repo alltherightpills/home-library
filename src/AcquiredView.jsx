@@ -98,49 +98,39 @@ function ByPlace({ copies, onOpenPlace }) {
   )
 }
 
-// The Acquired screen: every year, or every place, with how many books.
-function AcquiredCounts({ by, map, region, copies, readFilter, setReadFilter, onOpenPlace, onReplacePlace, onBack }) {
-  const withYear = copies.filter((c) => c.acquired_year).length
-  const withPlace = copies.filter(placeOf).length
+// The Acquired screen: every year, or every place, with how many books. It
+// always counts the whole library: the Read filter belongs to the book lists
+// a year or place opens, not here.
+function AcquiredCounts({ by, map, region, copies, onOpenPlace, onReplacePlace, onBack }) {
+  const go = (changes) => onReplacePlace({ kind: 'acquired', id: by, ...(map && { map, region }), ...changes })
   return (
     <div className="series-view">
       <BackBar onBack={onBack} label="My Library" />
       <h2>Acquired</h2>
-      <p className="book-meta">
-        {by === 'place' ? countText(withPlace, readFilter) : countText(withYear, readFilter)} with{' '}
-        {by === 'place' ? 'a place' : 'a year'}, of {copies.length.toLocaleString()}
-      </p>
       <div className="controls">
-        {['year', 'place'].map((b) => (
-          <button key={b} className={by === b ? 'chip active' : 'chip'} onClick={() => onReplacePlace({ kind: 'acquired', id: b })}>
-            By {b}
-          </button>
-        ))}
-        <ReadFilter filter={readFilter} setFilter={setReadFilter} />
-      </div>
-      {by === 'place' && (
-        <div className="controls">
-          {[false, true].map((m) => (
-            <button
-              key={String(m)}
-              className={map === m ? 'chip active' : 'chip'}
-              onClick={() => onReplacePlace({ kind: 'acquired', id: 'place', ...(m && { map: true }) })}
-            >
-              {m ? 'Map' : 'List'}
+        <span className="view-toggle" role="group" aria-label="Count by">
+          {['year', 'place'].map((b) => (
+            <button key={b} className={by === b ? 'chip active' : 'chip'} onClick={() => onReplacePlace({ kind: 'acquired', id: b })}>
+              By {b}
             </button>
           ))}
-        </div>
-      )}
+        </span>
+        {by === 'place' && (
+          <span className="view-toggle" role="group" aria-label="Show as">
+            <button className={map ? 'chip' : 'chip active'} onClick={() => go({ map: false, region: undefined })}>
+              List
+            </button>
+            <button className={map ? 'chip active' : 'chip'} onClick={() => go({ map: true })}>
+              Map
+            </button>
+          </span>
+        )}
+      </div>
       {by !== 'place' ? (
         <ByYear copies={copies} onOpenPlace={onOpenPlace} />
       ) : map ? (
         <Suspense fallback={<p className="book-meta">Loading the map…</p>}>
-          <PlaceMap
-            copies={copies}
-            onOpenPlace={onOpenPlace}
-            region={region}
-            onRegion={(r) => onReplacePlace({ kind: 'acquired', id: 'place', map: true, region: r })}
-          />
+          <PlaceMap copies={copies} onOpenPlace={onOpenPlace} region={region} onRegion={(r) => go({ region: r })} />
         </Suspense>
       ) : (
         <ByPlace copies={copies} onOpenPlace={onOpenPlace} />
@@ -167,7 +157,8 @@ function AcquiredBooks({ title, books, sort, setSort, view, setView, readFilter,
   )
 }
 
-// With the Read filter on, every screen here counts and lists only the books it lets through.
+// A year's or place's book list has the Read filter; the counts screen doesn't
+// (it always shows the whole library).
 function AcquiredView({ place, copies: all, ...rest }) {
   const copies = useMemo(() => byRead(all, rest.readFilter), [all, rest.readFilter])
   const books = useMemo(() => {
@@ -176,7 +167,7 @@ function AcquiredView({ place, copies: all, ...rest }) {
     return null
   }, [copies, place])
 
-  if (place.kind === 'acquired') return <AcquiredCounts by={place.id ?? 'year'} map={!!place.map} region={place.region} copies={copies} {...rest} />
+  if (place.kind === 'acquired') return <AcquiredCounts by={place.id ?? 'year'} map={!!place.map} region={place.region} copies={all} {...rest} />
   const title =
     place.kind === 'acquiredYear'
       ? place.id === 'none'

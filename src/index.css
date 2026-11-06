@@ -30,6 +30,19 @@ body {
   padding: calc(env(safe-area-inset-top) + 16px) 16px 16px;
 }
 
+/* Inner screens (anything with a ‹ back bar, and the book page) drop the big
+   tab title, so the back bar is at the top. A screen kept hidden behind
+   another (Review categories behind a book) doesn't count. */
+.screen:has(.pinned-back:not([hidden] *), .detail-actions:not([hidden] *)) > h1 {
+  display: none;
+}
+
+/* The back bar carries the notch space itself (it needs it when it sticks to
+   the top while scrolling), so the screen's own top space would double it. */
+.screen:has(.pinned-back:not([hidden] *)) {
+  padding-top: 0;
+}
+
 .placeholder {
   color: var(--muted);
 }

@@ -336,11 +336,13 @@ export default function PlaceMap({ copies, onOpenPlace, region, onRegion }) {
     <div className="place-map">
       {regions.length > 1 && (
         <div className="controls">
-          {regions.map((r) => (
-            <button key={r.name} className={r.name === shown.name ? 'chip active' : 'chip'} onClick={() => onRegion(r.name)}>
-              {r.name}
-            </button>
-          ))}
+          <span className="view-toggle" role="group" aria-label="Continent">
+            {regions.map((r) => (
+              <button key={r.name} className={r.name === shown.name ? 'chip active' : 'chip'} onClick={() => onRegion(r.name)}>
+                {r.name}
+              </button>
+            ))}
+          </span>
         </div>
       )}
       <RegionMap key={shown.name} name={shown.name} places={shown.places} onOpen={open} />
