@@ -1,6 +1,7 @@
 // The places map: a circle for each place books were acquired, sized by how
-// many. Pinch or drag to zoom and move; tap a circle for that place's books.
-// Loaded only when the map is opened (it brings the map shapes with it).
+// many. One continent at a time, with a button for each continent that has
+// places. Pinch or drag to zoom and move; tap a circle or name for that place's
+// books. Loaded only when the map is opened (it brings the map shapes with it).
 
 import { geoCentroid, geoConicEqualArea, geoMercator, geoPath } from 'd3-geo'
 import { select } from 'd3-selection'
@@ -10,11 +11,11 @@ import { feature } from 'topojson-client'
 import { placeTitle } from '../acquired.js'
 import {
   LOOKUP_GAP_MS,
-  MAIN_COUNTRIES,
   countryCode,
   lookupRow,
   lookupUrl,
   mapPlaces,
+  mapRegions,
   needsLookup,
   placeKey,
   placeLabels,
@@ -26,50 +27,86 @@ import shapes from './map-shapes.json'
 // The map is drawn in a 360 × 300 box, stretched to the screen's width.
 const W = 360
 const H = 300
-const INSET = 120
+const MAX_ZOOM = 40
+const MIN_ZOOM = 0.4
+// The screen space (in CSS pixels) the zoom buttons cover, so no name hides under them.
+const BUTTONS_PX = { width: 190, height: 50 }
 
 const provinces = feature(shapes, shapes.objects.provinces).features
 const countries = feature(shapes, shapes.objects.countries).features
 const lakes = feature(shapes, shapes.objects.lakes).features
 const countryNames = Object.fromEntries(countries.map((c) => [c.properties.name.toLowerCase(), c.properties.code]))
-const countryShape = Object.fromEntries(countries.map((c) => [c.properties.code, c]))
-// Neighbors shown around the US and Canada (Mexico, the Caribbean, Greenland).
-const nearby = countries.filter((c) => {
-  if (['USA', 'CAN'].includes(c.properties.code)) return false
-  const [lon, lat] = geoCentroid(c)
-  return lon > -170 && lon < -10 && lat > 5
-})
+const continents = Object.fromEntries(countries.map((c) => [c.properties.code, c.properties.continent]))
+const centroids = new Map(countries.map((c) => [c, geoCentroid(c)]))
+const within = ([lon0, lon1], [lat0, lat1]) => (c) => {
+  const [lon, lat] = centroids.get(c)
+  return lon > lon0 && lon < lon1 && lat > lat0 && lat < lat1
+}
 
-// Fitted to the lower 48 and southern Canada; pinch out for Alaska and the north.
-const projection = geoConicEqualArea()
-  .parallels([29.5, 45.5])
-  .rotate([96, 0])
-  .fitExtent(
+const fitTo = (projection, coordinates) =>
+  projection.fitExtent(
     [
       [6, 6],
       [W - 6, H - 6],
     ],
-    { type: 'MultiPoint', coordinates: [[-124.5, 25], [-67, 25], [-124.5, 49.5], [-67, 47.5]] },
+    { type: 'MultiPoint', coordinates },
   )
-const drawn = (() => {
-  const path = geoPath(projection)
+
+// Each continent's map: how it's flattened, the box it starts on, and what's drawn.
+// Other continents (none yet) get a plain map fitted to their places.
+const REGIONS = {
+  // The lower 48 and southern Canada to start; pinch out for Alaska and the north.
+  'North America': () => ({
+    projection: fitTo(geoConicEqualArea().parallels([29.5, 45.5]).rotate([96, 0]), [
+      [-124.5, 25],
+      [-67, 25],
+      [-124.5, 49.5],
+      [-67, 47.5],
+    ]),
+    // US states and Canadian provinces, with Mexico, the Caribbean and Greenland around them.
+    background: countries.filter((c) => !['USA', 'CAN'].includes(c.properties.code) && within([-170, -10], [5, 90])(c)),
+    provinces,
+    lakes,
+  }),
+  // The UK and Ireland to the Baltic and the Mediterranean.
+  Europe: () => ({
+    projection: fitTo(geoConicEqualArea().parallels([43, 62]).rotate([-10, 0]), [
+      [-11, 35],
+      [30, 35],
+      [-11, 60],
+      [30, 60],
+    ]),
+    background: countries.filter(within([-35, 70], [20, 82])),
+    provinces: [],
+    lakes: [],
+  }),
+}
+
+function otherRegion(name, places) {
+  const lons = places.map((p) => p.longitude)
+  const lats = places.map((p) => p.latitude)
+  const m = 12
   return {
-    countries: nearby.map((f) => path(f)),
-    provinces: provinces.map((f) => path(f)),
-    lakes: lakes.map((f) => path(f)),
+    projection: fitTo(geoMercator(), [
+      [Math.min(...lons) - m, Math.max(Math.min(...lats) - m, -80)],
+      [Math.max(...lons) + m, Math.min(Math.max(...lats) + m, 80)],
+    ]),
+    background: countries.filter((c) => c.properties.continent === name),
+    provinces: [],
+    lakes: [],
   }
-})()
+}
 
-const MAX_ZOOM = 40
-
-// The zoom that shows every circle on the main map (or the whole map if none).
+// The default zoom: every circle in view (or the starting view if there are none).
+// Zooms out past the starting view only when a place lies outside it (Alaska, say).
 function fitAll(points) {
   if (!points.length) return zoomIdentity
   const xs = points.map((p) => p[0])
   const ys = points.map((p) => p[1])
   const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
   const pad = 40
-  const k = Math.max(1, Math.min(MAX_ZOOM, 8, (W - 2 * pad) / Math.max(x1 - x0, 1), (H - 2 * pad) / Math.max(y1 - y0, 1)))
+  // At most 4×, so a lone place (London) still shows the country around it.
+  const k = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, 4, (W - 2 * pad) / Math.max(x1 - x0, 1), (H - 2 * pad) / Math.max(y1 - y0, 1)))
   return zoomIdentity.translate(W / 2 - (k * (x0 + x1)) / 2, H / 2 - (k * (y0 + y1)) / 2).scale(k)
 }
 
@@ -154,8 +191,8 @@ function Circles({ circles, onOpen }) {
 // taller than the text, so it's easy to hit with a finger.
 const NAME_PAD = 5
 
-function Labels({ circles, width, height, onOpen }) {
-  return placeLabels(circles, width, height).map((c) => (
+function Labels({ circles, width, height, onOpen, avoid }) {
+  return placeLabels(circles, width, height, avoid).map((c) => (
     <g key={c.key} className="map-place" onClick={() => onOpen(c.place)} role="button" aria-label={`${c.title}: ${c.count}`}>
       <rect
         x={c.box.x1 - 2}
@@ -171,57 +208,102 @@ function Labels({ circles, width, height, onOpen }) {
   ))
 }
 
-// A small map of one country outside North America, fitted to its places.
-function Inset({ code, name, places, most, onOpen }) {
-  const shape = countryShape[code]
-  const proj = useMemo(() => {
-    const p = geoMercator()
-    // Fit to the places and a margin around them, so a far-flung territory
-    // (or a whole large country) doesn't shrink them to a dot.
-    const lons = places.map((x) => x.longitude)
-    const lats = places.map((x) => x.latitude)
-    const m = 4
-    return p.fitExtent(
-      [
-        [8, 8],
-        [INSET - 8, INSET - 8],
-      ],
-      {
-        type: 'MultiPoint',
-        coordinates: [
-          [Math.min(...lons) - m, Math.min(...lats) - m],
-          [Math.max(...lons) + m, Math.max(...lats) + m],
-        ],
-      },
-    )
-  }, [places])
-  const path = geoPath(proj)
-  const circles = places.map((x) => {
-    const [cx, cy] = proj([x.longitude, x.latitude])
-    return { ...x, x: cx, y: cy, r: radius(x.count, most) }
-  })
-  return (
-    <figure className="map-inset">
-      <svg viewBox={`0 0 ${INSET} ${INSET}`}>
-        <rect width={INSET} height={INSET} className="map-water" />
-        {countries.map((f) => (
-          <path key={f.properties.code} d={path(f) ?? ''} className={f === shape ? 'map-land' : 'map-land other'} />
-        ))}
-        <Circles circles={circles} onOpen={onOpen} />
-        <Labels circles={circles} width={INSET} height={INSET} onOpen={onOpen} />
-      </svg>
-      <figcaption>{name}</figcaption>
-    </figure>
-  )
-}
-
-export default function PlaceMap({ copies, onOpenPlace }) {
-  const places = useMemo(() => mapPlaces(copies), [copies])
-  const libraryId = copies[0]?.library_id
-  const { rows, error, looking } = useCoordinates(places, libraryId)
+// One continent's map. Shown with a `key` per continent, so switching starts
+// fresh: zoomed to fit that continent's places.
+function RegionMap({ name, places, onOpen }) {
   const svgRef = useRef(null)
   const zoomRef = useRef(null)
   const [t, setT] = useState(zoomIdentity)
+  // Map units per screen pixel (the map is stretched to the screen's width).
+  const [unit, setUnit] = useState(1)
+
+  const region = useMemo(() => (REGIONS[name] ? REGIONS[name]() : otherRegion(name, places)), [name, places])
+  const drawn = useMemo(() => {
+    const path = geoPath(region.projection)
+    return {
+      background: region.background.map((f) => path(f) ?? ''),
+      provinces: region.provinces.map((f) => path(f) ?? ''),
+      lakes: region.lakes.map((f) => path(f) ?? ''),
+    }
+  }, [region])
+  const points = useMemo(() => places.map((p) => region.projection([p.longitude, p.latitude])), [places, region])
+
+  useEffect(() => {
+    const measure = () => svgRef.current?.clientWidth && setUnit(W / svgRef.current.clientWidth)
+    measure()
+    window.addEventListener('resize', measure)
+    const behavior = zoom()
+      .scaleExtent([1, MAX_ZOOM])
+      .on('zoom', (e) => setT(e.transform))
+    zoomRef.current = behavior
+    const svg = select(svgRef.current)
+    svg.call(behavior)
+    return () => {
+      window.removeEventListener('resize', measure)
+      svg.on('.zoom', null)
+    }
+  }, [])
+
+  // Zooming out stops at the starting view (for North America, the lower 48 and
+  // southern Canada), or wider only as far as it takes to show every circle.
+  useEffect(() => {
+    zoomRef.current.scaleExtent([Math.min(1, fitAll(points).k), MAX_ZOOM])
+  }, [points])
+
+  // Open on the default zoom, once there are circles (new lookups keep the view).
+  const fitted = useRef(false)
+  useEffect(() => {
+    if (fitted.current || !points.length) return
+    fitted.current = true
+    select(svgRef.current).call(zoomRef.current.transform, fitAll(points))
+  }, [points])
+
+  const showAll = () => select(svgRef.current).call(zoomRef.current.transform, fitAll(points))
+  const zoomBy = (factor) => select(svgRef.current).call(zoomRef.current.scaleBy, factor)
+
+  const circles = places.map((p, i) => {
+    const [x, y] = t.apply(points[i])
+    return { ...p, x, y, r: radius(p.count, p.most) }
+  })
+  const avoid = [{ x1: W - BUTTONS_PX.width * unit, x2: W, y1: 0, y2: BUTTONS_PX.height * unit }]
+
+  return (
+    <div className="map-frame">
+      <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="map-main">
+        <rect width={W} height={H} className="map-water" />
+        <g transform={t.toString()}>
+          {drawn.background.map((d, i) => (
+            <path key={`c${i}`} d={d} className={region.provinces.length ? 'map-land other' : 'map-land'} />
+          ))}
+          {drawn.provinces.map((d, i) => (
+            <path key={`p${i}`} d={d} className="map-land" />
+          ))}
+          {drawn.lakes.map((d, i) => (
+            <path key={`l${i}`} d={d} className="map-lake" />
+          ))}
+        </g>
+        <Circles circles={circles} onOpen={onOpen} />
+        <Labels circles={circles} width={W} height={H} onOpen={onOpen} avoid={avoid} />
+      </svg>
+      <div className="map-buttons">
+        <button onClick={() => zoomBy(2)} aria-label="Zoom in">
+          +
+        </button>
+        <button onClick={() => zoomBy(0.5)} aria-label="Zoom out">
+          −
+        </button>
+        <button onClick={showAll}>Show all</button>
+      </div>
+    </div>
+  )
+}
+
+// `region` is the continent chosen (kept in the history, so coming back from a
+// place's books returns to it); `onRegion` changes it.
+export default function PlaceMap({ copies, onOpenPlace, region, onRegion }) {
+  const places = useMemo(() => mapPlaces(copies), [copies])
+  const libraryId = copies[0]?.library_id
+  const { rows, error, looking } = useCoordinates(places, libraryId)
 
   // Each place with its saved coordinates (or none), title and circle size.
   const located = useMemo(() => {
@@ -245,88 +327,27 @@ export default function PlaceMap({ copies, onOpenPlace }) {
     })
   }, [places, rows])
 
-  const onMain = located.filter((p) => p.latitude != null && MAIN_COUNTRIES.includes(p.code))
-  const insets = useMemo(() => {
-    const groups = new Map()
-    for (const p of located) {
-      if (p.latitude == null || MAIN_COUNTRIES.includes(p.code) || !countryShape[p.code]) continue
-      if (!groups.has(p.code)) groups.set(p.code, [])
-      groups.get(p.code).push(p)
-    }
-    return [...groups].map(([code, list]) => ({ code, name: list[0].country, places: list }))
-  }, [located])
-  const unplaced = located.filter((p) => p.tried && (p.latitude == null || (!MAIN_COUNTRIES.includes(p.code) && !countryShape[p.code])))
-
-  const points = useMemo(() => onMain.map((p) => projection([p.longitude, p.latitude])), [onMain])
-  const showAll = () => zoomRef.current && select(svgRef.current).call(zoomRef.current.transform, fitAll(points))
-
-  useEffect(() => {
-    const behavior = zoom()
-      .scaleExtent([0.4, MAX_ZOOM])
-      .on('zoom', (e) => setT(e.transform))
-    zoomRef.current = behavior
-    const svg = select(svgRef.current)
-    svg.call(behavior)
-    return () => svg.on('.zoom', null)
-  }, [])
-
-  // Start showing every circle once the coordinates are in.
-  const fitted = useRef(false)
-  useEffect(() => {
-    if (fitted.current || !rows || !points.length) return
-    fitted.current = true
-    select(svgRef.current).call(zoomRef.current.transform, fitAll(points))
-  }, [rows, points])
-
-  const zoomBy = (factor) => select(svgRef.current).call(zoomRef.current.scaleBy, factor)
+  const regions = useMemo(() => mapRegions(located, continents), [located])
+  const shown = regions.find((r) => r.name === region) ?? regions[0] ?? { name: 'North America', places: [] }
+  const unplaced = located.filter((p) => p.tried && (p.latitude == null || !continents[p.code]))
   const open = (where) => onOpenPlace('acquiredPlace', undefined, { where })
-
-  const circles = onMain.map((p, i) => {
-    const [x, y] = t.apply(points[i])
-    return { ...p, x, y, r: radius(p.count, p.most) }
-  })
 
   return (
     <div className="place-map">
-      <div className="map-frame">
-        <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="map-main">
-          <rect width={W} height={H} className="map-water" />
-          <g transform={t.toString()}>
-            {drawn.countries.map((d, i) => (
-              <path key={`c${i}`} d={d ?? ''} className="map-land other" />
-            ))}
-            {drawn.provinces.map((d, i) => (
-              <path key={`p${i}`} d={d ?? ''} className="map-land" />
-            ))}
-            {drawn.lakes.map((d, i) => (
-              <path key={`l${i}`} d={d ?? ''} className="map-lake" />
-            ))}
-          </g>
-          <Circles circles={circles} onOpen={open} />
-          <Labels circles={circles} width={W} height={H} onOpen={open} />
-        </svg>
-        <div className="map-buttons">
-          <button onClick={() => zoomBy(2)} aria-label="Zoom in">
-            +
-          </button>
-          <button onClick={() => zoomBy(0.5)} aria-label="Zoom out">
-            −
-          </button>
-          <button onClick={showAll}>Show all</button>
+      {regions.length > 1 && (
+        <div className="controls">
+          {regions.map((r) => (
+            <button key={r.name} className={r.name === shown.name ? 'chip active' : 'chip'} onClick={() => onRegion(r.name)}>
+              {r.name}
+            </button>
+          ))}
         </div>
-      </div>
+      )}
+      <RegionMap key={shown.name} name={shown.name} places={shown.places} onOpen={open} />
 
       {!rows && !error && <p className="book-meta">Loading places…</p>}
       {looking > 0 && <p className="book-meta">Finding {looking} {looking === 1 ? 'place' : 'places'} on the map…</p>}
       {error && <p className="error">{error}</p>}
-
-      {insets.length > 0 && (
-        <div className="map-insets">
-          {insets.map((g) => (
-            <Inset key={g.code} code={g.code} name={g.name} places={g.places} most={g.places[0].most} onOpen={open} />
-          ))}
-        </div>
-      )}
 
       {unplaced.length > 0 && (
         <>

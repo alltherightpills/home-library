@@ -1110,32 +1110,6 @@ body {
   font-size: 15px;
 }
 
-.map-insets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 0 0 8px;
-}
-
-.map-inset {
-  margin: 0;
-  width: 130px;
-}
-
-.map-inset svg {
-  display: block;
-  width: 100%;
-  border: 1px solid #e2ddd2;
-  border-radius: 10px;
-}
-
-.map-inset figcaption {
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 13px;
-  text-align: center;
-}
-
 .map-credit {
   margin-top: 12px;
   font-size: 12px;

@@ -4,9 +4,25 @@
 
 import { placeOf, regionName } from './acquired.js'
 
-// Countries drawn on the main map (with US states and Canadian provinces);
-// any other country gets a small inset map of its own.
-export const MAIN_COUNTRIES = ['USA', 'CAN', 'MEX']
+// The map shows one continent at a time, with a button for each continent that
+// has places; North America first (US states and Canadian provinces drawn).
+export const REGION_ORDER = ['North America', 'Europe', 'Asia', 'South America', 'Africa', 'Oceania']
+
+// Places grouped by continent, for the region buttons: [{ name, places }], in
+// REGION_ORDER (any other continent last). Places with no coordinates or no
+// known country are left out (they're listed under the map instead).
+// `continents` maps a country code to its continent, from the map shapes.
+export function mapRegions(places, continents) {
+  const groups = new Map()
+  for (const p of places) {
+    const continent = continents[p.code]
+    if (p.latitude == null || !continent) continue
+    if (!groups.has(continent)) groups.set(continent, [])
+    groups.get(continent).push(p)
+  }
+  const rank = (name) => (REGION_ORDER.includes(name) ? REGION_ORDER.indexOf(name) : REGION_ORDER.length)
+  return [...groups].map(([name, list]) => ({ name, places: list })).sort((a, b) => rank(a.name) - rank(b.name))
+}
 
 // Names the owner may type for a country → the map's three-letter code.
 // Anything else is matched against the map's own country names.
@@ -94,23 +110,33 @@ export function radius(count, most) {
 const CHAR_WIDTH = 6.2
 const LABEL_HEIGHT = 13
 
-export function placeLabels(circles, width, height) {
+// `avoid`: boxes no name may cover (the zoom buttons, the insets).
+export function placeLabels(circles, width, height, avoid = []) {
   const overlaps = (a, b) => a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2
   const discs = circles.map((c) => ({ x1: c.x - c.r, x2: c.x + c.r, y1: c.y - c.r, y2: c.y + c.r }))
   const placed = []
-  const boxes = []
+  const boxes = [...avoid]
   for (const c of [...circles].sort((a, b) => b.r - a.r)) {
     if (!c.name) continue
     const w = c.name.length * CHAR_WIDTH
-    // Right of the circle, else left of it.
-    for (const left of [false, true]) {
-      const x1 = left ? c.x - c.r - 3 - w : c.x + c.r + 3
-      const box = { x1, x2: x1 + w, y1: c.y - LABEL_HEIGHT / 2, y2: c.y + LABEL_HEIGHT / 2 }
+    const h = LABEL_HEIGHT
+    // Above or below, centered on the circle but slid sideways to stay on the map.
+    const centered = Math.min(Math.max(c.x - w / 2, 1), width - 1 - w)
+    // Right of the circle, then left, then above, then below.
+    const spots = [
+      { x1: c.x + c.r + 3, y1: c.y - h / 2 },
+      { x1: c.x - c.r - 3 - w, y1: c.y - h / 2 },
+      { x1: centered, y1: c.y - c.r - 2 - h },
+      { x1: centered, y1: c.y + c.r + 2 },
+    ]
+    for (const [i, { x1, y1 }] of spots.entries()) {
+      const box = { x1, x2: x1 + w, y1, y2: y1 + h }
       if (box.x1 < 0 || box.x2 > width || box.y1 < 0 || box.y2 > height) continue
       if (boxes.some((b) => overlaps(b, box))) continue
-      if (discs.some((d, i) => circles[i] !== c && overlaps(d, box))) continue
+      if (discs.some((d, j) => circles[j] !== c && overlaps(d, box))) continue
       boxes.push(box)
-      placed.push({ ...c, labelX: left ? box.x2 : box.x1, labelAnchor: left ? 'end' : 'start', labelY: c.y, box })
+      const left = i === 1
+      placed.push({ ...c, labelX: left ? box.x2 : box.x1, labelAnchor: left ? 'end' : 'start', labelY: y1 + h / 2, box })
       break
     }
   }

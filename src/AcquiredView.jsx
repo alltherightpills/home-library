@@ -99,7 +99,7 @@ function ByPlace({ copies, onOpenPlace }) {
 }
 
 // The Acquired screen: every year, or every place, with how many books.
-function AcquiredCounts({ by, map, copies, readFilter, setReadFilter, onOpenPlace, onReplacePlace, onBack }) {
+function AcquiredCounts({ by, map, region, copies, readFilter, setReadFilter, onOpenPlace, onReplacePlace, onBack }) {
   const withYear = copies.filter((c) => c.acquired_year).length
   const withPlace = copies.filter(placeOf).length
   return (
@@ -135,7 +135,12 @@ function AcquiredCounts({ by, map, copies, readFilter, setReadFilter, onOpenPlac
         <ByYear copies={copies} onOpenPlace={onOpenPlace} />
       ) : map ? (
         <Suspense fallback={<p className="book-meta">Loading the map…</p>}>
-          <PlaceMap copies={copies} onOpenPlace={onOpenPlace} />
+          <PlaceMap
+            copies={copies}
+            onOpenPlace={onOpenPlace}
+            region={region}
+            onRegion={(r) => onReplacePlace({ kind: 'acquired', id: 'place', map: true, region: r })}
+          />
         </Suspense>
       ) : (
         <ByPlace copies={copies} onOpenPlace={onOpenPlace} />
@@ -171,7 +176,7 @@ function AcquiredView({ place, copies: all, ...rest }) {
     return null
   }, [copies, place])
 
-  if (place.kind === 'acquired') return <AcquiredCounts by={place.id ?? 'year'} map={!!place.map} copies={copies} {...rest} />
+  if (place.kind === 'acquired') return <AcquiredCounts by={place.id ?? 'year'} map={!!place.map} region={place.region} copies={copies} {...rest} />
   const title =
     place.kind === 'acquiredYear'
       ? place.id === 'none'
