@@ -117,7 +117,9 @@ export function placeLabels(circles, width, height, avoid = []) {
   const placed = []
   const boxes = [...avoid]
   for (const c of [...circles].sort((a, b) => b.r - a.r)) {
-    if (!c.name) continue
+    // A place off the visible map (zoomed past it) gets no name, so names
+    // never get slid in from the edge for places you can't see.
+    if (!c.name || c.x < 0 || c.x > width || c.y < 0 || c.y > height) continue
     const w = c.name.length * CHAR_WIDTH
     const h = LABEL_HEIGHT
     // Above or below, centered on the circle but slid sideways to stay on the map.

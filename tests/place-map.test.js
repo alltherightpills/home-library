@@ -74,6 +74,12 @@ describe('circles and names', () => {
     assert.ok(label.box.y2 <= 114 - 5) // above the circle
     assert.ok(label.box.x1 >= 0 && label.box.x1 < 24) // starts on the map, over the circle
   })
+  test('zoomed past a place, its name is not pulled in from the edge', () => {
+    const offLeft = { x: -40, y: 150, r: 5, name: 'Westville' }
+    const offRight = { x: 420, y: 150, r: 5, name: 'Eastport' }
+    const offTop = { x: 180, y: -30, r: 5, name: 'Northfield' }
+    assert.deepEqual(placeLabels([offLeft, offRight, offTop], 360, 300), [])
+  })
   test('no name under the zoom buttons', () => {
     const buttons = { x1: 170, x2: 360, y1: 0, y2: 50 }
     const [label] = placeLabels([{ x: 200, y: 25, r: 5, name: 'Hidden' }], 360, 300, [buttons])
