@@ -1,4 +1,6 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import AcquiredView, { AcquiredPanel } from './AcquiredView.jsx'
+import { ACQUIRED_KINDS } from './acquired.js'
 import BookDetail from './BookDetail.jsx'
 import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
@@ -172,6 +174,21 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
           onBack={() => history.back()}
         />
       )}
+      {!open && place && ACQUIRED_KINDS.includes(place.kind) && (
+        <AcquiredView
+          place={place}
+          copies={copies}
+          sort={sort}
+          setSort={setSort}
+          view={view}
+          setView={setView}
+          {...filterProps}
+          onOpenPlace={openPlace}
+          onReplacePlace={replacePlace}
+          onOpenBook={openBook}
+          onBack={() => history.back()}
+        />
+      )}
       {!open && place && ['series', 'publisherSeries'].includes(place.kind) && (
         <SeriesView
           place={place}
@@ -258,6 +275,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
                 </button>
               )}
             </div>
+            <AcquiredPanel copies={copies} onOpenPlace={openPlace} />
           </>
         )}
       </div>

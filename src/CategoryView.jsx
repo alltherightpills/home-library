@@ -1,14 +1,10 @@
 import { useMemo } from 'react'
 import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import { booksOn, shelfCounts } from './categories/browse.js'
-import { byRead } from './readings.js'
+import { byRead, countText } from './readings.js'
 import { SORTS } from './useCatalog.js'
 
-// "12 books", or "12 unread books" with the Read filter on.
-const countText = (n, readFilter = 'all') =>
-  `${n.toLocaleString()} ${readFilter === 'all' ? '' : `${readFilter} `}${n === 1 ? 'book' : 'books'}`
-
-function BackBar({ onBack, label = 'Back' }) {
+export function BackBar({ onBack, label = 'Back' }) {
   return (
     <div className="pinned-back">
       <button className="link" onClick={onBack}>
@@ -18,11 +14,16 @@ function BackBar({ onBack, label = 'Back' }) {
   )
 }
 
-function Row({ name, count, onOpen, muted }) {
+// One tappable row: a name and its count. `indent` steps it in (1 or 2, for
+// an outline); `detail` is a gray line under the name; `count` may be text.
+export function Row({ name, count, onOpen, muted, indent = 0, detail }) {
   return (
-    <li>
+    <li className={indent ? `indent-${indent}` : undefined}>
       <button onClick={onOpen}>
-        <span className={muted ? 'book-meta' : 'category-name'}>{name}</span>
+        <span>
+          <span className={muted ? 'book-meta' : 'category-name'}>{name}</span>
+          {detail && <span className="book-meta row-detail">{detail}</span>}
+        </span>
         <span className="book-meta">{count.toLocaleString()} ›</span>
       </button>
     </li>

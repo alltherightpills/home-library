@@ -22,14 +22,14 @@ A phone-first web app (installed on the owner's iPhone home screen) for catalogi
 - **Function first.** The look of the screens waits for a later design pass.
 - **The repo is public.** No personal data in it: lists of the owner's books go in `data/` (git-ignored), and keys and passwords in `.env.local` (git-ignored).
 
-## 2. Where things stand (2026-11-03)
+## 2. Where things stand (2026-11-06)
 
 - **Phase 1 is finished:** scanning, the LibraryThing import, enrichment, categories and the review list, the Library screens, Scan to add, backup/restore, and the spreadsheet export.
-- **Phase 2:** step 0 (iPhone shakedown), step 1 (reading tracking) and step 2 (shelf walk) are built. The owner is walking the remaining shelves.
-- **Next:** the "do now" cleanup items from the 2026-11-03 audit (in `cleanup.md`), then Phase 2 step 3.
+- **Phase 2:** step 0 (iPhone shakedown), step 1 (reading tracking) and step 2 (shelf walk) are built. The owner is walking the remaining shelves. The 2026-11-03 audit's "do now" items are done.
+- **Step 3 (year/place stats):** slices A (Acquired panel and screen) and B (tap a year or place for its books) built 2026-11-06. **Next:** slice C, a map of places with circles sized by book count (area, not width): a simple outline map, no street map; each place's coordinates looked up once and saved on a small list that step 4's Manage › Places takes over. Needs a migration.
 
 **Phase 2 order (remaining):**
-3. Year/place stats on the dashboard (count by year acquired and by place acquired).
+3. Year/place stats on the dashboard (count by year acquired and by place acquired), then slice C, the places map.
 4. Manage, part one: the hub (a sliders button on Library), Authors (rename everywhere, merge duplicates), Places (rename and merge), and Export in the app (`src/export/bookSheet.js` was built for this). Manage shows backup and restore as Mac-only.
 5. Lending + Borrowers (borrowers from a managed list; date lent, returned). Build its saves as all-or-nothing database functions (see `cleanup.md`).
 6. Wishlist: **its own list**, separate from the library and never counted in totals. Buying one moves it into the library through the normal check form. Scan gets Add to wishlist and notices a scanned wishlist book.
@@ -56,6 +56,7 @@ A phone-first web app (installed on the owner's iPhone home screen) for catalogi
 A bottom tab bar with four tabs: **Library · Reading · Scan · Pick for me** (a placeholder until Phase 3). One search bar, above the tab bar, shows on every screen except Scan, the password form, and screens with their own bottom buttons or a form. On the iPhone the tab bar hides while typing a search.
 
 - **Library (dashboard):** book total and books read (tap for All books with Read on), the review banner, main categories with counts, Browse all, the Shelf walk button with progress, and Series / Publisher's series buttons. Typing a search shows matching books here.
+- **Acquired** (bottom of the dashboard): top years and places, plus how many are walked with no bookplate or not walked yet. Its screen has By year (every year, newest first) and By place (country › state › city outline; US state codes spelled out); every row opens its books as a list. Rules in `src/acquired.js`, screens in `src/AcquiredView.jsx`. Places are grouped exactly as typed (trimmed), so merging spellings is for Manage › Places.
 - **Lists** (search results, All books, categories, subcategories, series): sort by author, title, or date added; List / Gallery (remembered on the phone); All / Unread / Read (not remembered, so it can't hide books unnoticed). All books also has Needs checking and Not walked yet.
 - **Category screens:** a main category's count is the books whose **main shelf** it is, so counts add up to the library; books "also in" it are listed too and marked. A subcategory lists every book on it.
 - **Review categories:** books with `category_review`, filtered by No main category, Sources disagree, No subcategory, Tentative. **Save and next is a decision even with nothing changed:** the shelves become the owner's and the book leaves the list.

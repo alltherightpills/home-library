@@ -606,6 +606,31 @@ body {
   flex-shrink: 0;
 }
 
+/* A gray line under a row's name (the dashboard's Acquired panel). */
+.category-rows .row-detail {
+  display: block;
+  font-size: 13px;
+}
+
+.category-rows button:has(.row-detail) {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Rows stepped in, for the country › state › city outline. */
+.category-rows .indent-1 button {
+  padding-left: 32px;
+}
+
+.category-rows .indent-2 button {
+  padding-left: 50px;
+}
+
+.category-rows .indent-2 .category-name {
+  font-size: 16px;
+  font-weight: 400;
+}
+
 .browse-all {
   display: block;
   width: 100%;

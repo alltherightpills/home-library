@@ -112,6 +112,10 @@ export function readCopyIds(list, copies) {
 export const byRead = (copies, filter) =>
   filter === 'all' ? copies : copies.filter((c) => c.read === (filter === 'read'))
 
+// "12 books", or "12 unread books" with the Read filter on.
+export const countText = (n, readFilter = 'all') =>
+  `${n.toLocaleString()} ${readFilter === 'all' ? '' : `${readFilter} `}${n === 1 ? 'book' : 'books'}`
+
 // "Nov 2, 2026" from a stored "2026-11-02".
 export const dateText = (iso) =>
   new Date(`${iso}T00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
