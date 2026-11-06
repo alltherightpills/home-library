@@ -25,6 +25,8 @@ export const BOOK_TABLES = [
   { name: 'copy_publisher_series', key: ['copy_id', 'publisher_series_id'], primaryKey: 'copy_id,publisher_series_id' },
   // Only the signed-in person's readings: the database shows nobody else's.
   { name: 'readings', key: ['id'], primaryKey: 'id' },
+  // Map coordinates for the places books were acquired (the app looks them up).
+  { name: 'places', key: ['id'], primaryKey: 'id' },
 ]
 
 // Backed up for reference; a restore leaves these as they are.

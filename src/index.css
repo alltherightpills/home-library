@@ -1027,3 +1027,116 @@ body {
 .walk-last {
   margin-bottom: 8px;
 }
+
+/* The places map (src/map/PlaceMap.jsx). */
+.map-frame {
+  position: relative;
+  margin: 4px 0 8px;
+  border: 1px solid #e2ddd2;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.map-main {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none; /* pinch and drag move the map, not the page */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.map-water {
+  fill: #e8eef2;
+}
+
+.map-land {
+  fill: #fbfaf6;
+  stroke: #b9b2a3;
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-land.other {
+  fill: #efede6;
+}
+
+.map-lake {
+  fill: #e8eef2;
+  stroke: #b9b2a3;
+  stroke-width: 0.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.map-place {
+  cursor: pointer;
+}
+
+.map-hit {
+  fill: transparent;
+}
+
+.map-circle {
+  fill: rgba(176, 74, 46, 0.45);
+  stroke: #8a3a24;
+  stroke-width: 1;
+}
+
+.map-label {
+  font-size: 11px;
+  fill: #3a352c;
+  stroke: #fbfaf6;
+  stroke-width: 3px;
+  paint-order: stroke;
+  pointer-events: none;
+}
+
+.map-buttons {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.map-buttons button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid #d6d0c3;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  font: inherit;
+  font-size: 15px;
+}
+
+.map-insets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 8px;
+}
+
+.map-inset {
+  margin: 0;
+  width: 130px;
+}
+
+.map-inset svg {
+  display: block;
+  width: 100%;
+  border: 1px solid #e2ddd2;
+  border-radius: 10px;
+}
+
+.map-inset figcaption {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.map-credit {
+  margin-top: 12px;
+  font-size: 12px;
+}

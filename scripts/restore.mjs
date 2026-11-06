@@ -76,6 +76,7 @@ function copyIntoLibrary(tables, libraryId, userId) {
     copy_publisher_series: tables.copy_publisher_series.map((r) => moved(r, { copy_id: newId(r.copy_id), publisher_series_id: newId(r.publisher_series_id) })),
     // The readings become the signed-in person's, in the new library.
     readings: tables.readings.map((r) => moved(r, { id: newId(r.id), copy_id: r.copy_id && newId(r.copy_id), user_id: userId })),
+    places: tables.places.map((r) => moved(r, { id: newId(r.id) })),
   }
 }
 
@@ -206,12 +207,12 @@ async function removeRows({ name, key }, rows) {
   }
 }
 
-for (const name of ['readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'copies', 'lookups']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'copies', 'lookups', 'places']) await removeRows(byName[name], plan[name].remove)
 for (const { local, path } of photosToUpload) {
   const { error } = await bucket.upload(path, await readFile(local), { contentType: 'image/jpeg', upsert: true })
   if (error) throw new Error(`Uploading photo ${path}: ${error.message}`)
 }
-for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings']) {
+for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings', 'places']) {
   await putRows(byName[name], plan[name].put)
   console.log(`${name}: done`)
 }

@@ -1,9 +1,12 @@
-import { useMemo } from 'react'
+import { Suspense, lazy, useMemo } from 'react'
 import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import { BackBar, Row } from './CategoryView.jsx'
 import { booksAcquiredIn, booksFrom, noPlace, placeOf, placeTitle, placeTree, regionName, topPlaces, yearCounts } from './acquired.js'
 import { byRead, countText } from './readings.js'
 import { SORTS } from './useCatalog.js'
+
+// The map brings its own shapes and drawing code, so it loads only when opened.
+const PlaceMap = lazy(() => import('./map/PlaceMap.jsx'))
 
 // The dashboard's panel: the top years and places, and what's still blank.
 export function AcquiredPanel({ copies, onOpenPlace }) {
@@ -96,7 +99,7 @@ function ByPlace({ copies, onOpenPlace }) {
 }
 
 // The Acquired screen: every year, or every place, with how many books.
-function AcquiredCounts({ by, copies, readFilter, setReadFilter, onOpenPlace, onReplacePlace, onBack }) {
+function AcquiredCounts({ by, map, copies, readFilter, setReadFilter, onOpenPlace, onReplacePlace, onBack }) {
   const withYear = copies.filter((c) => c.acquired_year).length
   const withPlace = copies.filter(placeOf).length
   return (
@@ -115,7 +118,28 @@ function AcquiredCounts({ by, copies, readFilter, setReadFilter, onOpenPlace, on
         ))}
         <ReadFilter filter={readFilter} setFilter={setReadFilter} />
       </div>
-      {by === 'place' ? <ByPlace copies={copies} onOpenPlace={onOpenPlace} /> : <ByYear copies={copies} onOpenPlace={onOpenPlace} />}
+      {by === 'place' && (
+        <div className="controls">
+          {[false, true].map((m) => (
+            <button
+              key={String(m)}
+              className={map === m ? 'chip active' : 'chip'}
+              onClick={() => onReplacePlace({ kind: 'acquired', id: 'place', ...(m && { map: true }) })}
+            >
+              {m ? 'Map' : 'List'}
+            </button>
+          ))}
+        </div>
+      )}
+      {by !== 'place' ? (
+        <ByYear copies={copies} onOpenPlace={onOpenPlace} />
+      ) : map ? (
+        <Suspense fallback={<p className="book-meta">Loading the map…</p>}>
+          <PlaceMap copies={copies} onOpenPlace={onOpenPlace} />
+        </Suspense>
+      ) : (
+        <ByPlace copies={copies} onOpenPlace={onOpenPlace} />
+      )}
     </div>
   )
 }
@@ -147,7 +171,7 @@ function AcquiredView({ place, copies: all, ...rest }) {
     return null
   }, [copies, place])
 
-  if (place.kind === 'acquired') return <AcquiredCounts by={place.id ?? 'year'} copies={copies} {...rest} />
+  if (place.kind === 'acquired') return <AcquiredCounts by={place.id ?? 'year'} map={!!place.map} copies={copies} {...rest} />
   const title =
     place.kind === 'acquiredYear'
       ? place.id === 'none'

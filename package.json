@@ -23,8 +23,12 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "barcode-detector": "^3.2.3",
+    "d3-geo": "^3.1.2",
+    "d3-selection": "^3.0.1",
+    "d3-zoom": "^3.0.1",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "topojson-client": "^3.1.0"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
