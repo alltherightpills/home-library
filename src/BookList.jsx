@@ -1,3 +1,6 @@
+import { useMemo } from 'react'
+import Lettered from './LetterIndex.jsx'
+import { letterStarts } from './letters.js'
 import { coverUrl } from './useCatalog.js'
 
 export function SortSelect({ sort, setSort }) {
@@ -44,18 +47,27 @@ export function ReadFilter({ filter, setFilter }) {
 
 const ReadMark = ({ copy }) => copy.read && <span className="read-mark" title="You've read this">✓ </span>
 
+// The sort key each A–Z order files a book under (the strip follows the sort).
+const LETTER_KEYS = { author: (c) => c.authorSort, title: (c) => c.titleSort }
+
 // A list of books with covers: the main list, a category's, and a series'.
 // `noteFor` can put a few words before a book's gray line ("Also in").
 // As a gallery: covers three across, with the title and author under each.
-// A ✓ before the title marks a book you've read.
-function BookList({ books, onOpenBook, noteFor, view = 'list' }) {
-  if (view === 'gallery') {
+// A ✓ before the title marks a book you've read. `letters` is the list's sort
+// ('author' or 'title'; anything else, such as date cataloged, has no strip):
+// a long list gets the A–Z strip down the right edge.
+function BookList({ books, onOpenBook, noteFor, view = 'list', letters }) {
+  const starts = useMemo(() => (LETTER_KEYS[letters] ? letterStarts(books.map(LETTER_KEYS[letters])) : null), [books, letters])
+  return <Lettered starts={starts}>{view === 'gallery' ? <Gallery books={books} onOpenBook={onOpenBook} noteFor={noteFor} starts={starts} /> : <Rows books={books} onOpenBook={onOpenBook} noteFor={noteFor} starts={starts} />}</Lettered>
+}
+
+function Gallery({ books, onOpenBook, noteFor, starts }) {
     return (
       <ul className="book-gallery">
-        {books.map((c) => {
+        {books.map((c, i) => {
           const src = coverUrl(c, 'G')
           return (
-            <li key={c.id}>
+            <li key={c.id} data-letter={starts?.get(i)}>
               <button onClick={() => onOpenBook(c.id)}>
                 <span className="gallery-cover">
                   {src ? <img src={src} alt="" loading="lazy" /> : <span className="gallery-blank">{c.title}</span>}
@@ -72,11 +84,13 @@ function BookList({ books, onOpenBook, noteFor, view = 'list' }) {
         })}
       </ul>
     )
-  }
+}
+
+function Rows({ books, onOpenBook, noteFor, starts }) {
   return (
     <ul className="book-list">
-      {books.map((c) => (
-        <li key={c.id}>
+      {books.map((c, i) => (
+        <li key={c.id} data-letter={starts?.get(i)}>
           <button onClick={() => onOpenBook(c.id)}>
             <span className="thumb">{coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" loading="lazy" />}</span>
             <span className="book-title">

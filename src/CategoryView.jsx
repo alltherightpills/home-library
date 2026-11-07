@@ -16,9 +16,9 @@ export function BackBar({ onBack, label = 'Back' }) {
 
 // One tappable row: a name and its count. `indent` steps it in (1 or 2, for
 // an outline); `detail` is a gray line under the name; `count` may be text.
-export function Row({ name, count, onOpen, muted, indent = 0, detail }) {
+export function Row({ name, count, onOpen, muted, indent = 0, detail, letter }) {
   return (
-    <li className={indent ? `indent-${indent}` : undefined}>
+    <li className={indent ? `indent-${indent}` : undefined} data-letter={letter}>
       <button onClick={onOpen}>
         <span>
           <span className={muted ? 'book-meta' : 'category-name'}>{name}</span>
@@ -62,7 +62,7 @@ function ShelfList({ entries, sort, setSort, view, setView, readFilter, setReadF
         <ViewToggle view={view} setView={setView} />
         <ReadFilter filter={readFilter} setFilter={setReadFilter} />
       </div>
-      <BookList books={books} onOpenBook={onOpenBook} view={view} noteFor={(c) => alsoIn.has(c.id) && `Also in ${alsoInName}`} />
+      <BookList books={books} onOpenBook={onOpenBook} view={view} letters={sort} noteFor={(c) => alsoIn.has(c.id) && `Also in ${alsoInName}`} />
     </>
   )
 }
@@ -190,7 +190,7 @@ function AllBooks({ filter, copies, sort, setSort, view, setView, readFilter, se
           )
         })}
       </div>
-      <BookList books={books} onOpenBook={onOpenBook} view={view} />
+      <BookList books={books} onOpenBook={onOpenBook} view={view} letters={sort} />
     </div>
   )
 }

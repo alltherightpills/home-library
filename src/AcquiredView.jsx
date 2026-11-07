@@ -152,7 +152,7 @@ function AcquiredBooks({ title, books, sort, setSort, view, setView, readFilter,
         <ViewToggle view={view} setView={setView} />
         <ReadFilter filter={readFilter} setFilter={setReadFilter} />
       </div>
-      <BookList books={sorted} onOpenBook={onOpenBook} view={view} />
+      <BookList books={sorted} onOpenBook={onOpenBook} view={view} letters={sort} />
     </div>
   )
 }

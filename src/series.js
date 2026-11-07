@@ -1,7 +1,7 @@
 // Lists of series and publisher's series, and the books in each. `kind` is the
 // copy's field: 'series' or 'publisherSeries'.
 
-const withoutArticle = (name) => name.replace(/^(the|a|an)\s+/i, '')
+export const withoutArticle = (name) => name.replace(/^(the|a|an)\s+/i, '')
 
 // Numbers compare by value, so 2 comes before 10.
 const byNumber = (a, b) => a.localeCompare(b, undefined, { numeric: true })

@@ -4,6 +4,8 @@ import { loadNotSame, markNotSame, mergeAuthorsInto, renameAuthor } from './book
 import BookList from './BookList.jsx'
 import { BackBar, Row } from './CategoryView.jsx'
 import { Field } from './EditBook.jsx'
+import Lettered from './LetterIndex.jsx'
+import { letterStarts } from './letters.js'
 import { SORTS } from './useCatalog.js'
 
 const bookCount = (n) => `${n.toLocaleString()} ${n === 1 ? 'book' : 'books'}`
@@ -72,19 +74,24 @@ export function AuthorsList({ place, copies, onOpenPlace, onReplacePlace, onBack
   )
 }
 
+// A long list gets the A–Z strip, by filed name.
 function PeopleRows({ people, onOpen }) {
+  const starts = useMemo(() => letterStarts(people.map((p) => p.author.sort_name)), [people])
   return (
-    <ul className="category-rows">
-      {people.map((p) => (
-        <Row
-          key={p.author.id}
-          name={p.author.sort_name}
-          detail={rolesText(p.roles)}
-          count={bookCount(p.books.length)}
-          onOpen={() => onOpen(p)}
-        />
-      ))}
-    </ul>
+    <Lettered starts={starts}>
+      <ul className="category-rows">
+        {people.map((p, i) => (
+          <Row
+            key={p.author.id}
+            name={p.author.sort_name}
+            detail={rolesText(p.roles)}
+            count={bookCount(p.books.length)}
+            letter={starts?.get(i)}
+            onOpen={() => onOpen(p)}
+          />
+        ))}
+      </ul>
+    </Lettered>
   )
 }
 
@@ -134,7 +141,7 @@ export function PersonPage({ place, copies, updateAuthor, onOpenPlace, onOpenBoo
           </button>
         </p>
       )}
-      <BookList books={books} onOpenBook={onOpenBook} />
+      <BookList books={books} onOpenBook={onOpenBook} letters="title" />
     </div>
   )
 }

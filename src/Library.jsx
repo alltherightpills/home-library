@@ -282,7 +282,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
             <p className="diagnostic">
               {shown.length} matching{readFilter !== 'all' && ` (${readFilter} only)`}
             </p>
-            <BookList books={shown} onOpenBook={openBook} view={view} />
+            <BookList books={shown} onOpenBook={openBook} view={view} letters={sort} />
           </>
         ) : (
           <>

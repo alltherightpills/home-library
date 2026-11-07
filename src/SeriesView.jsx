@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import BookList, { ReadFilter, ViewToggle } from './BookList.jsx'
 import { byRead } from './readings.js'
-import { labelBooks, labelIndex } from './series.js'
+import Lettered from './LetterIndex.jsx'
+import { letterStarts } from './letters.js'
+import { labelBooks, labelIndex, withoutArticle } from './series.js'
 
 const KIND_NAMES = { series: 'Series', publisherSeries: "Publisher's series" }
 
@@ -10,6 +12,8 @@ const countText = (n) => `${n} ${n === 1 ? 'book' : 'books'}`
 // All series or publisher's series, A–Z.
 function LabelIndex({ kind, copies, onOpenLabel, onBack }) {
   const entries = useMemo(() => labelIndex(copies, kind), [copies, kind])
+  // A long list gets the A–Z strip, filed as sorted (without "The" or "A").
+  const starts = useMemo(() => letterStarts(entries.map((e) => withoutArticle(e.name))), [entries])
   return (
     <div className="series-view">
       <div className="pinned-back">
@@ -18,16 +22,18 @@ function LabelIndex({ kind, copies, onOpenLabel, onBack }) {
         </button>
       </div>
       <h2>{KIND_NAMES[kind]}</h2>
-      <ul className="label-index">
-        {entries.map((entry) => (
-          <li key={entry.id}>
-            <button onClick={() => onOpenLabel(kind, entry.id)}>
-              <span className="book-title">{entry.name}</span>
-              <span className="book-meta">{countText(entry.count)}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <Lettered starts={starts}>
+        <ul className="label-index">
+          {entries.map((entry, i) => (
+            <li key={entry.id} data-letter={starts?.get(i)}>
+              <button onClick={() => onOpenLabel(kind, entry.id)}>
+                <span className="book-title">{entry.name}</span>
+                <span className="book-meta">{countText(entry.count)}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Lettered>
     </div>
   )
 }
