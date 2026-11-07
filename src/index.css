@@ -111,8 +111,35 @@ body {
 }
 
 .total {
+  display: flex;
+  align-items: center;
   margin: 0 0 12px;
   font-size: 18px;
+}
+
+/* The sliders button that opens Manage, at the right end of the total line. */
+.manage-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 8px 0 8px 8px; /* a bigger target to tap than the icon alone */
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--green);
+}
+
+/* A link styled as a big button (Manage › Export's Save spreadsheet). */
+.button-link {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* Manage rows that aren't built yet: plain text, nothing to tap. */
+.manage-soon {
+  padding: 10px 0;
 }
 
 .search {

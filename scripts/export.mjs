@@ -4,21 +4,17 @@
 //   npm run export                 signs in and reads the library as it is now
 //   npm run export -- --backup     reads the newest backup instead (no sign-in)
 //
-// The columns are in src/export/bookSheet.js, so the app's Manage screen can
-// offer the same export later.
+// The columns are in src/export/bookSheet.js and the tables in
+// src/export/tables.js, shared with the app's Manage › Export.
 
 import { readFile, readdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import writeExcelFile from 'write-excel-file/node'
 import { bookSheet } from '../src/export/bookSheet.js'
-import { BACKUP_ROOT, BOOK_TABLES, SNAPSHOT_NAME, fetchTable } from './lib/catalog.mjs'
+import { SHEET_OPTIONS, SHEET_TABLES as TABLES, sheetFileName } from '../src/export/tables.js'
+import { BACKUP_ROOT, SNAPSHOT_NAME, fetchTable } from './lib/catalog.mjs'
 import { signIn } from './lib/session.mjs'
-
-// Every book table except lookups (the saved answers from Open Library, LC and
-// Google), readings, which the spreadsheet doesn't show yet, and places (map
-// coordinates; the sheet has each book's place already).
-const TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings', 'places'].includes(t.name))
 
 const tables = {}
 let madeFrom
@@ -35,8 +31,7 @@ if (process.argv.includes('--backup')) {
 }
 
 const { sheetData, columns } = bookSheet(tables)
-const today = new Date().toLocaleDateString('en-CA') // 2026-11-02, by the Mac's clock
-const file = join(homedir(), 'Downloads', `Home Library ${today}.xlsx`)
-await writeExcelFile(sheetData, { columns, sheet: 'Books', stickyRowsCount: 1, stickyColumnsCount: 1 }).toFile(file)
+const file = join(homedir(), 'Downloads', sheetFileName())
+await writeExcelFile(sheetData, { columns, ...SHEET_OPTIONS }).toFile(file)
 
 console.log(`Saved ${sheetData.length - 1} books from ${madeFrom} to:\n  ${file}`)

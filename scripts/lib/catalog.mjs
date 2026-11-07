@@ -8,26 +8,9 @@ import { creditsByWork as creditsByWorkFor, labelsByCopy } from '../../src/expor
 export const BACKUP_ROOT = join(homedir(), 'Documents', 'Home Library Backups')
 export const SNAPSHOT_NAME = /^\d{4}-\d{2}-\d{2}_\d{4}$/
 
-// The book tables, parents before children. `key` names a row exactly within a
-// library; reading in that order never skips a row. `primaryKey` is the
-// database's own (what a restore matches rows on).
-export const BOOK_TABLES = [
-  { name: 'authors', key: ['id'], primaryKey: 'id' },
-  { name: 'works', key: ['id'], primaryKey: 'id' },
-  { name: 'work_authors', key: ['work_id', 'author_id', 'role'], primaryKey: 'work_id,author_id,role' },
-  { name: 'copies', key: ['id'], primaryKey: 'id' },
-  { name: 'lookups', key: ['source', 'isbn'], primaryKey: 'library_id,source,isbn' },
-  { name: 'categories', key: ['id'], primaryKey: 'id' },
-  { name: 'book_categories', key: ['copy_id', 'category_id'], primaryKey: 'copy_id,category_id' },
-  { name: 'series', key: ['id'], primaryKey: 'id' },
-  { name: 'publisher_series', key: ['id'], primaryKey: 'id' },
-  { name: 'copy_series', key: ['copy_id', 'series_id'], primaryKey: 'copy_id,series_id' },
-  { name: 'copy_publisher_series', key: ['copy_id', 'publisher_series_id'], primaryKey: 'copy_id,publisher_series_id' },
-  // Only the signed-in person's readings: the database shows nobody else's.
-  { name: 'readings', key: ['id'], primaryKey: 'id' },
-  // Map coordinates for the places books were acquired (the app looks them up).
-  { name: 'places', key: ['id'], primaryKey: 'id' },
-]
+// The book tables and how to read one live in src/ so the app's Manage › Export
+// can use them too.
+export { BOOK_TABLES, fetchTable } from '../../src/export/tables.js'
 
 // Backed up for reference; a restore leaves these as they are.
 export const LIBRARY_TABLES = [
@@ -35,17 +18,6 @@ export const LIBRARY_TABLES = [
   { name: 'library_members', key: ['user_id'] },
 ]
 
-export async function fetchTable(supabase, { name, key, libraryColumn = 'library_id' }, libraryId) {
-  const rows = []
-  for (let from = 0; ; from += 1000) {
-    let query = supabase.from(name).select('*').eq(libraryColumn, libraryId)
-    for (const column of key) query = query.order(column)
-    const { data, error } = await query.range(from, from + 999)
-    if (error) throw new Error(`Reading ${name}: ${error.message}`)
-    rows.push(...data)
-    if (data.length < 1000) return rows
-  }
-}
 
 // Cover photos are stored as covers/<library id>/<file>; their web address has this in it.
 export const PHOTO_PATH = '/storage/v1/object/public/covers/'

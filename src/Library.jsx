@@ -5,6 +5,7 @@ import BookDetail from './BookDetail.jsx'
 import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
+import Manage from './Manage.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
 import { byRead, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
@@ -201,6 +202,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
           onBack={() => history.back()}
         />
       )}
+      {!open && place?.kind === 'manage' && <Manage libraryId={copies[0]?.library_id} onBack={() => history.back()} />}
       {!open && place?.kind === 'walk' && (
         <ShelfWalk
           copies={copies}
@@ -214,6 +216,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
       )}
       <div className="library" hidden={!!open || !!place}>
         <p className="total">
+          <span>
           <strong>{copies.length.toLocaleString()}</strong> books
           {readings.list && (
             <>
@@ -234,6 +237,17 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
               )}
             </>
           )}
+          </span>
+          <button className="manage-button" onClick={() => openPlace('manage')} aria-label="Manage">
+            {/* Three sliders: the usual sign for settings and tools. */}
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />
+              <circle cx="16" cy="6" r="2" />
+              <circle cx="10" cy="12" r="2" />
+              <circle cx="18" cy="18" r="2" />
+            </svg>
+            Manage
+          </button>
         </p>
 
         {query.trim() ? (
