@@ -67,11 +67,19 @@ export function needsLookup(places, rows) {
 // at most one request a second, and save the answers rather than asking again.
 export const LOOKUP_GAP_MS = 1100
 
-export function lookupUrl({ country, region, city }) {
-  const params = new URLSearchParams({ format: 'jsonv2', limit: '1' })
+// The search's country box takes only whole countries, so "Edinburgh,
+// Scotland" finds nothing. The UK's nations go in its state box instead, with
+// the UK as the country (unless a county or region was typed as the state).
+const UK_NATIONS = ['england', 'scotland', 'wales', 'northern ireland']
+
+// `limit`: how many matches to ask for (Search again in Manage › Places shows several).
+export function lookupUrl({ country, region, city }, limit = 1) {
+  const params = new URLSearchParams({ format: 'jsonv2', limit: String(limit) })
+  const nation = UK_NATIONS.includes(country?.trim().toLowerCase()) ? country.trim() : null
+  const state = region ? regionName(region, country ?? 'USA') : nation
   if (city) params.set('city', city)
-  if (region) params.set('state', regionName(region, country ?? 'USA'))
-  params.set('country', country ?? 'USA')
+  if (state) params.set('state', state)
+  params.set('country', nation ? 'United Kingdom' : (country ?? 'USA'))
   return `https://nominatim.openstreetmap.org/search?${params}`
 }
 

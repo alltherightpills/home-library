@@ -7,6 +7,7 @@ import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import Manage from './Manage.jsx'
 import { AuthorsList, DuplicatesList, MergePick, MergeScreen, PersonPage } from './ManageAuthors.jsx'
+import { PlacePage, PlacesList } from './ManagePlaces.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
 import { byRead, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
@@ -18,7 +19,7 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies: catalog, categories, readings, error, updateCopy, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
   // Every copy marked `read` (yours, or another copy of the same work), for
   // the ✓, the count and the Read filter.
   const copies = useMemo(() => {
@@ -206,6 +207,19 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
       {!open && place?.kind === 'manage' && <Manage copies={copies} onOpenPlace={openPlace} onBack={() => history.back()} />}
       {!open && place?.kind === 'authors' && (
         <AuthorsList place={place} copies={copies} onOpenPlace={openPlace} onReplacePlace={replacePlace} onBack={() => history.back()} />
+      )}
+      {!open && place?.kind === 'places' && <PlacesList copies={copies} onOpenPlace={openPlace} onBack={() => history.back()} />}
+      {!open && place?.kind === 'placeEdit' && (
+        // Keyed by the place, so a rename shows the renamed place fresh.
+        <PlacePage
+          key={place.id}
+          place={place}
+          copies={copies}
+          updateCopies={updateCopies}
+          onReplacePlace={replacePlace}
+          onOpenBook={openBook}
+          onBack={() => history.back()}
+        />
       )}
       {!open && place?.kind === 'author' && (
         <PersonPage

@@ -44,6 +44,23 @@ export function saveAcquired({ year, ...place }) {
   localStorage.setItem(ACQUIRED_KEY, JSON.stringify(place))
 }
 
+// A place renamed in Manage › Places: the place remembered for new books
+// follows, so they don't bring the old spelling back.
+export function renameRememberedPlace(from, to) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ACQUIRED_KEY))
+    if (!saved) return
+    const same = (a, b) => (a ?? '').trim() === (b ?? '').trim()
+    // A blank remembered country means USA (see loadAcquired).
+    const country = saved.country || 'USA'
+    const matches = same(saved.city, from.city) && same(saved.region, from.region) && (same(saved.country, from.country) || same(country, from.country))
+    if (!matches) return
+    localStorage.setItem(ACQUIRED_KEY, JSON.stringify({ city: to.city ?? '', region: to.region ?? '', country: to.country ?? '' }))
+  } catch {
+    // Nothing remembered, or the phone's storage is unavailable: nothing to follow.
+  }
+}
+
 // "2026 · Decorah, Iowa, USA"
 export const acquiredText = ({ year, city, region, country }) =>
   [year, [city, region, country].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'nothing yet'

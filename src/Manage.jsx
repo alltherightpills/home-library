@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { BackBar, Row } from './CategoryView.jsx'
+import { placesIn } from './managePlaces.js'
 import { supabase } from './supabase.js'
 
-// Manage: tools for things shared across many books (Phase 2 step 4). Merging
-// authors and Places come in the next slices; backups stay on the Mac.
+// Manage: tools for things shared across many books (Phase 2 step 4): Authors,
+// Places and Export. Backups stay on the Mac.
 function Manage({ copies, onOpenPlace, onBack }) {
   const peopleCount = useMemo(() => new Set(copies.flatMap((c) => c.people.map((p) => p.author.id))).size, [copies])
+  const placeCount = useMemo(() => placesIn(copies).length, [copies])
   return (
     <div className="manage">
       <BackBar onBack={onBack} label="Library" />
@@ -19,7 +21,12 @@ function Manage({ copies, onOpenPlace, onBack }) {
           count={`${peopleCount.toLocaleString()} people`}
           onOpen={() => onOpenPlace('authors')}
         />
-        <li className="book-meta manage-soon">Places: rename and merge (coming soon)</li>
+        <Row
+          name="Places"
+          detail="Rename or merge where books were acquired"
+          count={`${placeCount.toLocaleString()} places`}
+          onOpen={() => onOpenPlace('places')}
+        />
       </ul>
 
       <h3 className="section-label">Export</h3>

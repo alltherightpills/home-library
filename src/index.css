@@ -301,9 +301,9 @@ body {
 /* Screens with their own buttons at the bottom, or a form to fill in, hide the
    search bar: Review categories, Edit a Book, the cover picker, and the Reading
    tab's camera and the shelf walk, whose ISBN boxes are a different search, and
-   Manage › Authors, which has its own name box. (A book opened from
+   Manage › Authors (its own name box) and Places (its forms). (A book opened from
    Review categories keeps the review screen hidden, not gone.) */
-.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *), .reading-scan, .shelf-walk, .manage-people) > .search-box {
+.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *), .reading-scan, .shelf-walk, .manage-people, .manage-places) > .search-box {
   display: none;
 }
 

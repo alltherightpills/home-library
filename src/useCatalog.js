@@ -74,6 +74,12 @@ export function useCatalog() {
     )
   }
 
+  // The same change on several copies at once (a place renamed in Manage › Places).
+  function updateCopies(ids, changes) {
+    const wanted = new Set(ids)
+    setCopies((all) => all.map((c) => (wanted.has(c.id) ? withDisplayFields({ ...c, ...changes }) : c)))
+  }
+
   // A person renamed in Manage › Authors: every book crediting them.
   function updateAuthor(author) {
     const credits = (c) => c.work?.contributors?.some((p) => p.author.id === author.id)
@@ -115,7 +121,7 @@ export function useCatalog() {
     return copy
   }
 
-  return { copies, categories, error, updateCopy, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy }
+  return { copies, categories, error, updateCopy, updateCopies, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy }
 }
 
 // The list orders, by the keys withDisplayFields adds.
