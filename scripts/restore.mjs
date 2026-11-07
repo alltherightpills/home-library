@@ -64,6 +64,11 @@ function copyIntoLibrary(tables, libraryId, userId) {
   const moved = (row, changes) => ({ ...row, library_id: libraryId, ...changes })
   return {
     authors: tables.authors.map((r) => moved(r, { id: newId(r.id) })),
+    // New ids may sort the other way round, and the database wants the smaller first.
+    authors_not_same: tables.authors_not_same.map((r) => {
+      const [author_a, author_b] = [newId(r.author_a), newId(r.author_b)].sort()
+      return moved(r, { author_a, author_b })
+    }),
     works: tables.works.map((r) => moved(r, { id: newId(r.id) })),
     work_authors: tables.work_authors.map((r) => moved(r, { work_id: newId(r.work_id), author_id: newId(r.author_id) })),
     copies: tables.copies.map((r) => moved(r, { id: newId(r.id), work_id: newId(r.work_id) })),
@@ -207,12 +212,12 @@ async function removeRows({ name, key }, rows) {
   }
 }
 
-for (const name of ['readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'copies', 'lookups', 'places']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'authors_not_same', 'copies', 'lookups', 'places']) await removeRows(byName[name], plan[name].remove)
 for (const { local, path } of photosToUpload) {
   const { error } = await bucket.upload(path, await readFile(local), { contentType: 'image/jpeg', upsert: true })
   if (error) throw new Error(`Uploading photo ${path}: ${error.message}`)
 }
-for (const name of ['authors', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings', 'places']) {
+for (const name of ['authors', 'authors_not_same', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings', 'places']) {
   await putRows(byName[name], plan[name].put)
   console.log(`${name}: done`)
 }

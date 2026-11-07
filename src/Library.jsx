@@ -6,7 +6,7 @@ import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import Manage from './Manage.jsx'
-import { AuthorsList, PersonPage } from './ManageAuthors.jsx'
+import { AuthorsList, DuplicatesList, MergePick, MergeScreen, PersonPage } from './ManageAuthors.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
 import { byRead, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
@@ -18,7 +18,7 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies: catalog, categories, readings, error, updateCopy, updateWork, updateAuthor, removeCopy, addCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, error, updateCopy, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy, query, nav }) {
   // Every copy marked `read` (yours, or another copy of the same work), for
   // the ✓, the count and the Read filter.
   const copies = useMemo(() => {
@@ -208,7 +208,22 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
         <AuthorsList place={place} copies={copies} onOpenPlace={openPlace} onReplacePlace={replacePlace} onBack={() => history.back()} />
       )}
       {!open && place?.kind === 'author' && (
-        <PersonPage place={place} copies={copies} updateAuthor={updateAuthor} onOpenBook={openBook} onBack={() => history.back()} />
+        <PersonPage
+          place={place}
+          copies={copies}
+          updateAuthor={updateAuthor}
+          onOpenPlace={openPlace}
+          onOpenBook={openBook}
+          onBack={() => history.back()}
+        />
+      )}
+      {!open && place?.kind === 'duplicates' && <DuplicatesList copies={copies} onOpenPlace={openPlace} onBack={() => history.back()} />}
+      {!open && place?.kind === 'mergePick' && (
+        <MergePick place={place} copies={copies} onReplacePlace={replacePlace} onBack={() => history.back()} />
+      )}
+      {!open && place?.kind === 'merge' && (
+        // Keyed by the group, so a different group starts with fresh choices.
+        <MergeScreen key={place.ids.join()} place={place} copies={copies} mergeAuthors={mergeAuthors} onBack={() => history.back()} />
       )}
       {!open && place?.kind === 'walk' && (
         <ShelfWalk

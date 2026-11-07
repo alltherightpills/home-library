@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
+import { mergedContributors } from './authors.js'
 
 export const SHELF_COLUMNS = 'category_id, is_main, set_by, removed, tentative, reasons'
 
@@ -87,6 +88,18 @@ export function useCatalog() {
     )
   }
 
+  // People merged in Manage › Authors: `dropIds` become `keep` on every book.
+  function mergeAuthors(keep, dropIds) {
+    const credits = (c) => c.work?.contributors?.some((p) => dropIds.includes(p.author.id))
+    setCopies((all) =>
+      all.map((c) =>
+        credits(c)
+          ? withDisplayFields({ ...c, work: { ...c.work, contributors: mergedContributors(c.work.contributors, keep, dropIds) } })
+          : c,
+      ),
+    )
+  }
+
   function removeCopy(id) {
     setCopies((all) => all.filter((c) => c.id !== id))
   }
@@ -101,7 +114,7 @@ export function useCatalog() {
     return copy
   }
 
-  return { copies, categories, error, updateCopy, updateWork, updateAuthor, removeCopy, addCopy }
+  return { copies, categories, error, updateCopy, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy }
 }
 
 // The list orders, by the keys withDisplayFields adds.

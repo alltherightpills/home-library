@@ -7,6 +7,8 @@
 // database's own (what a restore matches rows on).
 export const BOOK_TABLES = [
   { name: 'authors', key: ['id'], primaryKey: 'id' },
+  // Pairs of people checked and found different (Manage › Authors › Possible duplicates).
+  { name: 'authors_not_same', key: ['author_a', 'author_b'], primaryKey: 'author_a,author_b' },
   { name: 'works', key: ['id'], primaryKey: 'id' },
   { name: 'work_authors', key: ['work_id', 'author_id', 'role'], primaryKey: 'work_id,author_id,role' },
   { name: 'copies', key: ['id'], primaryKey: 'id' },
@@ -25,8 +27,9 @@ export const BOOK_TABLES = [
 
 // What the spreadsheet needs: every book table except lookups (the saved
 // answers from Open Library, LC and Google), readings, which the spreadsheet
-// doesn't show yet, and places (map coordinates; the sheet has each book's place).
-export const SHEET_TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings', 'places'].includes(t.name))
+// doesn't show yet, places (map coordinates; the sheet has each book's place),
+// and authors_not_same (only for Possible duplicates).
+export const SHEET_TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings', 'places', 'authors_not_same'].includes(t.name))
 
 // Every row of one table in the library, 1,000 at a time (the most Supabase
 // sends at once).

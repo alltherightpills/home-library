@@ -2,7 +2,7 @@
 // Well-known names only; the copies hold just what these rules read.
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { filterPeople, nameForms, nameParts, peopleIn, renamePlan } from '../src/authors.js'
+import { filterPeople, mergedContributors, nameForms, nameParts, pairKey, pairOf, peopleIn, possibleDuplicates, renamePlan } from '../src/authors.js'
 
 const person = (id, sort_name, display_name) => ({ id, sort_name, display_name })
 const leGuin = person('a1', 'Le Guin, Ursula K.', 'Ursula K. Le Guin')
@@ -83,5 +83,68 @@ describe('renaming', () => {
     const plan = renamePlan(people, marquez, { last: 'García Márquez', first: 'Gabriel José' })
     assert.equal(plan.same, null)
     assert.equal(plan.alike, null)
+  })
+})
+
+describe('possible duplicates', () => {
+  const osborneM = person('b1', 'Osborne, Mary', 'Mary Osborne')
+  const osborneMP = person('b2', 'Osborne, Mary Pope', 'Mary Pope Osborne')
+  const osborneW = person('b3', 'Osborne, Will', 'Will Osborne')
+  const lewisLower = person('b4', 'lewis', 'lewis')
+  const kafka = person('b5', 'Kafka, Franz', 'Franz Kafka')
+  const brontëC = person('b6', 'Brontë, Charlotte', 'Charlotte Brontë')
+  const bronteC = person('b7', 'Bronte, Charlotte', 'Charlotte Bronte')
+  const all = peopleIn([
+    copy('d1', [osborneM]),
+    copy('d2', [osborneMP]),
+    copy('d3', [osborneW]),
+    copy('d4', [lewis], [lewisLower]),
+    copy('d5', [lewisShort]),
+    copy('d6', [kafka]),
+    copy('d7', [brontëC]),
+    copy('d8', [bronteC]),
+  ])
+  const names = (groups) => groups.map((g) => g.map((p) => p.author.sort_name))
+
+  test('groups the same surname and first initial, ignoring accents; a single name joins its surname', () => {
+    assert.deepEqual(names(possibleDuplicates(all)), [
+      ['lewis', 'Lewis, C S', 'Lewis, C. S.'],
+      ['Bronte, Charlotte', 'Brontë, Charlotte'],
+      ['Osborne, Mary', 'Osborne, Mary Pope'],
+    ])
+  })
+
+  test('a group leaves the list once every pair in it is checked as different', () => {
+    const checked = new Set([pairKey('b1', 'b2')])
+    assert.deepEqual(names(possibleDuplicates(all, checked)).map((g) => g[0]), ['lewis', 'Bronte, Charlotte'])
+    // One pair of three checked: the group stays.
+    const onePair = new Set([pairKey('a5', 'a6')])
+    assert.equal(possibleDuplicates(all, onePair)[0].length, 3)
+  })
+
+  test('a pair has one key whichever way round', () => {
+    assert.equal(pairKey('b2', 'b1'), pairKey('b1', 'b2'))
+    assert.deepEqual(pairOf('b2', 'b1'), ['b1', 'b2'])
+  })
+})
+
+describe('merging on screen', () => {
+  const credit = (author, role, position) => ({ author, role, position })
+
+  test("a merged person's credits become the kept person's", () => {
+    const merged = mergedContributors([credit(lewisShort, 'Author', 0), credit(rabassa, 'Translator', 1)], lewis, ['a6'])
+    assert.deepEqual(merged.map((c) => [c.author.id, c.role, c.position]), [['a5', 'Author', 0], ['a3', 'Translator', 1]])
+  })
+
+  test('a book crediting both ends up with one credit, at the earlier position', () => {
+    const before = [credit(lewis, 'Author', 1), credit(lewisShort, 'Author', 0)]
+    const merged = mergedContributors(before, lewis, ['a6'])
+    assert.deepEqual(merged.map((c) => [c.author.id, c.position]), [['a5', 0]])
+    assert.equal(before[0].position, 1, "the catalog's own rows aren't changed")
+  })
+
+  test('the same person in two roles keeps both', () => {
+    const merged = mergedContributors([credit(lewis, 'Author', 0), credit(lewisShort, 'Illustrator', 1)], lewis, ['a6'])
+    assert.equal(merged.length, 2)
   })
 })

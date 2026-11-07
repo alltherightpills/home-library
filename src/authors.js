@@ -60,3 +60,66 @@ export function renamePlan(people, author, { last, first }) {
   const alike = same ? null : (others.find((a) => plain(a.sort_name) === plain(forms.sort_name)) ?? null)
   return { forms, same, alike }
 }
+
+// ---------------------------------------------------------------------------
+// Merging (slice C)
+// ---------------------------------------------------------------------------
+
+// One key per pair of people, whichever order they come in; the database
+// stores a checked pair the same way (smaller id first).
+export const pairOf = (a, b) => (a < b ? [a, b] : [b, a])
+export const pairKey = (a, b) => pairOf(a, b).join('|')
+
+// Possible duplicates: people sharing a surname and first initial, ignoring
+// accents and punctuation ("Osborne, Mary" and "Osborne, Mary Pope"). Someone
+// with a single name ("lewis") is grouped with everyone of that surname.
+// `notSame` holds pairKeys the owner checked and found different; a group is
+// shown while any pair in it is unchecked. → [[person, …]], biggest first.
+export function possibleDuplicates(people, notSame = new Set()) {
+  const bySurname = new Map()
+  for (const p of people) {
+    const { last, first } = nameParts(p.author.sort_name)
+    const surname = plain(last)
+    if (!surname) continue
+    if (!bySurname.has(surname)) bySurname.set(surname, [])
+    bySurname.get(surname).push({ person: p, initial: plain(first).charAt(0) })
+  }
+  const groups = []
+  for (const list of bySurname.values()) {
+    const single = list.filter((x) => !x.initial).map((x) => x.person)
+    const byInitial = new Map()
+    for (const x of list.filter((x) => x.initial)) {
+      if (!byInitial.has(x.initial)) byInitial.set(x.initial, [])
+      byInitial.get(x.initial).push(x.person)
+    }
+    // A single name goes with each initial's group; on its own if there are none.
+    const sets = byInitial.size ? [...byInitial.values()].map((g) => [...g, ...single]) : [single]
+    for (const group of sets) {
+      if (group.length < 2) continue
+      const unchecked = group.some((a, i) => group.slice(i + 1).some((b) => !notSame.has(pairKey(a.author.id, b.author.id))))
+      if (unchecked) groups.push(group)
+    }
+  }
+  // Accents settle ties ("Bronte" before "Brontë"), so the order never varies.
+  const byName = (a, b) =>
+    a.author.sort_name.localeCompare(b.author.sort_name, undefined, { sensitivity: 'base' }) ||
+    a.author.sort_name.localeCompare(b.author.sort_name)
+  return groups
+    .map((g) => [...g].sort(byName))
+    .sort((a, b) => b.length - a.length || byName(a[0], b[0]))
+}
+
+// A work's credits after merging `dropIds` into `keep`, as the database
+// function does it: their credits become the kept person's, and a book that
+// then credits the same person twice in one role keeps the earlier position.
+export function mergedContributors(contributors, keep, dropIds) {
+  const merged = []
+  for (const credit of contributors) {
+    // A copy of each credit, so the catalog's own rows are never changed in place.
+    const c = dropIds.includes(credit.author.id) ? { ...credit, author: keep } : { ...credit }
+    const twin = merged.find((m) => m.author.id === c.author.id && m.role === c.role)
+    if (!twin) merged.push(c)
+    else twin.position = Math.min(twin.position, c.position)
+  }
+  return merged
+}

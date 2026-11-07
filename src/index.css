@@ -146,6 +146,44 @@ body {
   margin: 8px 0 16px;
 }
 
+/* Manage › Authors › Same person?: one card per name, the kept one outlined. */
+.merge-people {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.merge-people li {
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.merge-people li.kept {
+  border: 2px solid var(--green);
+}
+
+.merge-people label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px; /* a comfortable target to tap */
+}
+
+.merge-people input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+}
+
+.merge-titles {
+  margin: 0 0 4px 32px;
+}
+
 /* Manage rows that aren't built yet: plain text, nothing to tap. */
 .manage-soon {
   padding: 10px 0;

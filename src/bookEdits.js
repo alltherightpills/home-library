@@ -120,6 +120,29 @@ export async function renameAuthor(authorId, forms) {
   return data
 }
 
+// Manage › Authors: `dropIds` become `keepId` on every book, then are removed,
+// all in one database step (supabase/migrations/20261107_01_merge_authors.sql).
+export async function mergeAuthorsInto(keepId, dropIds) {
+  const { error } = await supabase.rpc('merge_authors', { keep_id: keepId, drop_ids: dropIds })
+  if (error?.code === 'PGRST202') throw new Error('Merging needs the database change from 2026-11-07 run first.')
+  if (error) throw new Error(`Merging: ${error.message}`)
+}
+
+// Possible duplicates: pairs the owner checked and found different, as pairKeys.
+export async function loadNotSame() {
+  const { data, error } = await supabase.from('authors_not_same').select('author_a, author_b')
+  if (error) throw new Error(`Reading checked pairs: ${error.message}`)
+  return data.map((r) => `${r.author_a}|${r.author_b}`)
+}
+
+// `pairs` are [a, b] with the smaller id first (pairOf).
+export async function markNotSame(libraryId, pairs) {
+  if (!pairs.length) return
+  const rows = pairs.map(([author_a, author_b]) => ({ library_id: libraryId, author_a, author_b }))
+  const { error } = await supabase.from('authors_not_same').upsert(rows, { onConflict: 'author_a,author_b', ignoreDuplicates: true })
+  if (error) throw new Error(`Saving "not the same": ${error.message}`)
+}
+
 // An author with no books left would inflate the author count, so remove them.
 // If this fails the edit still stands; the extra author is harmless for now.
 export async function removeAuthorIfUnused(authorId) {
