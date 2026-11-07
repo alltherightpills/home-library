@@ -1,3 +1,4 @@
+import { nameForms, nameParts } from './authors.js'
 import { planShelfDecision, planShelfEdit, shelfChoices } from './categories/review.js'
 import {
   acquiredYearProblem,
@@ -15,12 +16,8 @@ import {
 import { supabase } from './supabase.js'
 import { SHELF_COLUMNS } from './useCatalog.js'
 
-// "Joyce, James" → { last: 'Joyce', first: 'James' }; "Homer" has only a last name.
-export function nameParts(sortName) {
-  const comma = sortName.indexOf(',')
-  if (comma === -1) return { last: sortName, first: '' }
-  return { last: sortName.slice(0, comma).trim(), first: sortName.slice(comma + 1).trim() }
-}
+// The name rules live in authors.js, shared with Manage › Authors.
+export { nameParts }
 
 // A book with no labels yet gets one blank row to fill in.
 const labelRows = (labels) => (labels.length ? labels.map(({ name, number }) => ({ name, number })) : [{ name: '', number: '' }])
@@ -91,22 +88,36 @@ function check(error, what) {
 
 // Find the person with this exact name, or add them.
 export async function findOrAddAuthor(libraryId, last, first) {
-  const sortName = first ? `${last}, ${first}` : last
+  const forms = nameForms(last, first)
   const { data: found, error } = await supabase
     .from('authors')
     .select('id, sort_name, display_name')
     .eq('library_id', libraryId)
-    .eq('sort_name', sortName)
+    .eq('sort_name', forms.sort_name)
     .maybeSingle()
   check(error, 'Looking up the author')
   if (found) return found
   const { data: added, error: addError } = await supabase
     .from('authors')
-    .insert({ library_id: libraryId, sort_name: sortName, display_name: first ? `${first} ${last}` : last })
+    .insert({ library_id: libraryId, ...forms })
     .select('id, sort_name, display_name')
     .single()
   check(addError, 'Adding the author')
   return added
+}
+
+// Manage › Authors: a new name for this person on every book. Books point at
+// the person, so one saved row changes them all. `forms` comes from nameForms.
+export async function renameAuthor(authorId, forms) {
+  const { data, error } = await supabase
+    .from('authors')
+    .update(forms)
+    .eq('id', authorId)
+    .select('id, sort_name, display_name')
+    .single()
+  if (error?.code === '23505') throw new Error(`Someone named ${forms.sort_name} is already in the catalog.`)
+  if (error) throw new Error(`Renaming: ${error.message}`)
+  return data
 }
 
 // An author with no books left would inflate the author count, so remove them.

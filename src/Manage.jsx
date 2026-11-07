@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
-import { BackBar } from './CategoryView.jsx'
+import { useEffect, useMemo, useState } from 'react'
+import { BackBar, Row } from './CategoryView.jsx'
 import { supabase } from './supabase.js'
 
-// Manage: tools for things shared across many books (Phase 2 step 4). Authors
-// and Places come in the next slices; backups stay on the Mac.
-function Manage({ libraryId, onBack }) {
+// Manage: tools for things shared across many books (Phase 2 step 4). Merging
+// authors and Places come in the next slices; backups stay on the Mac.
+function Manage({ copies, onOpenPlace, onBack }) {
+  const peopleCount = useMemo(() => new Set(copies.flatMap((c) => c.people.map((p) => p.author.id))).size, [copies])
   return (
     <div className="manage">
       <BackBar onBack={onBack} label="Library" />
@@ -12,12 +13,17 @@ function Manage({ libraryId, onBack }) {
 
       <h3 className="section-label">Shared across books</h3>
       <ul className="category-rows">
-        <li className="book-meta manage-soon">Authors: rename and merge (coming next)</li>
+        <Row
+          name="Authors"
+          detail="Rename someone on every book"
+          count={`${peopleCount.toLocaleString()} people`}
+          onOpen={() => onOpenPlace('authors')}
+        />
         <li className="book-meta manage-soon">Places: rename and merge (coming soon)</li>
       </ul>
 
       <h3 className="section-label">Export</h3>
-      <ExportSheet libraryId={libraryId} />
+      <ExportSheet libraryId={copies[0]?.library_id} />
 
       <h3 className="section-label">Backup and restore</h3>
       <p className="book-meta">

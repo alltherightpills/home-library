@@ -66,7 +66,7 @@ function SignedInApp({ session, notice, setNotice }) {
   // Books scanned since the app opened, newest first.
   const [scans, setScans] = useState([])
   const current = TABS.find((t) => t.id === tab)
-  const { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy } = useCatalog()
+  const { copies, categories, error, updateCopy, updateWork, updateAuthor, removeCopy, addCopy } = useCatalog()
   const readings = useReadings()
 
   // The Library search, kept here so the bar can show on other tabs too.
@@ -118,6 +118,7 @@ function SignedInApp({ session, notice, setNotice }) {
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}
+            updateAuthor={updateAuthor}
             removeCopy={removeCopy}
             addCopy={addCopy}
             query={query}

@@ -72,6 +72,21 @@ export function useCatalog() {
     )
   }
 
+  // A person renamed in Manage › Authors: every book crediting them.
+  function updateAuthor(author) {
+    const credits = (c) => c.work?.contributors?.some((p) => p.author.id === author.id)
+    setCopies((all) =>
+      all.map((c) =>
+        credits(c)
+          ? withDisplayFields({
+              ...c,
+              work: { ...c.work, contributors: c.work.contributors.map((p) => (p.author.id === author.id ? { ...p, author } : p)) },
+            })
+          : c,
+      ),
+    )
+  }
+
   function removeCopy(id) {
     setCopies((all) => all.filter((c) => c.id !== id))
   }
@@ -86,7 +101,7 @@ export function useCatalog() {
     return copy
   }
 
-  return { copies, categories, error, updateCopy, updateWork, removeCopy, addCopy }
+  return { copies, categories, error, updateCopy, updateWork, updateAuthor, removeCopy, addCopy }
 }
 
 // The list orders, by the keys withDisplayFields adds.

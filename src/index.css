@@ -137,6 +137,15 @@ body {
   text-decoration: none;
 }
 
+/* Manage › Authors: the name box sits between the count and the list. */
+.manage-people > .search {
+  margin: 8px 0 4px;
+}
+
+.rename-person {
+  margin: 8px 0 16px;
+}
+
 /* Manage rows that aren't built yet: plain text, nothing to tap. */
 .manage-soon {
   padding: 10px 0;
@@ -184,9 +193,10 @@ body {
 
 /* Screens with their own buttons at the bottom, or a form to fill in, hide the
    search bar: Review categories, Edit a Book, the cover picker, and the Reading
-   tab's camera and the shelf walk, whose ISBN boxes are a different search. (A book opened from
+   tab's camera and the shelf walk, whose ISBN boxes are a different search, and
+   Manage › Authors, which has its own name box. (A book opened from
    Review categories keeps the review screen hidden, not gone.) */
-.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *), .reading-scan, .shelf-walk) > .search-box {
+.app:has(.review-place:not([hidden]), .cover-picker, .edit-book:not([hidden] *), .reading-scan, .shelf-walk, .manage-people) > .search-box {
   display: none;
 }
 
