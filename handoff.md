@@ -22,16 +22,16 @@ A phone-first web app (installed on the owner's iPhone home screen) for catalogi
 - **Function first.** The look of the screens waits for a later design pass.
 - **The repo is public.** No personal data in it: lists of the owner's books go in `data/` (git-ignored), and keys and passwords in `.env.local` (git-ignored).
 
-## 2. Where things stand (2026-11-06)
+## 2. Where things stand (2026-11-07)
 
 - **Phase 1 is finished:** scanning, the LibraryThing import, enrichment, categories and the review list, the Library screens, Scan to add, backup/restore, and the spreadsheet export.
 - **Phase 2:** step 0 (iPhone shakedown), step 1 (reading tracking) and step 2 (shelf walk) are built. The owner is walking the remaining shelves. The 2026-11-03 audit's "do now" items are done.
 - **Step 3 (year/place stats)** is finished: the Acquired panel and screen, tap a row for its books, and the places map.
-- **Step 4 (Manage, part one)**, slices agreed 2026-11-07: **A** the hub + Export in the app (pushed 2026-11-07); **B** Authors list + rename everywhere (pushed 2026-11-07); **C** merge people + **Possible duplicates** (pushed 2026-11-07; migration `20261107_01_merge_authors.sql` run); **D** Places (built 2026-11-07; migration `20261107_02_rename_place.sql`). Also built on the owner's request: the A–Z strip on long lists (pushed 2026-11-07).
+- **Step 4 (Manage, part one)**, slices agreed 2026-11-07: **A** the hub + Export in the app (pushed 2026-11-07); **B** Authors list + rename everywhere (pushed 2026-11-07); **C** merge people + **Possible duplicates** (migration `20261107_01_merge_authors.sql` run); **D** Places (migration `20261107_02_rename_place.sql` run). Also built on the owner's request: the A–Z strip on long lists. **Step 4 is finished** (all pushed and tested 2026-11-07). **Next:** step 5, lending + borrowers; agree its slices with the owner first.
 
 **Phase 2 order (remaining):**
 3. Year/place stats on the dashboard (count by year acquired and by place acquired), then slice C, the places map (built).
-4. Manage, part one: the hub (a sliders button on Library), Authors (rename everywhere, merge duplicates), Places (rename and merge), and Export in the app (`src/export/bookSheet.js` was built for this). Manage shows backup and restore as Mac-only.
+4. Manage, part one: the hub, Authors, Places, and Export in the app (finished).
 5. Lending + Borrowers (borrowers from a managed list; date lent, returned). Build its saves as all-or-nothing database functions (see `cleanup.md`).
 6. Wishlist: **its own list**, separate from the library and never counted in totals. Buying one moves it into the library through the normal check form. Scan gets Add to wishlist and notices a scanned wishlist book.
 7. Offline, only (a) the catalog saved on the phone, so the owned check works with no signal, and (b) scanned ISBNs saved with no signal and looked up later. Everything else stays online-only.
