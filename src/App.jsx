@@ -8,6 +8,7 @@ import SignIn from './SignIn.jsx'
 import { useReadings } from './readings.js'
 import { lentOut } from './lending.js'
 import { useLoans } from './useLoans.js'
+import { useWishlist } from './useWishlist.js'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
 
@@ -71,6 +72,7 @@ function SignedInApp({ session, notice, setNotice }) {
   const { copies, categories, error, updateCopy, updateCopies, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy } = useCatalog()
   const readings = useReadings()
   const loans = useLoans()
+  const wishlist = useWishlist()
   // copy id → { name, lent_on } for the books out now (lists, Scan).
   const lentTo = useMemo(() => (loans.loans ? lentOut(loans.loans, loans.borrowers) : new Map()), [loans.loans, loans.borrowers])
 
@@ -122,6 +124,7 @@ function SignedInApp({ session, notice, setNotice }) {
             readings={readings}
             loans={loans}
             lentTo={lentTo}
+            wishlist={wishlist}
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}
@@ -135,7 +138,7 @@ function SignedInApp({ session, notice, setNotice }) {
           />
         )}
         {tab === 'scan' && (
-          <Scanner key={restarts.scan} copies={copies} lentTo={lentTo} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
+          <Scanner key={restarts.scan} copies={copies} lentTo={lentTo} wishlist={wishlist} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
         )}
         {tab === 'reading' && <ReadingTab key={restarts.reading} copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
         {tab === 'pick' && <p className="placeholder">Coming soon.</p>}

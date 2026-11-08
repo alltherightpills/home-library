@@ -7,11 +7,12 @@ import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
 import { copiesWithIsbn } from './isbn.js'
 import { listText, lookUpNewBook, otherEditions } from './scanLookup.js'
 import { coverUrl } from './useCatalog.js'
+import { wishWithIsbn } from './wishlist.js'
 
 // `scans` lives in App, so the list survives a visit to a book page.
 // The camera turns off whenever IsbnReader leaves the screen (the check form,
 // Add by hand, or another tab).
-function Scanner({ copies, lentTo, categories, scans, setScans, onOpenBook, addCopy }) {
+function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpenBook, addCopy }) {
   // "New books saved as [year · place]", remembered on the phone.
   const [acquired, setAcquired] = useState(loadAcquired)
   const [changingAcquired, setChangingAcquired] = useState(false)
@@ -168,6 +169,7 @@ function Scanner({ copies, lentTo, categories, scans, setScans, onOpenBook, addC
               scan={s}
               copies={copies}
               lentTo={lentTo}
+              wishlist={wishlist}
               onOpenBook={onOpenBook}
               onRetry={() => lookUp(s.isbn)}
               onAdd={() => openCheck([s.isbn])}
@@ -181,7 +183,7 @@ function Scanner({ copies, lentTo, categories, scans, setScans, onOpenBook, addC
 }
 
 // One scanned ISBN: the copies you own with it, or what the lookup found.
-function ScanResult({ scan, copies, lentTo, onOpenBook, onRetry, onAdd, onAddByHand }) {
+function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd, onAddByHand }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
   if (owned.length > 0) {
     return owned.map((c) => (
@@ -238,14 +240,19 @@ function ScanResult({ scan, copies, lentTo, onOpenBook, onRetry, onAdd, onAddByH
             ISBN {scan.isbn} · from {listText(book.sources)}
             {book.unreachable.length ? ` (${listText(book.unreachable)} didn't answer)` : ''}
           </p>
-          {copies && (
-            <button className="link strong" onClick={onAdd}>
-              {others.length ? 'Add this one too' : 'Add to library'}
-            </button>
-          )}
-          {scan.skipped && <span className="book-meta"> · skipped</span>}
+          {scan.skipped && <p className="book-meta">Skipped</p>}
         </div>
       </div>
+      {copies && (
+        <ScanActions
+          addLabel={others.length ? 'Add this one too' : 'Add to library'}
+          onAdd={onAdd}
+          book={book}
+          isbn={scan.isbn}
+          wishlist={wishlist}
+          libraryId={copies[0]?.library_id}
+        />
+      )}
       {others.length > 0 && (
         <div className="scan-editions">
           <p>
@@ -259,6 +266,66 @@ function ScanResult({ scan, copies, lentTo, onOpenBook, onRetry, onAdd, onAddByH
         </div>
       )}
     </li>
+  )
+}
+
+// A found book's buttons, side by side under it: Add to library and Add to
+// wishlist. Add to wishlist opens a note box (optional) with Save to wishlist
+// and Cancel. A book already on the wishlist says so instead of offering it.
+function ScanActions({ addLabel, onAdd, book, isbn, wishlist, libraryId }) {
+  const [note, setNote] = useState(null) // the note box's text while adding; null when closed
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  // No title (rare): nothing to put on the wishlist.
+  const canWish = Boolean(book.title && wishlist.list)
+  const wish = wishWithIsbn(wishlist.list, isbn)
+
+  async function save(e) {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await wishlist.add(book, isbn, note, libraryId)
+      setNote(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="scan-actions">
+      {note === null ? (
+        <div className="button-pair">
+          <button className="primary" onClick={onAdd}>
+            {addLabel}
+          </button>
+          {canWish && !wish && (
+            <button className="secondary" onClick={() => (setError(''), setNote(''))}>
+              Add to wishlist
+            </button>
+          )}
+        </div>
+      ) : (
+        // edit-book: the shared form look, with 16px text so the iPhone doesn't zoom.
+        <form className="edit-book wish-form" onSubmit={save}>
+          <Field label="Note (optional)" value={note} onChange={setNote} />
+          <div className="button-pair">
+            <button className="primary" type="submit" disabled={busy}>
+              Save to wishlist
+            </button>
+            <button className="secondary" type="button" disabled={busy} onClick={() => (setError(''), setNote(null))}>
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+      {wish && <p className="book-meta on-wishlist">★ On your wishlist{wish.note ? ` · ${wish.note}` : ''}</p>}
+      {wishlist.error && <p className="error">Couldn't load the wishlist: {wishlist.error}</p>}
+      {error && <p className="error">{error}</p>}
+    </div>
   )
 }
 

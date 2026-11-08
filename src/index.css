@@ -1079,6 +1079,62 @@ body {
   font-weight: normal;
 }
 
+/* Two buttons side by side, sharing the width equally: the main one filled
+   (.primary), the other outlined (.secondary). Spelled out in full, because
+   inside a .book-list row every button is otherwise turned into a list row. */
+.button-pair {
+  display: flex;
+  gap: 10px;
+}
+
+.button-pair .primary,
+.button-pair .secondary {
+  display: block;
+  flex: 1;
+  width: auto;
+  padding: 12px 10px;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+}
+
+.button-pair .primary {
+  border: 2px solid var(--green);
+  background: var(--green);
+  color: #fff;
+}
+
+.button-pair .secondary {
+  border: 2px solid var(--green);
+  background: transparent;
+  color: var(--green);
+}
+
+/* The wishlist: the buttons under a found book on Scan, and the Wishlist screen's rows. */
+.scan-actions {
+  margin-top: 12px;
+}
+
+.scan-actions .on-wishlist {
+  margin: 8px 0 0;
+  color: var(--green);
+}
+
+.scan-actions .wish-form .button-pair {
+  margin-top: 10px;
+}
+
+.wish-note {
+  grid-column: 2;
+  font-size: 14px;
+  font-style: italic;
+}
+
+.reading-list .wish-form {
+  margin: 10px 0 0 48px;
+}
+
 .scan-editions {
   margin-top: 12px;
   padding: 4px 12px;

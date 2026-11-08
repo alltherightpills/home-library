@@ -26,13 +26,16 @@ export const BOOK_TABLES = [
   // Lending: the people books go out to, and one row per time a book went out.
   { name: 'borrowers', key: ['id'], primaryKey: 'id' },
   { name: 'loans', key: ['id'], primaryKey: 'id' },
+  // Books wanted but not owned: their own list, not part of the library.
+  { name: 'wishlist', key: ['id'], primaryKey: 'id' },
 ]
 
 // What the spreadsheet needs: every book table except lookups (the saved
 // answers from Open Library, LC and Google), readings, which the spreadsheet
 // doesn't show yet, places (map coordinates; the sheet has each book's place),
-// and authors_not_same (only for Possible duplicates).
-export const SHEET_TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings', 'places', 'authors_not_same'].includes(t.name))
+// authors_not_same (only for Possible duplicates), and the wishlist (books not
+// owned; the owner didn't want it in the spreadsheet, 2026-11-08).
+export const SHEET_TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings', 'places', 'authors_not_same', 'wishlist'].includes(t.name))
 
 // Every row of one table in the library, 1,000 at a time (the most Supabase
 // sends at once).

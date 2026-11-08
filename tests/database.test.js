@@ -184,3 +184,65 @@ describe('lending', () => {
     })
   })
 })
+
+describe('wishlist', () => {
+  const wish = (title, isbn13 = null, extra = {}) =>
+    one(
+      `insert into public.wishlist (library_id, title, authors, isbn13, note, added_on)
+       values (public.my_library(), $1, $2, $3, $4, $5) returning *`,
+      [title, extra.authors ?? [], isbn13, extra.note ?? null, extra.added_on ?? '2026-11-08'],
+    )
+
+  test('a wish is saved with its authors, note and date', async () => {
+    await as(ROBIN, async () => {
+      const w = await wish('Beloved', '9781400033416', { authors: ['Toni Morrison'], note: 'from Sam' })
+      assert.deepEqual(w.authors, ['Toni Morrison'])
+      assert.equal(w.note, 'from Sam')
+      assert.equal(w.added_on.toISOString().slice(0, 10), '2026-11-08')
+    })
+  })
+
+  test('the same edition can’t be wished for twice; a wish with no ISBN is fine', async () => {
+    await as(ROBIN, async () => {
+      const err = await wish('Beloved again', '9781400033416').catch((e) => e)
+      assert.equal(err.code, '23505', 'the app shows its own words for this code')
+      await wish('A book heard about on the radio')
+      await wish('Another with no ISBN')
+    })
+  })
+
+  test('a blank title, untidy note or bad ISBN is refused', async () => {
+    await as(ROBIN, async () => {
+      await assert.rejects(wish('   '))
+      await assert.rejects(wish(' Spaces'))
+      await assert.rejects(wish('Fine title', null, { note: '' }))
+      await assert.rejects(wish('Fine title', '12345'))
+    })
+  })
+
+  test('wishes never count as books in the library', async () => {
+    await as(ROBIN, async () => {
+      const books = await count('public.copies')
+      await wish('Middlemarch', '9780141439549')
+      assert.equal(await count('public.copies'), books)
+    })
+  })
+
+  test('another household sees none of it and can’t add to it', async () => {
+    const robinsLibrary = await as(ROBIN, async () => {
+      assert.equal(await count('public.wishlist'), 4)
+      return (await one('select public.my_library() as id')).id
+    })
+    await as(KIT, async () => {
+      assert.equal(await count('public.wishlist'), 0)
+      await assert.rejects(
+        db.query(`insert into public.wishlist (library_id, title, added_on) values ($1, 'Sneaky', '2026-11-08')`, [robinsLibrary]),
+        /row-level security/,
+      )
+      assert.equal(await count(`public.wishlist where title = 'Middlemarch'`), 0, 'Kit can’t see Robin’s wishes')
+    })
+    await as(null, async () => {
+      await assert.rejects(db.query('select * from public.wishlist'), /permission denied/)
+    })
+  })
+})
