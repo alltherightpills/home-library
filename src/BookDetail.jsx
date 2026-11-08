@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import BookLending from './BookLending.jsx'
 import BookReading from './BookReading.jsx'
 import { shelfText } from './categories/review.js'
 import CoverPicker from './CoverPicker.jsx'
@@ -41,7 +42,7 @@ function editionLabel(other, copy) {
 
 // Everything stored for one copy. A plain view for checking the data;
 // the designed book page (mockup screen 3) comes later.
-function BookDetail({ copy, copies, categories, readings, onBack, onOpenBook, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
+function BookDetail({ copy, copies, categories, readings, loans, onBack, onOpenBook, onOpenLabel, onCoverChange, sharedWork, updateCopy, updateWork, onRemoved }) {
   // The cover picker and edit screen are steps in the browser history too, so
   // swiping back closes them.
   const [picking, setPicking] = useState(() => Boolean(history.state?.cover))
@@ -190,6 +191,7 @@ function BookDetail({ copy, copies, categories, readings, onBack, onOpenBook, on
       {copy.needs_review && <p className="review-note">⚠︎ Needs checking{copy.review_note && `: ${copy.review_note}`}</p>}
 
       <BookReading copy={copy} readings={readings} />
+      <BookLending copy={copy} loans={loans} />
 
       <dl>
         {rows

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
+import { dateText, today } from './dates.js'
 import { supabase } from './supabase.js'
+
+export { dateText }
 
 // The signed-in person's reading history. The database only ever returns and
 // changes their own rows, so a family member's reading never shows up here.
 
 const COLUMNS = 'id, copy_id, borrowed, title, author, isbn, cover_url, borrowed_from, status, started_on, ended_on, created_at'
 const PAGE = 1000 // the most rows the server returns per request
-
-const today = () => new Date().toLocaleDateString('en-CA')
 
 function check(error, what) {
   if (error) throw new Error(`${what}: ${error.message}`)
@@ -115,10 +116,6 @@ export const byRead = (copies, filter) =>
 // "12 books", or "12 unread books" with the Read filter on.
 export const countText = (n, readFilter = 'all') =>
   `${n.toLocaleString()} ${readFilter === 'all' ? '' : `${readFilter} `}${n === 1 ? 'book' : 'books'}`
-
-// "Nov 2, 2026" from a stored "2026-11-02".
-export const dateText = (iso) =>
-  new Date(`${iso}T00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
 
 // One line of a book's reading history.
 export function readingText(r) {

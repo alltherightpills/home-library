@@ -19,7 +19,7 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies: catalog, categories, readings, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, loans, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
   // Every copy marked `read` (yours, or another copy of the same work), for
   // the ✓, the count and the Read filter.
   const copies = useMemo(() => {
@@ -137,6 +137,7 @@ function Library({ copies: catalog, categories, readings, error, updateCopy, upd
           copies={copies}
           categories={categories}
           readings={readings}
+          loans={loans}
           sharedWork={copies.some((c) => c.id !== open.id && c.work?.id === open.work?.id)}
           updateCopy={updateCopy}
           updateWork={updateWork}
