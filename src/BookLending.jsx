@@ -57,13 +57,16 @@ function BookLending({ copy, loans }) {
           )}
         </div>
       ) : (
-        <form onSubmit={lend}>
+        // edit-book: the shared form look, including 16px text, below which
+        // the iPhone zooms the page when a box is tapped.
+        <form className="edit-book" onSubmit={lend}>
           <datalist id={listId}>
             {borrowerNames(loans.borrowers).map((n) => (
               <option key={n} value={n} />
             ))}
           </datalist>
-          <Field label="Lend to" value={name} onChange={setName} list={listId} />
+          {/* Safari shows a ⌄ on a box with suggestions, so none until there's someone to suggest. */}
+          <Field label="Lend to" value={name} onChange={setName} list={loans.borrowers.length ? listId : undefined} />
           {name.trim() && (
             <p className="book-meta">{known ? `${known.name} is on your list.` : 'New name: they’ll be added to your borrowers.'}</p>
           )}
