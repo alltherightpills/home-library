@@ -166,9 +166,19 @@ describe('lending', () => {
     })
   })
 
+  test('renaming: to someone else’s name is refused, other capitals are fine', async () => {
+    await as(ROBIN, async () => {
+      const err = await db.query(`update public.borrowers set name = 'ANA' where name = 'Sam Rivera'`).catch((e) => e)
+      assert.equal(err.code, '23505', 'the app shows its own words for this code')
+      await db.query(`update public.borrowers set name = 'sam rivera' where name = 'Sam Rivera'`)
+      await db.query(`update public.borrowers set name = 'Sam Rivera' where name = 'sam rivera'`)
+    })
+  })
+
   test('a borrower with loans can’t be removed; removing a book removes its loans', async () => {
     await as(ROBIN, async () => {
-      await assert.rejects(db.query(`delete from public.borrowers where name = 'Sam Rivera'`), /foreign key/)
+      const err = await db.query(`delete from public.borrowers where name = 'Sam Rivera'`).catch((e) => e)
+      assert.equal(err.code, '23503', 'the app shows its own words for this code')
       await db.query('delete from public.copies where id = $1', [beowulf])
       assert.equal(await count(`public.loans where copy_id = '${beowulf}'`), 0)
     })

@@ -5,6 +5,7 @@ import BookDetail from './BookDetail.jsx'
 import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
+import { BorrowerPage, BorrowersList, LentOutView } from './LendingViews.jsx'
 import Manage from './Manage.jsx'
 import { AuthorsList, DuplicatesList, MergePick, MergeScreen, PersonPage } from './ManageAuthors.jsx'
 import { PlacePage, PlacesList } from './ManagePlaces.jsx'
@@ -19,14 +20,14 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies: catalog, categories, readings, loans, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, loans, lentTo, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
   // Every copy marked `read` (yours, or another copy of the same work), for
-  // the ✓, the count and the Read filter.
+  // the ✓, the count and the Read filter, and `lentTo` (who has it) if it's out.
   const copies = useMemo(() => {
     if (!catalog) return catalog
     const read = readCopyIds(readings.list, catalog)
-    return catalog.map((c) => ({ ...c, read: read.has(c.id) }))
-  }, [catalog, readings.list])
+    return catalog.map((c) => ({ ...c, read: read.has(c.id), lentTo: lentTo.get(c.id)?.name }))
+  }, [catalog, readings.list, lentTo])
   const readCount = useMemo(() => copies?.filter((c) => c.read).length ?? 0, [copies])
   const [sort, setSort] = useState('author')
   // All / Unread / Read, offered once the reading history has loaded.
@@ -106,6 +107,7 @@ function Library({ copies: catalog, categories, readings, loans, error, updateCo
 
   const reviewCount = copies?.filter((c) => c.category_review).length ?? 0
   const walkedCount = copies?.filter((c) => c.shelf_walked_on).length ?? 0
+  const lentCount = copies?.filter((c) => c.lentTo).length ?? 0
   const seriesCount = useMemo(() => (copies ? labelIndex(copies, 'series').length : 0), [copies])
   const publisherSeriesCount = useMemo(() => (copies ? labelIndex(copies, 'publisherSeries').length : 0), [copies])
 
@@ -205,7 +207,14 @@ function Library({ copies: catalog, categories, readings, loans, error, updateCo
           onBack={() => history.back()}
         />
       )}
-      {!open && place?.kind === 'manage' && <Manage copies={copies} onOpenPlace={openPlace} onBack={() => history.back()} />}
+      {!open && place?.kind === 'manage' && <Manage copies={copies} loans={loans} onOpenPlace={openPlace} onBack={() => history.back()} />}
+      {!open && place?.kind === 'lent' && (
+        <LentOutView copies={copies} loans={loans} onOpenBook={openBook} onOpenPlace={openPlace} onBack={() => history.back()} />
+      )}
+      {!open && place?.kind === 'borrowers' && <BorrowersList loans={loans} onOpenPlace={openPlace} onBack={() => history.back()} />}
+      {!open && place?.kind === 'borrower' && (
+        <BorrowerPage place={place} copies={copies} loans={loans} onOpenBook={openBook} onBack={() => history.back()} />
+      )}
       {!open && place?.kind === 'authors' && (
         <AuthorsList place={place} copies={copies} onOpenPlace={openPlace} onReplacePlace={replacePlace} onBack={() => history.back()} />
       )}
@@ -311,6 +320,12 @@ function Library({ copies: catalog, categories, readings, loans, error, updateCo
             <button className="primary browse-all" onClick={() => openPlace('all')}>
               Browse all {copies.length.toLocaleString()} books ›
             </button>
+            {lentCount > 0 && (
+              // Only while something is out.
+              <button className="review-banner walk-banner" onClick={() => openPlace('lent')}>
+                <strong>Lent out</strong> · {lentCount} {lentCount === 1 ? 'book' : 'books'} ›
+              </button>
+            )}
             <button className="review-banner walk-banner" onClick={() => openPlace('walk')}>
               <strong>Shelf walk</strong> · {walkedCount.toLocaleString()} of {copies.length.toLocaleString()} walked ›
             </button>

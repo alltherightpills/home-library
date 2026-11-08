@@ -29,12 +29,10 @@ export const BOOK_TABLES = [
 ]
 
 // What the spreadsheet needs: every book table except lookups (the saved
-// answers from Open Library, LC and Google), readings and lending, which the
-// spreadsheet doesn't show yet, places (map coordinates; the sheet has each
-// book's place), and authors_not_same (only for Possible duplicates).
-export const SHEET_TABLES = BOOK_TABLES.filter(
-  (t) => !['lookups', 'readings', 'places', 'authors_not_same', 'borrowers', 'loans'].includes(t.name),
-)
+// answers from Open Library, LC and Google), readings, which the spreadsheet
+// doesn't show yet, places (map coordinates; the sheet has each book's place),
+// and authors_not_same (only for Possible duplicates).
+export const SHEET_TABLES = BOOK_TABLES.filter((t) => !['lookups', 'readings', 'places', 'authors_not_same'].includes(t.name))
 
 // Every row of one table in the library, 1,000 at a time (the most Supabase
 // sends at once).

@@ -53,15 +53,18 @@ const LETTER_KEYS = { author: (c) => c.authorSort, title: (c) => c.titleSort }
 // A list of books with covers: the main list, a category's, and a series'.
 // `noteFor` can put a few words before a book's gray line ("Also in").
 // As a gallery: covers three across, with the title and author under each.
-// A ✓ before the title marks a book you've read. `letters` is the list's sort
+// A ✓ before the title marks a book you've read; `hideLent` drops "Lent to …". `letters` is the list's sort
 // ('author' or 'title'; anything else, such as date cataloged, has no strip):
 // a long list gets the A–Z strip down the right edge.
-function BookList({ books, onOpenBook, noteFor, view = 'list', letters }) {
+function BookList({ books, onOpenBook, noteFor, view = 'list', letters, hideLent }) {
   const starts = useMemo(() => (LETTER_KEYS[letters] ? letterStarts(books.map(LETTER_KEYS[letters])) : null), [books, letters])
-  return <Lettered starts={starts}>{view === 'gallery' ? <Gallery books={books} onOpenBook={onOpenBook} noteFor={noteFor} starts={starts} /> : <Rows books={books} onOpenBook={onOpenBook} noteFor={noteFor} starts={starts} />}</Lettered>
+  // A book lent out says who has it first (`lentTo`, set in Library.jsx),
+  // except on the lending screens, whose headings already say.
+  const notes = (c) => [!hideLent && c.lentTo && `Lent to ${c.lentTo}`, noteFor?.(c)]
+  return <Lettered starts={starts}>{view === 'gallery' ? <Gallery books={books} onOpenBook={onOpenBook} notes={notes} starts={starts} /> : <Rows books={books} onOpenBook={onOpenBook} notes={notes} starts={starts} />}</Lettered>
 }
 
-function Gallery({ books, onOpenBook, noteFor, starts }) {
+function Gallery({ books, onOpenBook, notes, starts }) {
     return (
       <ul className="book-gallery">
         {books.map((c, i) => {
@@ -77,7 +80,7 @@ function Gallery({ books, onOpenBook, noteFor, starts }) {
                   {c.needs_review && <span className="flag">⚠︎ </span>}
                   {c.title}
                 </span>
-                <span className="gallery-meta">{[noteFor?.(c), c.byline].filter(Boolean).join(' · ')}</span>
+                <span className="gallery-meta">{[...notes(c), c.byline].filter(Boolean).join(' · ')}</span>
               </button>
             </li>
           )
@@ -86,7 +89,7 @@ function Gallery({ books, onOpenBook, noteFor, starts }) {
     )
 }
 
-function Rows({ books, onOpenBook, noteFor, starts }) {
+function Rows({ books, onOpenBook, notes, starts }) {
   return (
     <ul className="book-list">
       {books.map((c, i) => (
@@ -98,7 +101,7 @@ function Rows({ books, onOpenBook, noteFor, starts }) {
               {c.needs_review && <span className="flag">⚠︎ </span>}
               {c.title}
             </span>
-            <span className="book-meta">{[noteFor?.(c), c.listLine].filter(Boolean).join(' · ')}</span>
+            <span className="book-meta">{[...notes(c), c.listLine].filter(Boolean).join(' · ')}</span>
           </button>
         </li>
       ))}

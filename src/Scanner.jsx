@@ -11,7 +11,7 @@ import { coverUrl } from './useCatalog.js'
 // `scans` lives in App, so the list survives a visit to a book page.
 // The camera turns off whenever IsbnReader leaves the screen (the check form,
 // Add by hand, or another tab).
-function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
+function Scanner({ copies, lentTo, categories, scans, setScans, onOpenBook, addCopy }) {
   // "New books saved as [year · place]", remembered on the phone.
   const [acquired, setAcquired] = useState(loadAcquired)
   const [changingAcquired, setChangingAcquired] = useState(false)
@@ -167,6 +167,7 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
               key={s.isbn}
               scan={s}
               copies={copies}
+              lentTo={lentTo}
               onOpenBook={onOpenBook}
               onRetry={() => lookUp(s.isbn)}
               onAdd={() => openCheck([s.isbn])}
@@ -180,11 +181,11 @@ function Scanner({ copies, categories, scans, setScans, onOpenBook, addCopy }) {
 }
 
 // One scanned ISBN: the copies you own with it, or what the lookup found.
-function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd, onAddByHand }) {
+function ScanResult({ scan, copies, lentTo, onOpenBook, onRetry, onAdd, onAddByHand }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
   if (owned.length > 0) {
     return owned.map((c) => (
-      <OwnedRow key={c.id} copy={c} note={owned.length > 1 ? `You own ${owned.length} copies` : 'You own this'} onOpenBook={onOpenBook} />
+      <OwnedRow key={c.id} copy={c} lent={lentTo.get(c.id)} note={owned.length > 1 ? `You own ${owned.length} copies` : 'You own this'} onOpenBook={onOpenBook} />
     ))
   }
   const { status, book, message } = scan.lookup ?? {}
@@ -252,7 +253,7 @@ function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd, onAddByHand }) {
           </p>
           <ul className="book-list">
             {others.map((c) => (
-              <OwnedRow key={c.id} copy={c} note="Open my copy" onOpenBook={onOpenBook} />
+              <OwnedRow key={c.id} copy={c} lent={lentTo.get(c.id)} note="Open my copy" onOpenBook={onOpenBook} />
             ))}
           </ul>
         </div>
@@ -261,15 +262,16 @@ function ScanResult({ scan, copies, onOpenBook, onRetry, onAdd, onAddByHand }) {
   )
 }
 
-// A copy you own, as in the main list, with a note before its gray line.
-function OwnedRow({ copy, note, onOpenBook }) {
+// A copy you own, as in the main list, with a note before its gray line, and
+// who has it if it's lent out (`lent`: { name }).
+function OwnedRow({ copy, note, lent, onOpenBook }) {
   return (
     <li>
       <button onClick={() => onOpenBook(copy.id)}>
         <span className="thumb">{coverUrl(copy, 'M') && <img src={coverUrl(copy, 'M')} alt="" />}</span>
         <span className="book-title">{copy.title}</span>
         <span className="book-meta">
-          {note} · {copy.listLine}
+          {[note, lent && `lent to ${lent.name}`, copy.listLine].filter(Boolean).join(' · ')}
         </span>
       </button>
     </li>

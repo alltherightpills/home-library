@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Library from './Library.jsx'
 import PasswordForm from './PasswordForm.jsx'
 import ReadingTab from './ReadingTab.jsx'
@@ -6,6 +6,7 @@ import Scanner from './Scanner.jsx'
 import SearchBox from './SearchBox.jsx'
 import SignIn from './SignIn.jsx'
 import { useReadings } from './readings.js'
+import { lentOut } from './lending.js'
 import { useLoans } from './useLoans.js'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
@@ -70,6 +71,8 @@ function SignedInApp({ session, notice, setNotice }) {
   const { copies, categories, error, updateCopy, updateCopies, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy } = useCatalog()
   const readings = useReadings()
   const loans = useLoans()
+  // copy id → { name, lent_on } for the books out now (lists, Scan).
+  const lentTo = useMemo(() => (loans.loans ? lentOut(loans.loans, loans.borrowers) : new Map()), [loans.loans, loans.borrowers])
 
   // The Library search, kept here so the bar can show on other tabs too.
   const [query, setQuery] = useState('')
@@ -118,6 +121,7 @@ function SignedInApp({ session, notice, setNotice }) {
             categories={categories}
             readings={readings}
             loans={loans}
+            lentTo={lentTo}
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}
@@ -131,7 +135,7 @@ function SignedInApp({ session, notice, setNotice }) {
           />
         )}
         {tab === 'scan' && (
-          <Scanner key={restarts.scan} copies={copies} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
+          <Scanner key={restarts.scan} copies={copies} lentTo={lentTo} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
         )}
         {tab === 'reading' && <ReadingTab key={restarts.reading} copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
         {tab === 'pick' && <p className="placeholder">Coming soon.</p>}

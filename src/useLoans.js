@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { today } from './dates.js'
+import { tidyName } from './lending.js'
 import { supabase } from './supabase.js'
 
 // The household's borrowers and loans, loaded once when the app opens (a few a
@@ -59,7 +60,26 @@ export function useLoans() {
     setState((s) => ({ ...s, loans: s.loans.filter((l) => l.id !== loan.id) }))
   }
 
-  return { ...state, lend, giveBack, remove }
+  // Renames someone on the list; every loan shows the new name, since loans
+  // point at the person.
+  async function rename(borrower, name) {
+    const { data, error } = await supabase.from('borrowers').update({ name: tidyName(name) }).eq('id', borrower.id).select('id, name').single()
+    // 23505: the database's "already taken" (names are unique, ignoring capitals).
+    if (error?.code === '23505') throw new Error('Someone on your list already has that name.')
+    check(error, 'Renaming')
+    setState((s) => ({ ...s, borrowers: s.borrowers.map((b) => (b.id === data.id ? data : b)) }))
+  }
+
+  // Takes someone off the list. The database refuses while any loan names them.
+  async function removeBorrower(borrower) {
+    const { error } = await supabase.from('borrowers').delete().eq('id', borrower.id)
+    // 23503: a loan still points at them.
+    if (error?.code === '23503') throw new Error('They still have loans in the history, so they stay on the list.')
+    check(error, 'Removing')
+    setState((s) => ({ ...s, borrowers: s.borrowers.filter((b) => b.id !== borrower.id) }))
+  }
+
+  return { ...state, lend, giveBack, remove, rename, removeBorrower }
 }
 
 // The loan's columns the app keeps (lend_copy returns the whole row).

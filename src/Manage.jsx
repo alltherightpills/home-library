@@ -4,8 +4,9 @@ import { placesIn } from './managePlaces.js'
 import { supabase } from './supabase.js'
 
 // Manage: tools for things shared across many books (Phase 2 step 4): Authors,
-// Places and Export. Backups stay on the Mac.
-function Manage({ copies, onOpenPlace, onBack }) {
+// Places, Borrowers and Export. Backups stay on the Mac.
+function Manage({ copies, loans, onOpenPlace, onBack }) {
+  const borrowerCount = loans.borrowers?.length
   const peopleCount = useMemo(() => new Set(copies.flatMap((c) => c.people.map((p) => p.author.id))).size, [copies])
   const placeCount = useMemo(() => placesIn(copies).length, [copies])
   return (
@@ -26,6 +27,12 @@ function Manage({ copies, onOpenPlace, onBack }) {
           detail="Rename or merge where books were acquired"
           count={`${placeCount.toLocaleString()} places`}
           onOpen={() => onOpenPlace('places')}
+        />
+        <Row
+          name="Borrowers"
+          detail="People you've lent books to"
+          count={borrowerCount == null ? '' : `${borrowerCount} ${borrowerCount === 1 ? 'person' : 'people'}`}
+          onOpen={() => onOpenPlace('borrowers')}
         />
       </ul>
 

@@ -4,6 +4,7 @@
 // shares the author and series wording.
 
 import { flagText, shelfText } from '../categories/review.js'
+import { lentOut } from '../lending.js'
 
 // work id → ["Le Guin, Ursula K.", "Smith, Jo (Translator)"], in credit order.
 export function creditsByWork(authors, work_authors) {
@@ -57,6 +58,8 @@ const COLUMNS = [
   { header: 'City acquired', width: 14, get: (b) => b.copy.acquired_city },
   { header: 'State or region acquired', width: 14, get: (b) => b.copy.acquired_region },
   { header: 'Country acquired', width: 14, get: (b) => b.copy.acquired_country },
+  { header: 'Lent to', width: 16, get: (b) => b.lent?.name },
+  { header: 'Lent on', width: 11, ...asText, get: (b) => b.lent?.lent_on },
   { header: 'Original title', width: 30, get: (b) => b.copy.original_title },
   { header: 'Edition note', width: 20, get: (b) => b.copy.edition_note },
   { header: 'Notes', width: 30, get: (b) => b.copy.notes },
@@ -76,7 +79,9 @@ const coverLink = (copy) =>
 
 // Rows for write-excel-file: a bold heading row, then one row per book sorted by
 // title, then authors. Returns { sheetData, columns } (columns carries the widths).
-export function bookSheet({ works, authors, work_authors, copies, categories, book_categories, series, publisher_series, copy_series, copy_publisher_series }) {
+// Lending is blank for a backup made before it existed.
+export function bookSheet({ works, authors, work_authors, copies, categories, book_categories, series, publisher_series, copy_series, copy_publisher_series, borrowers = [], loans = [] }) {
+  const lent = lentOut(loans, borrowers)
   const workById = new Map(works.map((w) => [w.id, w]))
   const credits = creditsByWork(authors, work_authors)
   const seriesByCopy = labelsByCopy(copy_series, series, 'series_id')
@@ -97,6 +102,7 @@ export function bookSheet({ works, authors, work_authors, copies, categories, bo
       mainCategory,
       subcategories,
       alsoIn: shelved.alsoIn.join('; '),
+      lent: lent.get(copy.id),
     }
   })
   const byWords = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })

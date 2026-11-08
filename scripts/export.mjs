@@ -22,7 +22,8 @@ if (process.argv.includes('--backup')) {
   const snapshots = (await readdir(BACKUP_ROOT)).filter((name) => SNAPSHOT_NAME.test(name)).sort()
   const snapshot = snapshots.at(-1)
   if (!snapshot) throw new Error(`No backups found in ${BACKUP_ROOT}`)
-  for (const { name } of TABLES) tables[name] = JSON.parse(await readFile(join(BACKUP_ROOT, snapshot, `${name}.json`), 'utf8'))
+  // A backup made before a table existed has no file for it: that table was empty then.
+  for (const { name } of TABLES) tables[name] = JSON.parse(await readFile(join(BACKUP_ROOT, snapshot, `${name}.json`), 'utf8').catch(() => '[]'))
   madeFrom = `backup ${snapshot}`
 } else {
   const { supabase, libraryId } = await signIn()
