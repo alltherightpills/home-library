@@ -28,7 +28,7 @@ function Pick({ coverUrl, title, lines, onPick, disabled }) {
 // `isbn` is set when a scanned book had no record; the new copy gets it.
 // With `onAdded` (the shelf walk), a saved book goes straight to it as
 // { id, warning } instead of to the Added screen.
-function AddByHand({ isbn, copies, categories, acquired, addCopy, onOpenBook, onDone, onAdded, backLabel = 'Back to scanning' }) {
+function AddByHand({ isbn, copies, categories, acquired, wishlist, addCopy, onOpenBook, onDone, onAdded, backLabel = 'Back to scanning' }) {
   const [typed, setTyped] = useState(BLANK)
   const [step, setStep] = useState('search') // search | pick | form | done
   const [search, setSearch] = useState(null)
@@ -132,6 +132,7 @@ function AddByHand({ isbn, copies, categories, acquired, addCopy, onOpenBook, on
           copies={copies}
           categories={categories}
           acquired={acquired}
+          wishlist={wishlist}
           onSaved={saved}
           onSkip={() => show('pick')}
           skipLabel="Back to results"

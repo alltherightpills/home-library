@@ -2,7 +2,7 @@
 // Made-up books only.
 import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
-import { newestFirst, tidyNote, wishFromBook, wishWithIsbn } from '../src/wishlist.js'
+import { copiesForWish, newestFirst, tidyNote, wishFromBook, wishesForBook } from '../src/wishlist.js'
 
 const book = {
   title: 'The Salt  Road ',
@@ -32,11 +32,48 @@ describe('wishlist', () => {
     assert.equal(tidyNote(''), null)
   })
 
-  test('finding the wish for an edition', () => {
-    const wishes = [{ isbn13: '9780000000019' }, { isbn13: null }]
-    assert.equal(wishWithIsbn(wishes, '9780000000019'), wishes[0])
-    assert.equal(wishWithIsbn(wishes, '9780000000026'), null)
-    assert.equal(wishWithIsbn(null, '9780000000019'), null, 'while loading')
+  // Any edition: the same ISBN, the same Open Library work, or the same short
+  // title with a surname in common.
+  const salt = { title: 'The Salt Road: A Novel', authors: ['Ada Fenwick'], isbn13: '9780000000019', work_key: '/works/OL1W' }
+  const kiln = { title: 'Kiln Hours', authors: ['Bo Marsh'], isbn13: '9780000000026', work_key: null }
+  const wishes = [kiln, salt]
+
+  test('a scanned book matches a wish by ISBN, work, or title and surname', () => {
+    const scanned = (changes) => ({ title: 'Something Else', authors: ['Nobody'], workKey: null, ...changes })
+    assert.deepEqual(wishesForBook(wishes, scanned({}), '9780000000019'), [salt], 'same ISBN')
+    assert.deepEqual(wishesForBook(wishes, scanned({ workKey: '/works/OL1W' }), '9780000000099'), [salt], 'same work')
+    assert.deepEqual(
+      wishesForBook(wishes, scanned({ title: 'The salt road', authors: ['A. Fenwick'] }), '9780000000099'),
+      [salt],
+      'another edition by title and surname',
+    )
+    assert.deepEqual(wishesForBook(wishes, scanned({ title: 'The Salt Road' }), '9780000000099'), [], 'title alone is not enough')
+    assert.deepEqual(wishesForBook(wishes, scanned({ authors: ['Ada Fenwick'] }), '9780000000099'), [], 'author alone is not enough')
+    assert.deepEqual(wishesForBook(null, scanned({}), '9780000000019'), [], 'while loading')
+  })
+
+  test('this exact edition’s wish comes first', () => {
+    const other = { ...salt, isbn13: '9780000000033', work_key: '/works/OL1W' }
+    const found = wishesForBook([other, salt], { title: 'The Salt Road', authors: ['Ada Fenwick'], workKey: '/works/OL1W' }, '9780000000019')
+    assert.deepEqual(found, [salt, other])
+  })
+
+  test('a wish matches copies already owned, in any edition', () => {
+    const copy = (id, title, sortName, isbn13 = null) => ({ id, title, original_title: null, isbn13, people: [{ author: { sort_name: sortName } }] })
+    const copies = [
+      copy('a', 'The Salt Road', 'Fenwick, Ada'),
+      copy('b', 'Kiln Hours', 'Someone, Else'),
+      copy('c', 'Untitled', 'Marsh, Bo', '9780000000026'),
+    ]
+    assert.deepEqual(copiesForWish(salt, copies).map((c) => c.id), ['a'])
+    assert.deepEqual(copiesForWish(kiln, copies).map((c) => c.id), ['c'], 'by ISBN; the same title by someone else is not it')
+    assert.deepEqual(copiesForWish(salt, null), [], 'while loading')
+  })
+
+  test('surnames with two words, and accents', () => {
+    const wish = { title: 'Cien años de soledad', authors: ['Gabriel García Márquez'], isbn13: null, work_key: null }
+    const copies = [{ id: 'g', title: 'Cien Años de Soledad', original_title: null, isbn13: null, people: [{ author: { sort_name: 'García Márquez, Gabriel' } }] }]
+    assert.deepEqual(copiesForWish(wish, copies).map((c) => c.id), ['g'])
   })
 
   test('newest first, and the later addition first on the same day', () => {

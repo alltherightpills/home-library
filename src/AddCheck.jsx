@@ -6,6 +6,7 @@ import { flagText, planShelfEdit, shelfText } from './categories/review.js'
 import { copiesWithIsbn } from './isbn.js'
 import { listText, otherEditions } from './scanLookup.js'
 import { labelNames } from './series.js'
+import { wishesForBook } from './wishlist.js'
 
 const distinct = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b))
 
@@ -73,8 +74,13 @@ function VoteNote({ vote, categories, mainId, onUseGuess }) {
 // The check form for one book, scanned or (`manual`) added by hand, which also
 // shows the edition's details to fill in. onSaved gets { id, warning } once the
 // book is in the database.
-export function CheckBook({ book, isbn, manual, copies, categories, acquired, onSaved, onSkip, skipLabel = 'Skip' }) {
+export function CheckBook({ book, isbn, manual, copies, categories, acquired, wishlist, onSaved, onSkip, skipLabel = 'Skip' }) {
   const others = useMemo(() => otherEditions(copies, book), [copies, book])
+  // Wishes for this book in any edition, fixed when the form opens; with the
+  // tick on (the default), saving takes them off the wishlist.
+  // (The Shelf walk's adds pass no wishlist.)
+  const [wishes] = useState(() => wishesForBook(wishlist?.list, book, isbn))
+  const [takeOff, setTakeOff] = useState(true)
   const seriesNames = useMemo(() => labelNames(copies, 'series'), [copies])
   const publisherSeriesNames = useMemo(() => labelNames(copies, 'publisherSeries'), [copies])
   const authors = useMemo(() => authorsIn(copies), [copies])
@@ -108,22 +114,34 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, on
     }
     setBusy(true)
     setError('')
+    let result
     try {
-      onSaved(
-        await saveNewBook({
-          form,
-          book,
-          vote,
-          categories,
-          isbn13: isbn,
-          libraryId: copies[0].library_id,
-          knownAuthorIds: new Set(authors.map((a) => a.id)),
-        }),
-      )
+      result = await saveNewBook({
+        form,
+        book,
+        vote,
+        categories,
+        isbn13: isbn,
+        libraryId: copies[0].library_id,
+        knownAuthorIds: new Set(authors.map((a) => a.id)),
+      })
     } catch (err) {
       setError(`Couldn't add the book: ${err.message} Tap Save to try again.`)
       setBusy(false)
+      return
     }
+    // The book is in; a wish that won't come off is only a warning.
+    if (takeOff) {
+      for (const wish of wishes) {
+        try {
+          await wishlist.remove(wish)
+        } catch (err) {
+          const problem = `The book was added, but “${wish.title}” couldn't be taken off the wishlist (${err.message}). Remove it on the Wishlist screen.`
+          result = { ...result, warning: [result.warning, problem].filter(Boolean).join(' ') }
+        }
+      }
+    }
+    onSaved(result)
   }
 
   return (
@@ -145,6 +163,19 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, on
       </div>
 
       {error && <p className="error">{error}</p>}
+
+      {wishes.length > 0 && (
+        <div className="scan-editions">
+          <p>
+            <strong>★ On your wishlist:</strong> {wishes.map((w) => w.title).join('; ')}
+            {wishes.length === 1 && wishes[0].isbn13 && wishes[0].isbn13 !== isbn && ' (another edition)'}
+          </p>
+          <label className="edit-check">
+            <input type="checkbox" checked={takeOff} onChange={(e) => setTakeOff(e.target.checked)} />
+            Take it off the wishlist
+          </label>
+        </div>
+      )}
 
       {others.length > 0 && (
         <div className="scan-editions">
@@ -271,7 +302,7 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, on
 
 // Goes through the scanned books in the order they were scanned, one form at a
 // time. `queue` is their ISBNs, fixed when the screen opened.
-function AddCheck({ queue, scans, copies, categories, acquired, onSkipped, onDone, addCopy }) {
+function AddCheck({ queue, scans, copies, categories, acquired, wishlist, onSkipped, onDone, addCopy }) {
   const [index, setIndex] = useState(0)
   const [results, setResults] = useState({ added: 0, skipped: 0 })
   // Books added on this screen, so a book just added isn't taken for one owned before.
@@ -369,6 +400,7 @@ function AddCheck({ queue, scans, copies, categories, acquired, onSkipped, onDon
             copies={copies}
             categories={categories}
             acquired={acquired}
+            wishlist={wishlist}
             onSaved={saved}
             onSkip={() => {
               onSkipped(isbn)

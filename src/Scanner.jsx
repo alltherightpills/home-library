@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AddByHand from './AddByHand.jsx'
 import AddCheck from './AddCheck.jsx'
 import { Field } from './EditBook.jsx'
@@ -7,12 +7,14 @@ import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
 import { copiesWithIsbn } from './isbn.js'
 import { listText, lookUpNewBook, otherEditions } from './scanLookup.js'
 import { coverUrl } from './useCatalog.js'
-import { wishWithIsbn } from './wishlist.js'
+import { wishesForBook } from './wishlist.js'
 
 // `scans` lives in App, so the list survives a visit to a book page.
 // The camera turns off whenever IsbnReader leaves the screen (the check form,
 // Add by hand, or another tab).
-function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpenBook, addCopy }) {
+// `buying` is an ISBN from the Wishlist screen's I bought it: it's taken as a
+// scan and its check form opens straight away.
+function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpenBook, addCopy, buying, onBuyingStarted }) {
   // "New books saved as [year · place]", remembered on the phone.
   const [acquired, setAcquired] = useState(loadAcquired)
   const [changingAcquired, setChangingAcquired] = useState(false)
@@ -67,6 +69,20 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
     }
   }
 
+  // I bought it: scan the wished-for edition, then open its check form (which
+  // waits for the lookup). Owned already, it opens the book page instead.
+  // `started` stops a second run (React's development mode runs effects twice).
+  const started = useRef(null)
+  useEffect(() => {
+    if (!buying || !copies || started.current === buying) return
+    started.current = buying
+    onBuyingStarted()
+    handleIsbn(buying)
+    if (!copiesWithIsbn(copies, buying).length) openCheck([buying])
+    // Runs once per I bought it; the functions it calls change every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buying, copies])
+
   // Looks up a book you don't own, showing progress in its row of the list.
   async function lookUp(isbn) {
     const setLookup = (lookup) => setScans((prev) => prev.map((s) => (s.isbn === isbn ? { ...s, lookup } : s)))
@@ -85,6 +101,7 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
         copies={copies}
         categories={categories}
         acquired={acquired}
+        wishlist={wishlist}
         addCopy={addCopy}
         onOpenBook={onOpenBook}
         onDone={() => history.back()}
@@ -100,6 +117,7 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
         copies={copies}
         categories={categories}
         acquired={acquired}
+        wishlist={wishlist}
         addCopy={addCopy}
         onSkipped={markSkipped}
         onDone={() => history.back()}
@@ -279,7 +297,8 @@ function ScanActions({ addLabel, onAdd, book, isbn, wishlist, libraryId }) {
 
   // No title (rare): nothing to put on the wishlist.
   const canWish = Boolean(book.title && wishlist.list)
-  const wish = wishWithIsbn(wishlist.list, isbn)
+  // A wish for this book in any edition; this exact edition's comes first.
+  const wish = wishesForBook(wishlist.list, book, isbn)[0]
 
   async function save(e) {
     e.preventDefault()
@@ -322,7 +341,12 @@ function ScanActions({ addLabel, onAdd, book, isbn, wishlist, libraryId }) {
           </div>
         </form>
       )}
-      {wish && <p className="book-meta on-wishlist">★ On your wishlist{wish.note ? ` · ${wish.note}` : ''}</p>}
+      {wish && (
+        <p className="book-meta on-wishlist">
+          {wish.isbn13 === isbn ? '★ On your wishlist' : `★ Another edition is on your wishlist: ${wish.title}`}
+          {wish.note ? ` · ${wish.note}` : ''}
+        </p>
+      )}
       {wishlist.error && <p className="error">Couldn't load the wishlist: {wishlist.error}</p>}
       {error && <p className="error">{error}</p>}
     </div>

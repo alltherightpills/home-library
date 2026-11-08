@@ -76,6 +76,20 @@ function SignedInApp({ session, notice, setNotice }) {
   // copy id → { name, lent_on } for the books out now (lists, Scan).
   const lentTo = useMemo(() => (loans.loans ? lentOut(loans.loans, loans.borrowers) : new Map()), [loans.loans, loans.borrowers])
 
+  // An ISBN from the Wishlist screen's I bought it, for the Scan tab to take
+  // as a scan and open its check form; null otherwise.
+  const [buying, setBuying] = useState(null)
+
+  // I bought it: over to Scan, marking the step before as the Library, so
+  // swiping back from Scan returns to the Wishlist screen.
+  function buy(isbn) {
+    history.replaceState({ ...history.state, tab: 'library' }, '')
+    history.pushState({ tab: 'scan' }, '')
+    setBuying(isbn)
+    setTab('scan')
+    window.scrollTo(0, 0)
+  }
+
   // The Library search, kept here so the bar can show on other tabs too.
   const [query, setQuery] = useState('')
   // The Library tab's own ways of moving between its screens (while it's showing).
@@ -125,6 +139,7 @@ function SignedInApp({ session, notice, setNotice }) {
             loans={loans}
             lentTo={lentTo}
             wishlist={wishlist}
+            onBuy={buy}
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}
@@ -138,7 +153,19 @@ function SignedInApp({ session, notice, setNotice }) {
           />
         )}
         {tab === 'scan' && (
-          <Scanner key={restarts.scan} copies={copies} lentTo={lentTo} wishlist={wishlist} categories={categories} scans={scans} setScans={setScans} onOpenBook={(id) => goToLibrary({ book: id })} addCopy={addCopy} />
+          <Scanner
+            key={restarts.scan}
+            copies={copies}
+            lentTo={lentTo}
+            wishlist={wishlist}
+            categories={categories}
+            scans={scans}
+            setScans={setScans}
+            onOpenBook={(id) => goToLibrary({ book: id })}
+            addCopy={addCopy}
+            buying={buying}
+            onBuyingStarted={() => setBuying(null)}
+          />
         )}
         {tab === 'reading' && <ReadingTab key={restarts.reading} copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
         {tab === 'pick' && <p className="placeholder">Coming soon.</p>}

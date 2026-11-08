@@ -21,7 +21,7 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies: catalog, categories, readings, loans, lentTo, wishlist, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, loans, lentTo, wishlist, onBuy, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
   // Every copy marked `read` (yours, or another copy of the same work), for
   // the ✓, the count and the Read filter, and `lentTo` (who has it) if it's out.
   const copies = useMemo(() => {
@@ -212,7 +212,9 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
       {!open && place?.kind === 'lent' && (
         <LentOutView copies={copies} loans={loans} onOpenBook={openBook} onOpenPlace={openPlace} onBack={() => history.back()} />
       )}
-      {!open && place?.kind === 'wishlist' && <WishlistView wishlist={wishlist} onBack={() => history.back()} />}
+      {!open && place?.kind === 'wishlist' && (
+        <WishlistView wishlist={wishlist} copies={copies} onBuy={onBuy} onOpenBook={openBook} onBack={() => history.back()} />
+      )}
       {!open && place?.kind === 'borrowers' && <BorrowersList loans={loans} onOpenPlace={openPlace} onBack={() => history.back()} />}
       {!open && place?.kind === 'borrower' && (
         <BorrowerPage place={place} copies={copies} loans={loans} onOpenBook={openBook} onBack={() => history.back()} />
