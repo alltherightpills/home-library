@@ -13,6 +13,7 @@ import { useWishlist } from './useWishlist.js'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
 import { clearSaved } from './savedCopy.js'
+import { loadQueue, saveQueue, waitingScans } from './scanQueue.js'
 import { asOfText } from './useSaved.js'
 
 // The four tabs in the bottom bar (handoff.md, "The screens").
@@ -92,8 +93,9 @@ function SignedInApp({ session, notice, setNotice }) {
   // screen (React rebuilds a component whose `key` changes).
   const [restarts, setRestarts] = useState({})
   const [changingPassword, setChangingPassword] = useState(false)
-  // Books scanned since the app opened, newest first.
-  const [scans, setScans] = useState([])
+  // Books scanned since the app opened, newest first, after any kept from
+  // before because they couldn't be looked up (the scan queue, step 7b).
+  const [scans, setScans] = useState(() => loadQueue(session.user.id))
   const current = TABS.find((t) => t.id === tab)
   const refreshTick = useRefreshTick()
   const userId = session.user.id
@@ -102,6 +104,13 @@ function SignedInApp({ session, notice, setNotice }) {
   const readings = useReadings(userId, refreshTick)
   const loans = useLoans(userId, refreshTick)
   const wishlist = useWishlist(userId, refreshTick)
+  // The queued scans still to deal with, kept on the phone as they change
+  // (once the catalog is in, so an added book drops out).
+  const waiting = useMemo(() => (copies ? waitingScans(scans, copies) : []), [scans, copies])
+  useEffect(() => {
+    if (copies) saveQueue(userId, waiting.map((s) => s.isbn))
+  }, [userId, copies, waiting])
+
   // copy id → { name, lent_on } for the books out now (lists, Scan).
   const lentTo = useMemo(() => (loans.loans ? lentOut(loans.loans, loans.borrowers) : new Map()), [loans.loans, loans.borrowers])
 
@@ -110,14 +119,19 @@ function SignedInApp({ session, notice, setNotice }) {
   // for the copy's barcode, with Add by hand filled in. Null otherwise.
   const [buying, setBuying] = useState(null)
 
-  // I bought it: over to Scan, marking the step before as the Library, so
-  // swiping back from Scan returns to the Wishlist screen.
-  function buy(wish) {
+  // Over to Scan from a Library screen, marking the step before as the
+  // Library, so swiping back from Scan returns to that screen.
+  function goToScan() {
     history.replaceState({ ...history.state, tab: 'library' }, '')
     history.pushState({ tab: 'scan' }, '')
-    setBuying(wish)
     setTab('scan')
     window.scrollTo(0, 0)
+  }
+
+  // I bought it, on the Wishlist screen.
+  function buy(wish) {
+    setBuying(wish)
+    goToScan()
   }
 
   // The Library search, kept here so the bar can show on other tabs too.
@@ -175,6 +189,8 @@ function SignedInApp({ session, notice, setNotice }) {
             lentTo={lentTo}
             wishlist={wishlist}
             onBuy={buy}
+            waitingCount={waiting.length}
+            onOpenScan={goToScan}
             error={error}
             updateCopy={updateCopy}
             updateWork={updateWork}
@@ -200,6 +216,7 @@ function SignedInApp({ session, notice, setNotice }) {
             addCopy={addCopy}
             buying={buying}
             onBuyingStarted={() => setBuying(null)}
+            refreshTick={refreshTick}
           />
         )}
         {tab === 'reading' && <ReadingTab key={restarts.reading} copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}

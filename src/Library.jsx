@@ -21,7 +21,7 @@ const VIEW_KEY = 'library.view'
 
 // The search bar itself belongs to App.jsx, which shows it on other tabs too;
 // `query` is what's typed in it, and `nav` hands it this tab's moves.
-function Library({ copies: catalog, categories, readings, loans, lentTo, wishlist, onBuy, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
+function Library({ copies: catalog, categories, readings, loans, lentTo, wishlist, onBuy, waitingCount, onOpenScan, error, updateCopy, updateWork, updateAuthor, mergeAuthors, updateCopies, removeCopy, addCopy, query, nav }) {
   // Every copy marked `read` (yours, or another copy of the same work), for
   // the ✓, the count and the Read filter, and `lentTo` (who has it) if it's out.
   const copies = useMemo(() => {
@@ -334,6 +334,12 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
             <button className="primary browse-all" onClick={() => openPlace('all')}>
               Browse all {copies.length.toLocaleString()} books ›
             </button>
+            {waitingCount > 0 && (
+              // Only while scans kept for want of signal are still to add (step 7b).
+              <button className="review-banner walk-banner" onClick={onOpenScan}>
+                <strong>Scans waiting</strong> · {waitingCount} {waitingCount === 1 ? 'book' : 'books'} ›
+              </button>
+            )}
             {lentCount > 0 && (
               // Only while something is out.
               <button className="review-banner walk-banner" onClick={() => openPlace('lent')}>

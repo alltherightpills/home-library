@@ -7,6 +7,7 @@ import { acquiredText, loadAcquired, saveAcquired } from './addBook.js'
 import { copiesWithIsbn } from './isbn.js'
 import { listText, lookUpNewBook, otherEditions } from './scanLookup.js'
 import { coverUrl } from './useCatalog.js'
+import { needsLookup } from './scanQueue.js'
 import { wishesForBook } from './wishlist.js'
 
 // `scans` lives in App, so the list survives a visit to a book page.
@@ -16,7 +17,10 @@ import { wishesForBook } from './wishlist.js'
 // is taken as a scan and its check form opens straight away. One without
 // (added by title) asks for the copy's barcode, and No ISBN? Add by hand
 // opens with its title and author typed in.
-function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpenBook, addCopy, buying, onBuyingStarted }) {
+// A scan whose lookup can't happen (no signal) joins the scan queue
+// (scanQueue.js): kept on the phone, looked up when Scan is open with signal
+// (on opening, and again on `refreshTick`, which changes when signal returns).
+function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpenBook, addCopy, buying, onBuyingStarted, refreshTick }) {
   // "New books saved as [year · place]", remembered on the phone.
   const [acquired, setAcquired] = useState(loadAcquired)
   const [changingAcquired, setChangingAcquired] = useState(false)
@@ -94,15 +98,30 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
   }, [buying, copies])
 
   // Looks up a book you don't own, showing progress in its row of the list.
+  // With no signal it joins the queue instead (without trying, when the phone
+  // knows it's offline; otherwise when the lookup fails).
   async function lookUp(isbn) {
-    const setLookup = (lookup) => setScans((prev) => prev.map((s) => (s.isbn === isbn ? { ...s, lookup } : s)))
-    setLookup({ status: 'looking' })
+    const setScan = (changes) => setScans((prev) => prev.map((s) => (s.isbn === isbn ? { ...s, ...changes } : s)))
+    if (navigator.onLine === false) return setScan({ queued: true, lookup: { status: 'waiting' } })
+    setScan({ lookup: { status: 'looking' } })
     try {
-      setLookup({ status: 'done', book: await lookUpNewBook(isbn, copies?.[0]?.library_id) })
+      setScan({ lookup: { status: 'done', book: await lookUpNewBook(isbn, copies?.[0]?.library_id) } })
     } catch (err) {
-      setLookup({ status: 'error', message: err.message })
+      setScan({ queued: true, lookup: { status: 'error', message: err.message } })
     }
   }
+
+  const removeScan = (isbn) => setScans((prev) => prev.filter((s) => s.isbn !== isbn))
+
+  // The queue's lookups, once the catalog is in (a book added meanwhile is
+  // left alone) and there's signal.
+  useEffect(() => {
+    if (!copies || navigator.onLine === false) return
+    for (const s of scans) if (needsLookup(s) && !copiesWithIsbn(copies, s.isbn).length) lookUp(s.isbn)
+    // Runs on opening Scan, when the catalog arrives, and on each refresh; the
+    // scans and functions it reads change every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTick, Boolean(copies)])
 
   if (byHand) {
     return (
@@ -216,6 +235,7 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
               onRetry={() => lookUp(s.isbn)}
               onAdd={() => openCheck([s.isbn])}
               onAddByHand={() => openByHand(s.isbn)}
+              onRemove={() => removeScan(s.isbn)}
             />
           ))}
         </ul>
@@ -225,18 +245,47 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
 }
 
 // One scanned ISBN: the copies you own with it, or what the lookup found.
-function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd, onAddByHand }) {
+// A queued scan (kept for want of signal) has Remove, until it's added.
+function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd, onAddByHand, onRemove }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
   if (owned.length > 0) {
     return owned.map((c) => (
       <OwnedRow key={c.id} copy={c} lent={lentTo.get(c.id)} note={owned.length > 1 ? `You own ${owned.length} copies` : 'You own this'} onOpenBook={onOpenBook} />
     ))
   }
+  const remove = scan.queued && (
+    <button className="link" onClick={onRemove}>
+      Remove
+    </button>
+  )
   const { status, book, message } = scan.lookup ?? {}
   if (status !== 'done' || !book.found) {
+    // With no lookup, only this exact ISBN can be matched to the wishlist.
+    const wished = wishlist.list?.find((w) => w.isbn13 === scan.isbn)
+    const waiting = scan.queued && (!status || status === 'waiting' || status === 'error')
     return (
       <li className="scan-new">
         <strong>{scan.isbn}</strong>
+        {wished && (
+          <span className="book-meta on-wishlist">
+            ★ On your wishlist: {wished.title}
+            {wished.note ? ` · ${wished.note}` : ''}
+          </span>
+        )}
+        {waiting && (
+          <span className="book-meta">
+            Not in your library. Waiting for signal: it’s looked up when you’re back online.{' '}
+            {status === 'error' && (
+              <>
+                <button className="link" onClick={onRetry}>
+                  Try again
+                </button>{' '}
+                ·{' '}
+              </>
+            )}
+            {remove}
+          </span>
+        )}
         {status === 'looking' && <span className="book-meta">Not in your library. Looking it up…</span>}
         {status === 'done' && (
           <span className="book-meta">
@@ -247,9 +296,10 @@ function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd
                 Add by hand
               </button>
             )}
+            {remove && <> · {remove}</>}
           </span>
         )}
-        {status === 'error' && (
+        {status === 'error' && !waiting && (
           <span className="book-meta">
             Not in your library. Couldn't look it up: check your connection. ({message}){' '}
             <button className="link" onClick={onRetry}>
@@ -257,7 +307,7 @@ function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd
             </button>
           </span>
         )}
-        {!status && <span className="book-meta">{copies ? 'Not in your library' : 'Checking…'}</span>}
+        {!status && !waiting && <span className="book-meta">{copies ? 'Not in your library' : 'Checking…'}</span>}
       </li>
     )
   }
@@ -283,6 +333,7 @@ function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd
             {book.unreachable.length ? ` (${listText(book.unreachable)} didn't answer)` : ''}
           </p>
           {scan.skipped && <p className="book-meta">Skipped</p>}
+          {remove && !scan.skipped && <p className="book-meta">Scanned with no signal · {remove}</p>}
         </div>
       </div>
       {copies && (
