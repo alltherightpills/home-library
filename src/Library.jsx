@@ -13,7 +13,7 @@ import { BROWSE_KINDS } from './categories/browse.js'
 import { byRead, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
 import ShelfWalk from './ShelfWalk.jsx'
-import WishlistView from './WishlistView.jsx'
+import WishlistView, { WishAdd } from './WishlistView.jsx'
 import { labelIndex } from './series.js'
 import { SORTS, searchWords } from './useCatalog.js'
 
@@ -213,7 +213,17 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
         <LentOutView copies={copies} loans={loans} onOpenBook={openBook} onOpenPlace={openPlace} onBack={() => history.back()} />
       )}
       {!open && place?.kind === 'wishlist' && (
-        <WishlistView wishlist={wishlist} copies={copies} onBuy={onBuy} onOpenBook={openBook} onBack={() => history.back()} />
+        <WishlistView
+          wishlist={wishlist}
+          copies={copies}
+          onBuy={onBuy}
+          onOpenBook={openBook}
+          onAdd={() => openPlace('wishAdd')}
+          onBack={() => history.back()}
+        />
+      )}
+      {!open && place?.kind === 'wishAdd' && (
+        <WishAdd wishlist={wishlist} copies={copies} onOpenBook={openBook} onDone={() => history.back()} />
       )}
       {!open && place?.kind === 'borrowers' && <BorrowersList loans={loans} onOpenPlace={openPlace} onBack={() => history.back()} />}
       {!open && place?.kind === 'borrower' && (

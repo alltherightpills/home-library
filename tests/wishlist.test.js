@@ -70,6 +70,17 @@ describe('wishlist', () => {
     assert.deepEqual(copiesForWish(salt, null), [], 'while loading')
   })
 
+  // Add a book by title (slice C): no ISBN, so a later scan finds it by work or by title and surname.
+  test('a wish added by title has no ISBN, and a scan of any edition still finds it', () => {
+    const w = wishFromBook(book, null, '', 'lib-1')
+    assert.equal(w.isbn13, null)
+    const byTitle = { ...w, title: 'The Salt Road', work_key: null }
+    const scanned = { title: 'The Salt Road', authors: ['Ada Fenwick'], workKey: '/works/OL1W' }
+    assert.deepEqual(wishesForBook([w], scanned, '9780000000019'), [w], 'same work')
+    assert.deepEqual(wishesForBook([byTitle], { ...scanned, workKey: null }, '9780000000019'), [byTitle], 'title and surname')
+    assert.deepEqual(wishesForBook([w], { title: 'Kiln Hours', authors: ['Bo Marsh'], workKey: null }, '9780000000026'), [], 'another book')
+  })
+
   test('surnames with two words, and accents', () => {
     const wish = { title: 'Cien años de soledad', authors: ['Gabriel García Márquez'], isbn13: null, work_key: null }
     const copies = [{ id: 'g', title: 'Cien Años de Soledad', original_title: null, isbn13: null, people: [{ author: { sort_name: 'García Márquez, Gabriel' } }] }]

@@ -12,8 +12,10 @@ import { wishesForBook } from './wishlist.js'
 // `scans` lives in App, so the list survives a visit to a book page.
 // The camera turns off whenever IsbnReader leaves the screen (the check form,
 // Add by hand, or another tab).
-// `buying` is an ISBN from the Wishlist screen's I bought it: it's taken as a
-// scan and its check form opens straight away.
+// `buying` is a wish from the Wishlist screen's I bought it. One with an ISBN
+// is taken as a scan and its check form opens straight away. One without
+// (added by title) asks for the copy's barcode, and No ISBN? Add by hand
+// opens with its title and author typed in.
 function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpenBook, addCopy, buying, onBuyingStarted }) {
   // "New books saved as [year · place]", remembered on the phone.
   const [acquired, setAcquired] = useState(loadAcquired)
@@ -24,6 +26,10 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
   // Add by hand, likewise a step in the history: { isbn } (null for a book with
   // no ISBN), or null when not showing.
   const [byHand, setByHand] = useState(null)
+  // I bought it for a wish with no ISBN: the wish, while it's still on the
+  // wishlist (adding the book takes it off, and the line goes).
+  const [buyingWish] = useState(() => (buying && !buying.isbn13 ? buying : null))
+  const stillWished = buyingWish && wishlist.list?.some((w) => w.id === buyingWish.id)
 
   useEffect(() => {
     const onPop = () => {
@@ -40,9 +46,10 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
     window.scrollTo(0, 0)
   }
 
-  function openByHand(isbn = null) {
+  // `initial`: the search boxes filled in, for I bought it.
+  function openByHand(isbn = null, initial = undefined) {
     history.pushState({ tab: 'scan', byHand: true }, '')
-    setByHand({ isbn })
+    setByHand({ isbn, initial })
     window.scrollTo(0, 0)
   }
 
@@ -71,14 +78,17 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
 
   // I bought it: scan the wished-for edition, then open its check form (which
   // waits for the lookup). Owned already, it opens the book page instead.
+  // (A wish with no ISBN only needs `buyingWish`, above.)
   // `started` stops a second run (React's development mode runs effects twice).
   const started = useRef(null)
   useEffect(() => {
     if (!buying || !copies || started.current === buying) return
     started.current = buying
     onBuyingStarted()
-    handleIsbn(buying)
-    if (!copiesWithIsbn(copies, buying).length) openCheck([buying])
+    const isbn = buying.isbn13
+    if (!isbn) return
+    handleIsbn(isbn)
+    if (!copiesWithIsbn(copies, isbn).length) openCheck([isbn])
     // Runs once per I bought it; the functions it calls change every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [buying, copies])
@@ -98,6 +108,7 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
     return (
       <AddByHand
         isbn={byHand.isbn}
+        initial={byHand.initial}
         copies={copies}
         categories={categories}
         acquired={acquired}
@@ -160,10 +171,23 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
         </p>
       )}
 
+      {stillWished && (
+        <p className="on-wishlist">
+          ★ Scan the barcode of your copy of <strong>{buyingWish.title}</strong>. No barcode? Tap Add by hand under the camera.
+        </p>
+      )}
+
       <IsbnReader onIsbn={handleIsbn}>
         {copies && (
           <p className="by-hand-link">
-            <button className="link" onClick={() => openByHand()}>
+            <button
+              className="link"
+              onClick={() =>
+                stillWished
+                  ? openByHand(null, { title: buyingWish.title, author: buyingWish.authors[0] ?? '', year: '' })
+                  : openByHand()
+              }
+            >
               No ISBN? Add by hand
             </button>
           </p>

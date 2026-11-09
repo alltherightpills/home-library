@@ -76,16 +76,17 @@ function SignedInApp({ session, notice, setNotice }) {
   // copy id → { name, lent_on } for the books out now (lists, Scan).
   const lentTo = useMemo(() => (loans.loans ? lentOut(loans.loans, loans.borrowers) : new Map()), [loans.loans, loans.borrowers])
 
-  // An ISBN from the Wishlist screen's I bought it, for the Scan tab to take
-  // as a scan and open its check form; null otherwise.
+  // The wish from the Wishlist screen's I bought it, for the Scan tab: one
+  // with an ISBN is taken as a scan and its check form opens; one without asks
+  // for the copy's barcode, with Add by hand filled in. Null otherwise.
   const [buying, setBuying] = useState(null)
 
   // I bought it: over to Scan, marking the step before as the Library, so
   // swiping back from Scan returns to the Wishlist screen.
-  function buy(isbn) {
+  function buy(wish) {
     history.replaceState({ ...history.state, tab: 'library' }, '')
     history.pushState({ tab: 'scan' }, '')
-    setBuying(isbn)
+    setBuying(wish)
     setTab('scan')
     window.scrollTo(0, 0)
   }

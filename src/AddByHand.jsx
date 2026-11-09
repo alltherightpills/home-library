@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { CheckBook } from './AddCheck.jsx'
 import { Field } from './EditBook.jsx'
-import { bookFromPick, searchByHand } from './handLookup.js'
 import { listText } from './scanLookup.js'
-
-const BLANK = { title: '', author: '', year: '' }
+import { useHandSearch } from './useHandSearch.js'
 
 // One search result to pick: an LC edition or an Open Library work.
 function Pick({ coverUrl, title, lines, onPick, disabled }) {
@@ -23,50 +21,103 @@ function Pick({ coverUrl, title, lines, onPick, disabled }) {
   )
 }
 
+// The search boxes. `withYear` adds the year printed in your copy (not for a
+// wish, which has no copy yet).
+export function SearchStep({ hand, withYear = true }) {
+  const { typed, setTypedPart, busy, error, runSearch } = hand
+  return (
+    <form className="edit-book" onSubmit={runSearch} noValidate>
+      {error && <p className="error">{error}</p>}
+      <Field label="Title" value={typed.title} onChange={setTypedPart('title')} />
+      <Field label="Author (optional)" value={typed.author} onChange={setTypedPart('author')} />
+      {withYear && (
+        <>
+          <Field label="Year printed in your copy (optional)" value={typed.year} onChange={setTypedPart('year')} numeric />
+          <p className="book-meta">The year finds that edition in the Library of Congress catalog, which otherwise shows its 10 newest.</p>
+        </>
+      )}
+      <button type="submit" className="primary" disabled={busy}>
+        {busy ? 'Searching…' : 'Search'}
+      </button>
+    </form>
+  )
+}
+
+// The results to pick from, then Search again or None of these.
+export function PickStep({ hand, worksHint, noneLabel }) {
+  const { typed, search, busy, show, pick } = hand
+  const { editions, yearMatched, works, unreachable } = search
+  return (
+    <>
+      <h2>Pick the closest match</h2>
+      {unreachable.length > 0 && <p className="scan-hint">{listText(unreachable)} didn't answer.</p>}
+      {editions.length > 0 && (
+        <>
+          <h3>Library of Congress editions</h3>
+          {typed.year && !yearMatched && <p className="book-meta">LC has no edition from {typed.year}. These are from other years.</p>}
+          <ul className="book-list">
+            {editions.map((edition, i) => (
+              <Pick
+                key={i}
+                title={edition.subtitle ? `${edition.title}: ${edition.subtitle}` : edition.title}
+                lines={[
+                  edition.authors.join(', '),
+                  [edition.publisher, edition.year, edition.pages && `${edition.pages} pages`].filter(Boolean).join(' · '),
+                  edition.edition,
+                ]}
+                onPick={() => pick({ edition })}
+                disabled={busy}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+      {works.length > 0 && (
+        <>
+          <h3>Open Library</h3>
+          <p className="book-meta">{worksHint}</p>
+          <ul className="book-list">
+            {works.map(({ doc, coverUrl }) => (
+              <Pick
+                key={doc.key}
+                coverUrl={coverUrl}
+                title={doc.title}
+                lines={[
+                  (doc.author_name ?? []).join(', '),
+                  [doc.first_publish_year && `First published ${doc.first_publish_year}`, doc.edition_count && `${doc.edition_count} editions`]
+                    .filter(Boolean)
+                    .join(' · '),
+                ]}
+                onPick={() => pick({ work: doc })}
+                disabled={busy}
+              />
+            ))}
+          </ul>
+        </>
+      )}
+      {!editions.length && !works.length && <p className="placeholder">Nothing found for that search.</p>}
+      <div className="review-actions">
+        <button className="link" onClick={() => show('search')} disabled={busy}>
+          Search again
+        </button>
+        <button className="primary" onClick={() => pick()} disabled={busy}>
+          {noneLabel}
+        </button>
+      </div>
+    </>
+  )
+}
+
 // Add by hand, for a book with no ISBN or no record: search by title, author
 // and year, pick the closest edition (or none), then the usual check form.
 // `isbn` is set when a scanned book had no record; the new copy gets it.
+// `initial` fills in the search boxes (I bought it, for a wish with no ISBN).
 // With `onAdded` (the shelf walk), a saved book goes straight to it as
 // { id, warning } instead of to the Added screen.
-function AddByHand({ isbn, copies, categories, acquired, wishlist, addCopy, onOpenBook, onDone, onAdded, backLabel = 'Back to scanning' }) {
-  const [typed, setTyped] = useState(BLANK)
-  const [step, setStep] = useState('search') // search | pick | form | done
-  const [search, setSearch] = useState(null)
-  const [book, setBook] = useState(null)
+function AddByHand({ isbn, initial, copies, categories, acquired, wishlist, addCopy, onOpenBook, onDone, onAdded, backLabel = 'Back to scanning' }) {
+  const hand = useHandSearch(initial)
+  const { step, show, book } = hand
   const [added, setAdded] = useState(null) // { id, title, warning }
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
-
-  const show = (next) => {
-    setStep(next)
-    window.scrollTo(0, 0)
-  }
-  const setTypedPart = (key) => (value) => setTyped((t) => ({ ...t, [key]: value }))
-
-  async function runSearch(e) {
-    e.preventDefault()
-    if (!typed.title.trim()) return setError('Type at least the title.')
-    if (typed.year.trim() && !/^\d{4}$/.test(typed.year.trim())) return setError('Year should be four digits, like 1952.')
-    setBusy(true)
-    setError('')
-    try {
-      setSearch(await searchByHand({ title: typed.title.trim(), author: typed.author.trim(), year: typed.year.trim() }))
-      show('pick')
-    } catch (err) {
-      setError(`Couldn't search: ${err.message}`)
-    }
-    setBusy(false)
-  }
-
-  async function pick(choice) {
-    setBusy(true)
-    try {
-      setBook(await bookFromPick(search, typed, choice))
-      show('form')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   // The book is saved; show it in the catalog, then say so.
   async function saved({ id, warning }) {
@@ -83,11 +134,8 @@ function AddByHand({ isbn, copies, categories, acquired, wishlist, addCopy, onOp
   }
 
   function startAgain() {
-    setTyped(BLANK)
-    setSearch(null)
-    setBook(null)
     setAdded(null)
-    show('search')
+    hand.reset()
   }
 
   const header = (
@@ -142,65 +190,14 @@ function AddByHand({ isbn, copies, categories, acquired, wishlist, addCopy, onOp
   }
 
   if (step === 'pick') {
-    const { editions, yearMatched, works, unreachable } = search
     return (
       <div className="series-view">
         {header}
-        <h2>Pick the closest match</h2>
-        {unreachable.length > 0 && <p className="scan-hint">{listText(unreachable)} didn't answer.</p>}
-        {editions.length > 0 && (
-          <>
-            <h3>Library of Congress editions</h3>
-            {typed.year && !yearMatched && (
-              <p className="book-meta">LC has no edition from {typed.year}. These are from other years.</p>
-            )}
-            <ul className="book-list">
-              {editions.map((edition, i) => (
-                <Pick
-                  key={i}
-                  title={edition.subtitle ? `${edition.title}: ${edition.subtitle}` : edition.title}
-                  lines={[
-                    edition.authors.join(', '),
-                    [edition.publisher, edition.year, edition.pages && `${edition.pages} pages`].filter(Boolean).join(' · '),
-                    edition.edition,
-                  ]}
-                  onPick={() => pick({ edition })}
-                  disabled={busy}
-                />
-              ))}
-            </ul>
-          </>
-        )}
-        {works.length > 0 && (
-          <>
-            <h3>Open Library</h3>
-            <p className="book-meta">These cover every edition, so you'll type your copy's publisher and year.</p>
-            <ul className="book-list">
-              {works.map(({ doc, coverUrl }) => (
-                <Pick
-                  key={doc.key}
-                  coverUrl={coverUrl}
-                  title={doc.title}
-                  lines={[
-                    (doc.author_name ?? []).join(', '),
-                    [doc.first_publish_year && `First published ${doc.first_publish_year}`, doc.edition_count && `${doc.edition_count} editions`].filter(Boolean).join(' · '),
-                  ]}
-                  onPick={() => pick({ work: doc })}
-                  disabled={busy}
-                />
-              ))}
-            </ul>
-          </>
-        )}
-        {!editions.length && !works.length && <p className="placeholder">Nothing found for that search.</p>}
-        <div className="review-actions">
-          <button className="link" onClick={() => show('search')} disabled={busy}>
-            Search again
-          </button>
-          <button className="primary" onClick={() => pick()} disabled={busy}>
-            None of these: type it in
-          </button>
-        </div>
+        <PickStep
+          hand={hand}
+          worksHint="These cover every edition, so you'll type your copy's publisher and year."
+          noneLabel="None of these: type it in"
+        />
       </div>
     )
   }
@@ -209,16 +206,7 @@ function AddByHand({ isbn, copies, categories, acquired, wishlist, addCopy, onOp
     <div className="series-view">
       {header}
       <h2>Add by hand</h2>
-      <form className="edit-book" onSubmit={runSearch} noValidate>
-        {error && <p className="error">{error}</p>}
-        <Field label="Title" value={typed.title} onChange={setTypedPart('title')} />
-        <Field label="Author (optional)" value={typed.author} onChange={setTypedPart('author')} />
-        <Field label="Year printed in your copy (optional)" value={typed.year} onChange={setTypedPart('year')} numeric />
-        <p className="book-meta">The year finds that edition in the Library of Congress catalog, which otherwise shows its 10 newest.</p>
-        <button type="submit" className="primary" disabled={busy}>
-          {busy ? 'Searching…' : 'Search'}
-        </button>
-      </form>
+      <SearchStep hand={hand} />
     </div>
   )
 }

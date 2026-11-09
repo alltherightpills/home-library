@@ -1116,12 +1116,16 @@ body {
   margin-top: 12px;
 }
 
-.scan-actions .on-wishlist {
-  margin: 8px 0 0;
+.on-wishlist {
   color: var(--green);
 }
 
-.scan-actions .wish-form .button-pair {
+.scan-actions .on-wishlist {
+  margin: 8px 0 0;
+}
+
+.scan-actions .wish-form .button-pair,
+.series-view > .wish-form .button-pair {
   margin-top: 10px;
 }
 
