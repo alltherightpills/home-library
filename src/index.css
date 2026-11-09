@@ -1155,6 +1155,13 @@ body {
   font-size: 13px;
 }
 
+/* "No signal · your library as of 2:15 pm", under the tab's title (step 7a). */
+.offline-line {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .tab-bar {
   position: sticky;
   bottom: 0;

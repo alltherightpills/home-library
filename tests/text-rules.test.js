@@ -11,6 +11,7 @@ import { isbn10To13, isbn13To10, readTypedIsbn, toIsbn, toIsbn10 } from '../src/
 import { parsePlace } from '../src/shelfWalk.js'
 import { cleanTitle, splitPublisherSeries } from '../src/titles/cleanTitle.js'
 import { normalize, searchWords, titleSortKey } from '../src/useCatalog.js'
+import { asOfText } from '../src/useSaved.js'
 
 describe('ISBNs', () => {
   test('check digits catch a misread', () => {
@@ -161,5 +162,15 @@ describe('Category rules (main category, subcategories, audience)', () => {
     assert.equal(categorize(book({ dewey: '813.54' })).audience, 'Adult')
     assert.equal(categorize(book({ dewey: '813.54', subjects: [['Dragons', 'Juvenile fiction']] })).audience, 'Kids')
     assert.equal(categorize(book({ dewey: '813.6', subjects: [['Young adult fiction']] })).audience, 'Teen')
+  })
+})
+
+// Step 7a: when the saved copy of the library was last fresh.
+describe('saved copy', () => {
+  test('as of: the time today, the date and time before today', () => {
+    const now = new Date(2026, 10, 9, 15, 0)
+    const time = new Date(2026, 10, 9, 14, 15).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    assert.equal(asOfText(new Date(2026, 10, 9, 14, 15).toISOString(), now), time)
+    assert.match(asOfText(new Date(2026, 10, 8, 14, 15).toISOString(), now), /8, /)
   })
 })

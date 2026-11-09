@@ -1,3 +1,4 @@
+import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Library from './Library.jsx'
 import PasswordForm from './PasswordForm.jsx'
@@ -11,6 +12,8 @@ import { useLoans } from './useLoans.js'
 import { useWishlist } from './useWishlist.js'
 import { supabase } from './supabase.js'
 import { useCatalog } from './useCatalog.js'
+import { clearSaved } from './savedCopy.js'
+import { asOfText } from './useSaved.js'
 
 // The four tabs in the bottom bar (handoff.md, "The screens").
 const TABS = [
@@ -25,6 +28,16 @@ const TABS = [
 const arrivedToReset = window.location.hash.includes('type=recovery')
 const resetLinkFailed = window.location.hash.includes('error_code=')
 
+// The sign-in kept on the phone, as the sign-in library stores it, or null.
+function storedSignIn() {
+  try {
+    const kept = JSON.parse(localStorage.getItem(supabase.auth.storageKey))
+    return kept?.user?.id ? kept : null
+  } catch {
+    return null
+  }
+}
+
 function App() {
   // Who is signed in: undefined while checking, null if nobody.
   const [session, setSession] = useState(undefined)
@@ -32,9 +45,22 @@ function App() {
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    // The sign-in pass lasts an hour and is renewed over the internet. With no
+    // signal an expired one can't be renewed, and the sign-in library answers
+    // "nobody" while keeping the sign-in on the phone (it renews it once there's
+    // signal). So with no signal, the kept sign-in counts: the saved catalog
+    // shows, and anything that needs the database says it needs signal.
+    supabase.auth.getSession().then(({ data, error }) =>
+      setSession(data.session ?? (isAuthRetryableFetchError(error) ? storedSignIn() : null)),
+    )
     // Keep `session` up to date when signing in or out.
     const { data } = supabase.auth.onAuthStateChange((event, newSession) => {
+      // The first answer is getSession's to give (above), so a "nobody" for
+      // want of signal doesn't show the Sign in screen.
+      if (event === 'INITIAL_SESSION' && !newSession) return
+      // However it happens (Sign out, or a sign-in that has run out), the
+      // phone's saved copy goes with it.
+      if (event === 'SIGNED_OUT') clearSaved()
       setSession(newSession)
       if (event === 'PASSWORD_RECOVERY') setResetting(true)
     })
@@ -69,10 +95,13 @@ function SignedInApp({ session, notice, setNotice }) {
   // Books scanned since the app opened, newest first.
   const [scans, setScans] = useState([])
   const current = TABS.find((t) => t.id === tab)
-  const { copies, categories, error, updateCopy, updateCopies, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy } = useCatalog()
-  const readings = useReadings()
-  const loans = useLoans()
-  const wishlist = useWishlist()
+  const refreshTick = useRefreshTick()
+  const userId = session.user.id
+  const { copies, categories, error, failed, syncedAt, updateCopy, updateCopies, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy } =
+    useCatalog(userId, refreshTick)
+  const readings = useReadings(userId, refreshTick)
+  const loans = useLoans(userId, refreshTick)
+  const wishlist = useWishlist(userId, refreshTick)
   // copy id → { name, lent_on } for the books out now (lists, Scan).
   const lentTo = useMemo(() => (loans.loans ? lentOut(loans.loans, loans.borrowers) : new Map()), [loans.loans, loans.borrowers])
 
@@ -131,6 +160,11 @@ function SignedInApp({ session, notice, setNotice }) {
       <main className="screen">
         <h1>{current.label}</h1>
         {notice && <p>{notice}</p>}
+        {failed && copies && syncedAt && (
+          <p className="offline-line">
+            {navigator.onLine ? 'Can’t reach the database' : 'No signal'} · your library as of {asOfText(syncedAt)}
+          </p>
+        )}
         {tab === 'library' && !changingPassword && (
           <Library
             key={restarts.library}
@@ -188,7 +222,8 @@ function SignedInApp({ session, notice, setNotice }) {
               Change password
             </button>{' '}
             ·{' '}
-            <button className="link" onClick={() => supabase.auth.signOut()}>
+            {/* The saved copy goes too, so the next person here doesn't see this one's reading. */}
+            <button className="link" onClick={() => clearSaved().then(() => supabase.auth.signOut())}>
               Sign out
             </button>
           </p>
@@ -227,6 +262,31 @@ function SignedInApp({ session, notice, setNotice }) {
       </nav>
     </div>
   )
+}
+
+// Changes when the app should load fresh data: back in the app after a minute
+// or more away (the iPhone keeps it open for days), signal back, or the
+// sign-in pass renewed (hourly while open, and the first chance after signal
+// returns, since loads wait for a working pass).
+function useRefreshTick() {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const bump = () => setTick((t) => t + 1)
+    let hiddenAt = null
+    const onVisibility = () => {
+      if (document.hidden) hiddenAt = Date.now()
+      else if (hiddenAt && Date.now() - hiddenAt > 60_000) bump()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('online', bump)
+    const { data } = supabase.auth.onAuthStateChange((event) => event === 'TOKEN_REFRESHED' && bump())
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('online', bump)
+      data.subscription.unsubscribe()
+    }
+  }, [])
+  return tick
 }
 
 export default App

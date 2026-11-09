@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
 import { dateText, today } from './dates.js'
 import { supabase } from './supabase.js'
+import { useSaved } from './useSaved.js'
 
 export { dateText }
 
@@ -14,35 +14,24 @@ function check(error, what) {
   if (error) throw new Error(`${what}: ${error.message}`)
 }
 
-// Every reading, or an error message.
+// Every reading.
 async function fetchReadings() {
   const all = []
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase.from('readings').select(COLUMNS).order('id').range(from, from + PAGE - 1)
-    if (error) return { error: error.message }
+    if (error) throw new Error(error.message)
     all.push(...data)
-    if (data.length < PAGE) return { list: all }
+    if (data.length < PAGE) return all
   }
 }
 
-export function useReadings() {
-  const [list, setList] = useState(null) // null while loading
-  const [error, setError] = useState('')
-
-  const show = (result) => {
-    setError(result.error ?? '')
-    if (result.list) setList(result.list)
-  }
-
-  useEffect(() => {
-    let cancelled = false
-    fetchReadings().then((result) => !cancelled && show(result))
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const load = () => fetchReadings().then(show)
+// Saved on the phone too, so the ✓ and the Read filter work with no signal
+// (see useSaved.js). The saved copy is this person's own, by `userId`.
+export function useReadings(userId, refreshTick) {
+  const saved = useSaved(`${userId}:readings`, fetchReadings, refreshTick)
+  const list = saved.value // null while loading
+  const error = saved.error
+  const setList = saved.update
 
   async function insert(row) {
     const { data, error } = await supabase.from('readings').insert(row).select(COLUMNS).single()
@@ -87,7 +76,7 @@ export function useReadings() {
     setList((all) => all.filter((r) => r.id !== reading.id))
   }
 
-  return { list, error, start, startBorrowed, markRead, end, update, remove, reload: load }
+  return { list, error, start, startBorrowed, markRead, end, update, remove, reload: saved.refresh }
 }
 
 // One copy's readings, newest first.

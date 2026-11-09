@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
 import { today } from './dates.js'
 import { tidyName } from './lending.js'
 import { supabase } from './supabase.js'
+import { useSaved } from './useSaved.js'
 
-// The household's borrowers and loans, loaded once when the app opens (a few a
-// year, so one request each is plenty). Shared by every member, like the books.
+// The household's borrowers and loans (a few a year, so one request each is
+// plenty). Shared by every member, like the books. Saved on the phone with the
+// catalog, so Lent marks show with no signal (see useSaved.js).
 
 const LOAN_COLUMNS = 'id, copy_id, borrower_id, lent_on, returned_on, created_at'
 
@@ -18,19 +19,15 @@ async function fetchAll() {
     supabase.from('loans').select(LOAN_COLUMNS).order('lent_on'),
   ])
   const error = borrowers.error ?? loans.error
-  return error ? { error: error.message } : { borrowers: borrowers.data, loans: loans.data }
+  if (error) throw new Error(error.message)
+  return { borrowers: borrowers.data, loans: loans.data }
 }
 
-export function useLoans() {
-  const [state, setState] = useState({ borrowers: null, loans: null, error: '' }) // null while loading
-
-  useEffect(() => {
-    let cancelled = false
-    fetchAll().then((result) => !cancelled && setState({ borrowers: null, loans: null, error: '', ...result }))
-    return () => {
-      cancelled = true
-    }
-  }, [])
+export function useLoans(userId, refreshTick) {
+  const saved = useSaved(`${userId}:loans`, fetchAll, refreshTick)
+  // borrowers and loans: null while loading.
+  const state = { borrowers: null, loans: null, ...saved.value, error: saved.error }
+  const setState = saved.update
 
   // Lends the copy to someone by name, dated today. The database adds a new
   // name to the borrowers and records the loan in one step (lend_copy).

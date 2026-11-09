@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { mergedContributors } from './authors.js'
 import { normalize } from './normalize.js'
+import { useSaved } from './useSaved.js'
 
 export const SHELF_COLUMNS = 'category_id, is_main, set_by, removed, tentative, reasons'
 
@@ -22,45 +22,37 @@ const COLUMNS = `
 
 const PAGE = 1000 // the most rows the server returns per request
 
-// Loads every copy in the library once, when signed in.
-export function useCatalog() {
-  const [copies, setCopies] = useState(null) // null while loading
-  const [categories, setCategories] = useState([])
-  const [error, setError] = useState('')
+// Every copy in the library and the category list, ready to show.
+async function fetchCatalog() {
+  const { data: categories, error: listError } = await supabase.from('categories').select('id, name, parent_id, position').order('position')
+  if (listError) throw new Error(listError.message)
+  const all = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('copies')
+      .select(COLUMNS)
+      .order('id')
+      .range(from, from + PAGE - 1)
+    if (error) throw new Error(error.message)
+    all.push(...data)
+    if (data.length < PAGE) break
+  }
+  // The library is never empty, so no books means something went wrong;
+  // the saved copy stays rather than being replaced by nothing.
+  if (!all.length) throw new Error('The database sent no books.')
+  return { copies: all.map(withDisplayFields), categories }
+}
 
-  useEffect(() => {
-    let cancelled = false
-    async function load() {
-      const { data: list, error: listError } = await supabase
-        .from('categories')
-        .select('id, name, parent_id, position')
-        .order('position')
-      if (listError) {
-        if (!cancelled) setError(listError.message)
-        return
-      }
-      if (!cancelled) setCategories(list)
-      const all = []
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await supabase
-          .from('copies')
-          .select(COLUMNS)
-          .order('id')
-          .range(from, from + PAGE - 1)
-        if (error) {
-          if (!cancelled) setError(error.message)
-          return
-        }
-        all.push(...data)
-        if (data.length < PAGE) break
-      }
-      if (!cancelled) setCopies(all.map(withDisplayFields))
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [])
+// The whole catalog, from the phone's saved copy at once and then fresh from
+// the database (see useSaved.js). `refreshTick` changes when it should load
+// again; `failed` and `syncedAt` say when it's the saved copy because the
+// fresh one couldn't load.
+export function useCatalog(userId, refreshTick) {
+  const saved = useSaved(`${userId}:catalog`, fetchCatalog, refreshTick)
+  const copies = saved.value?.copies ?? null // null while loading
+  const categories = saved.value?.categories ?? []
+  const error = saved.error
+  const setCopies = (change) => saved.update((v) => ({ ...v, copies: change(v.copies) }))
 
   // Show a change that was just saved, without reloading the whole catalog.
   function updateCopy(id, changes) {
@@ -121,7 +113,20 @@ export function useCatalog() {
     return copy
   }
 
-  return { copies, categories, error, updateCopy, updateCopies, updateWork, updateAuthor, mergeAuthors, removeCopy, addCopy }
+  return {
+    copies,
+    categories,
+    error,
+    failed: saved.failed,
+    syncedAt: saved.syncedAt,
+    updateCopy,
+    updateCopies,
+    updateWork,
+    updateAuthor,
+    mergeAuthors,
+    removeCopy,
+    addCopy,
+  }
 }
 
 // The list orders, by the keys withDisplayFields adds.
