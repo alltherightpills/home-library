@@ -18,7 +18,8 @@
     "categories:setup": "node scripts/categories-setup.mjs",
     "categories:save": "node scripts/categories-save.mjs",
     "covers:upgrade": "node scripts/covers-upgrade.mjs",
-    "works:split": "node scripts/works-split.mjs"
+    "works:split": "node scripts/works-split.mjs",
+    "yale": "node scripts/yale-shakespeare.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
