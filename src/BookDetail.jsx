@@ -120,6 +120,7 @@ function BookDetail({ copy, copies, categories, readings, loans, onBack, onOpenB
     ['Shelved in', shelved.main || 'No main category yet'],
     ['Also in', shelved.alsoIn.join('; ')],
     ['Audience', copy.audience],
+    ['Location', copy.location],
     ['Contributors', copy.people.map((p) => `${p.author.display_name} (${p.role})`).join('; ')],
     ['Work', copy.work?.title],
     ['Series', labelLinks('series')],

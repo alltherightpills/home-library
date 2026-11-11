@@ -234,6 +234,13 @@ function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onR
           <option>Kids</option>
         </select>
       </label>
+      <label>
+        Location
+        <select value={form.location} onChange={(e) => set('location')(e.target.value)}>
+          <option>Home</option>
+          <option>Office</option>
+        </select>
+      </label>
 
       <h3>This edition</h3>
       <Field label="Publisher" value={form.publisher} onChange={set('publisher')} />

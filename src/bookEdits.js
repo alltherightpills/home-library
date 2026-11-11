@@ -51,6 +51,7 @@ export function formFromCopy(copy, categories) {
     needsReview: copy.needs_review,
     reviewNote: text(copy.review_note),
     audience: text(copy.audience),
+    location: copy.location ?? 'Home',
     shelves: shelfChoices(copy, categories),
   }
 }
@@ -286,6 +287,7 @@ export async function saveBookEdits(copy, form, sharedWork, categories, { onCopy
       acquired_city: textOrNull(form.city),
       acquired_region: textOrNull(form.region),
       acquired_country: textOrNull(form.country),
+      location: form.location,
       needs_review: form.needsReview,
       // Turning the flag off clears its note, so an old note can't reappear.
       review_note: form.needsReview ? textOrNull(form.reviewNote) : null,

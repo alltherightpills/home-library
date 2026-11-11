@@ -45,6 +45,7 @@ const COLUMNS = [
   { header: 'Subcategories', width: 28, get: (b) => b.subcategories },
   { header: 'Also in', width: 24, get: (b) => b.alsoIn },
   { header: 'Audience', width: 9, get: (b) => b.copy.audience },
+  { header: 'Location', width: 9, get: (b) => b.copy.location },
   { header: 'First published', width: 9, type: Number, get: (b) => b.work?.first_published_year },
   { header: 'Edition year', width: 9, type: Number, get: (b) => b.copy.edition_year },
   { header: 'Publisher', width: 24, get: (b) => b.copy.publisher },

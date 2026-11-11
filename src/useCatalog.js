@@ -12,7 +12,7 @@ const COLUMNS = `
   lcc, dewey, dewey_wording, subjects, lt_genres, needs_review, review_note, added_on,
   cover_id, cover_url, cover_source, lc_call_number, lc_subjects,
   acquired_year, acquired_city, acquired_region, acquired_country, shelf_walked_on,
-  original_title, edition_note, notes, category_review, audience, audience_set_by,
+  original_title, edition_note, notes, category_review, audience, audience_set_by, location,
   shelves:book_categories ( ${SHELF_COLUMNS} ),
   series_links:copy_series ( number, position, label:series ( id, name, aliases ) ),
   publisher_series_links:copy_publisher_series ( number, position, label:publisher_series ( id, name, aliases ) ),

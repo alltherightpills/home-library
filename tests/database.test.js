@@ -246,3 +246,16 @@ describe('wishlist', () => {
     })
   })
 })
+
+describe('location', () => {
+  test('a new book is at Home; Office is allowed; nothing else is', async () => {
+    await as(ROBIN, async () => {
+      const id = await addBook('Moby-Dick')
+      assert.equal((await one('select location from public.copies where id = $1', [id])).location, 'Home')
+      await db.query(`update public.copies set location = 'Office' where id = $1`, [id])
+      assert.equal((await one('select location from public.copies where id = $1', [id])).location, 'Office')
+      await assert.rejects(db.query(`update public.copies set location = 'office' where id = $1`, [id]), /copies_location_known/)
+      await assert.rejects(db.query(`update public.copies set location = null where id = $1`, [id]), /null/)
+    })
+  })
+})
