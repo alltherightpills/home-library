@@ -303,6 +303,13 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, wi
         <Field label="State / region" value={form.region} onChange={set('region')} list="add-regions" />
         <Field label="Country" value={form.country} onChange={set('country')} list="add-countries" />
       </div>
+      <label>
+        Location
+        <select value={form.location} onChange={(e) => set('location')(e.target.value)}>
+          <option>Home</option>
+          <option>Office</option>
+        </select>
+      </label>
 
       <div className="review-actions">
         <button type="button" className="link" onClick={onSkip} disabled={busy}>

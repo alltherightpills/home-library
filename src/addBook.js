@@ -26,23 +26,31 @@ import { cleanTitle, splitPublisherSeries } from './titles/cleanTitle.js'
 
 const ACQUIRED_KEY = 'scan.acquired'
 const YEAR_KEY = 'scan.acquiredYear' // in sessionStorage: gone when the app closes
+// Home or Office, also only while the app stays open: most new books go home.
+const LOCATION_KEY = 'scan.location'
 
 export function loadAcquired() {
   const year = sessionStorage.getItem(YEAR_KEY) ?? String(new Date().getFullYear())
+  const location = sessionStorage.getItem(LOCATION_KEY) === 'Office' ? 'Office' : 'Home'
   const blank = { city: '', region: '', country: 'USA' }
   try {
-    const saved = { ...blank, ...JSON.parse(localStorage.getItem(ACQUIRED_KEY)) }
+    const { city, region, country } = { ...blank, ...JSON.parse(localStorage.getItem(ACQUIRED_KEY)) }
     // Almost every book is bought in the US, so a blank country means USA.
-    return { ...saved, year, country: saved.country || 'USA' }
+    return { city, region, year, location, country: country || 'USA' }
   } catch {
-    return { ...blank, year }
+    return { ...blank, year, location }
   }
 }
 
-export function saveAcquired({ year, ...place }) {
+export function saveAcquired({ year, location, ...place }) {
   sessionStorage.setItem(YEAR_KEY, year)
+  sessionStorage.setItem(LOCATION_KEY, location)
   localStorage.setItem(ACQUIRED_KEY, JSON.stringify(place))
 }
+
+// Office books have no bookplates, so they start with no year or place.
+const bookplateFor = (acquired) =>
+  acquired.location === 'Office' ? { year: '', city: '', region: '', country: '' } : acquired
 
 // A place renamed in Manage › Places: the place remembered for new books
 // follows, so they don't bring the old spelling back.
@@ -61,9 +69,12 @@ export function renameRememberedPlace(from, to) {
   }
 }
 
-// "2026 · Decorah, Iowa, USA"
-export const acquiredText = ({ year, city, region, country }) =>
-  [year, [city, region, country].filter(Boolean).join(', ')].filter(Boolean).join(' · ') || 'nothing yet'
+// "Home · 2026 · Decorah, Iowa, USA", or "Office · no year or place"
+export function acquiredText(acquired) {
+  const { year, city, region, country } = bookplateFor(acquired)
+  const bookplate = [year, [city, region, country].filter(Boolean).join(', ')].filter(Boolean).join(' · ')
+  return `${acquired.location ?? 'Home'} · ${bookplate || 'no year or place'}`
+}
 
 // ---------------------------------------------------------------------------
 // Names
@@ -171,6 +182,7 @@ export function formFromLookup(book, acquired, others, knownSeries, categories) 
   const originalTitle = clean.changed ? raw : null
   const text = (value) => (value === null || value === undefined ? '' : String(value))
   const vote = voteOnNewBook(book, { title: clean.title, originalTitle }, categories)
+  const bookplate = bookplateFor(acquired)
   const form = {
     title: clean.title,
     originalTitle,
@@ -185,10 +197,12 @@ export function formFromLookup(book, acquired, others, knownSeries, categories) 
     pages: book.pages > 0 && book.pages < 100000 ? String(book.pages) : '',
     binding: text(book.binding),
     firstPublished: text(book.firstPublished),
-    acquiredYear: acquired.year,
-    city: acquired.city,
-    region: acquired.region,
-    country: acquired.country,
+    acquiredYear: bookplate.year,
+    city: bookplate.city,
+    region: bookplate.region,
+    country: bookplate.country,
+    // The shelf walk passes no location: its books are at home.
+    location: acquired.location ?? 'Home',
     workId: others[0]?.work?.id ?? '',
     shelves: shelfChoices({ shelves: vote.shelves }, categories),
     audience: vote.audience,
@@ -280,6 +294,7 @@ export async function saveNewBook({ form, book, vote, categories, isbn13, librar
         acquired_city: text(form.city),
         acquired_region: text(form.region),
         acquired_country: text(form.country),
+        location: form.location,
         ...book.cover,
         ...book.catalog,
         audience: form.audience,

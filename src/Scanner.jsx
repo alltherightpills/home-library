@@ -191,12 +191,23 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
           <p>
             <strong>New books saved as</strong>
           </p>
-          <div className="edit-pair">
-            <Field label="Year acquired" value={acquired.year} onChange={setAcquiredPart('year')} numeric />
-            <Field label="City" value={acquired.city} onChange={setAcquiredPart('city')} />
-            <Field label="State / region" value={acquired.region} onChange={setAcquiredPart('region')} />
-            <Field label="Country" value={acquired.country} onChange={setAcquiredPart('country')} />
-          </div>
+          <label>
+            Location
+            <select value={acquired.location} onChange={(e) => setAcquiredPart('location')(e.target.value)}>
+              <option>Home</option>
+              <option>Office</option>
+            </select>
+          </label>
+          {acquired.location === 'Office' ? (
+            <p className="book-meta">Office books start with no year or place (you can still type one on the form).</p>
+          ) : (
+            <div className="edit-pair">
+              <Field label="Year acquired" value={acquired.year} onChange={setAcquiredPart('year')} numeric />
+              <Field label="City" value={acquired.city} onChange={setAcquiredPart('city')} />
+              <Field label="State / region" value={acquired.region} onChange={setAcquiredPart('region')} />
+              <Field label="Country" value={acquired.country} onChange={setAcquiredPart('country')} />
+            </div>
+          )}
           <button className="primary" type="submit">
             Done
           </button>
