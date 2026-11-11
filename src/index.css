@@ -1344,3 +1344,32 @@ body {
   margin-top: 12px;
   font-size: 12px;
 }
+
+/* Shelf walk, "Is this your copy?": the covers side by side, then what changes. */
+.edition-covers {
+  display: flex;
+  gap: 20px;
+  margin: 12px 0;
+}
+
+.edition-covers figure {
+  margin: 0;
+  text-align: center;
+}
+
+.edition-changes {
+  border-collapse: collapse;
+  margin: 12px 0;
+}
+
+.edition-changes th {
+  padding: 4px 12px 4px 0;
+  text-align: left;
+  font-weight: normal;
+  color: var(--muted);
+}
+
+.edition-changes td {
+  padding: 4px 6px 4px 0;
+  overflow-wrap: anywhere;
+}

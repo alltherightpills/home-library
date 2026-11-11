@@ -97,6 +97,17 @@ export async function saveWalk(copy, form, readings) {
   return changes
 }
 
+// Turns a copy into the edition just scanned (see editionFix.js); returns the
+// changes. A photo cover it replaces is no longer used, so its file goes too
+// (if that fails, the copy is still saved; the old file just stays).
+export async function saveEditionFix(copy, changes) {
+  const { error } = await supabase.from('copies').update(changes).eq('id', copy.id)
+  if (error) throw new Error(`Saving: ${error.message}`)
+  const oldPhoto = copy.cover_source === 'photo' && copy.cover_url?.split('/object/public/covers/')[1]
+  if (oldPhoto) await supabase.storage.from('covers').remove([oldPhoto])
+  return changes
+}
+
 // A book not in the catalog: the card comes first, then the Check and add form,
 // which starts from the card's year and place (country only with a place, as above).
 export function acquiredFrom(form) {

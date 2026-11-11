@@ -3,10 +3,20 @@ import AddByHand from './AddByHand.jsx'
 import { CheckBook } from './AddCheck.jsx'
 import { Field } from './EditBook.jsx'
 import IsbnReader from './IsbnReader.jsx'
+import { changeRows, editionChanges } from './editionFix.js'
 import { copiesWithIsbn } from './isbn.js'
 import { dateText, readingsOf } from './readings.js'
-import { lookUpNewBook } from './scanLookup.js'
-import { acquiredFrom, checkForm, finishNewBook, saveWalk, startForm, titleMatches, walkSuggestions } from './shelfWalk.js'
+import { lookUpNewBook, otherEditions } from './scanLookup.js'
+import {
+  acquiredFrom,
+  checkForm,
+  finishNewBook,
+  saveEditionFix,
+  saveWalk,
+  startForm,
+  titleMatches,
+  walkSuggestions,
+} from './shelfWalk.js'
 import { coverUrl } from './useCatalog.js'
 
 const SHORTCUTS = 5 // one-tap buttons under the year and place boxes
@@ -20,8 +30,12 @@ const YEARS = Array.from({ length: THIS_YEAR - 1995 + 1 }, (_, i) => String(THIS
 function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPlace, onBack }) {
   // The card being filled in (a copy id), or null while scanning.
   const [cardId, setCardId] = useState(null)
-  // What the last scan found, while scanning: { isbn, owned: [copies] }.
+  // What the last scan found, while scanning: { isbn, owned: [copies] }, and
+  // for an ISBN not owned, its `lookup` ({ status, book }) to find the book
+  // under another edition's ISBN.
   const [scan, setScan] = useState(null)
+  // Turning that copy (an id) into the scanned edition, or null.
+  const [fixingId, setFixingId] = useState(null)
   // Find by title: the words typed, or null while the camera is showing. Kept
   // while a found book's card is open, so Skip returns to the results.
   const [finding, setFinding] = useState(null)
@@ -45,16 +59,23 @@ function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPl
     if (owned.length === 1) {
       setScan(null)
       setCardId(owned[0].id)
-    } else {
+    } else if (owned.length) {
       setScan({ isbn, owned })
+    } else {
+      // Look it up now: you may own it under another edition's ISBN.
+      setScan({ isbn, owned, lookup: { status: 'looking' } })
+      const setLookup = (lookup) => setScan((s) => (s?.isbn === isbn ? { ...s, lookup } : s))
+      lookUpNewBook(isbn, copies[0].library_id)
+        .then((book) => setLookup({ status: 'done', book }))
+        .catch((err) => setLookup({ status: 'error', message: err.message }))
     }
   }
 
-  // Looks the book up while its card is filled in.
-  function startAdding(isbn) {
+  // Looks the book up while its card is filled in (unless the scan already did).
+  function startAdding(isbn, known = null) {
     setNotice('')
-    setAdding({ isbn, lookup: isbn ? { status: 'looking' } : null, answers: null })
-    if (!isbn) return
+    setAdding({ isbn, lookup: known ?? (isbn ? { status: 'looking' } : null), answers: null })
+    if (!isbn || known) return
     const setLookup = (lookup) => setAdding((a) => (a?.isbn === isbn ? { ...a, lookup } : a))
     lookUpNewBook(isbn, copies[0].library_id)
       .then((book) => setLookup({ status: 'done', book }))
@@ -146,6 +167,29 @@ function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPl
       </div>
     )
   }
+
+  // The scanned edition before saving it over a copy you own.
+  const fixing = copies.find((c) => c.id === fixingId)
+  if (fixing && scan?.lookup?.status === 'done') {
+    return (
+      <EditionFix
+        copy={fixing}
+        book={scan.lookup.book}
+        isbn={scan.isbn}
+        onSaved={(changes) => {
+          updateCopy(fixing.id, changes)
+          setFixingId(null)
+          setScan(null)
+          setCardId(fixing.id) // on to its card, as if it had scanned
+        }}
+        onCancel={() => setFixingId(null)}
+      />
+    )
+  }
+
+  // For an ISBN not owned: copies that may be the same book under another ISBN.
+  const lookedUp = scan?.lookup?.status === 'done' ? scan.lookup : null
+  const sameBook = lookedUp ? otherEditions(copies, lookedUp.book) : []
 
   return (
     <div className="series-view shelf-walk">
@@ -245,10 +289,24 @@ function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPl
               </p>
             </IsbnReader>
           )}
-          {finding === null && scan && scan.owned.length === 0 && (
+          {finding === null && scan && scan.owned.length === 0 && sameBook.length > 0 && (
+            <>
+              <p className="review-note">
+                {scan.isbn} isn't in your library, but you may own this book under another ISBN. Is it one of these?
+              </p>
+              <CopyPicks copies={sameBook} onPick={setFixingId} />
+              <p className="by-hand-link">
+                <button className="link" onClick={() => startAdding(scan.isbn, lookedUp)}>
+                  None of these? Add it
+                </button>
+              </p>
+            </>
+          )}
+          {finding === null && scan && scan.owned.length === 0 && sameBook.length === 0 && (
             <p className="review-note">
-              {scan.isbn} isn't in your library.{' '}
-              <button className="link strong" onClick={() => startAdding(scan.isbn)}>
+              {scan.isbn} isn't in your library
+              {scan.lookup?.status === 'looking' ? ' (checking for another edition you own…)' : ''}.{' '}
+              <button className="link strong" onClick={() => startAdding(scan.isbn, lookedUp)}>
                 Add it
               </button>
             </p>
@@ -277,6 +335,79 @@ function newBookCard({ isbn, lookup }) {
     listLine: [book?.authors.join(', '), 'Not in your library yet'].filter(Boolean).join(' · '),
     cover_url: book?.coverUrl ?? null,
   }
+}
+
+// Before turning a copy into the edition just scanned: both covers, what changes,
+// and what doesn't. Yes saves it; the walk then opens its card.
+function EditionFix({ copy, book, isbn, onSaved, onCancel }) {
+  const changes = useMemo(() => editionChanges(copy, book, isbn), [copy, book, isbn])
+  const rows = changeRows(copy, changes)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const coverChanges = coverUrl(copy, 'M') !== coverUrl(changes, 'M')
+
+  async function save() {
+    setBusy(true)
+    setError('')
+    try {
+      onSaved(await saveEditionFix(copy, changes))
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="series-view shelf-walk">
+      <div className="pinned-back">
+        <button className="link" onClick={onCancel} disabled={busy}>
+          ‹ Back to the walk
+        </button>
+      </div>
+      <h2>Is this your copy?</h2>
+      <p>
+        <strong>{copy.title}</strong> is in your library as another edition. Update it to the edition you scanned?
+      </p>
+      {coverChanges && (
+        <div className="edition-covers">
+          {[
+            ['Now', copy],
+            ['Scanned', changes],
+          ].map(([label, c]) => (
+            <figure key={label}>
+              <span className="thumb large">{coverUrl(c, 'M') && <img src={coverUrl(c, 'M')} alt="" />}</span>
+              <figcaption className="book-meta">{label}</figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+      <table className="edition-changes">
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label}>
+              <th scope="row">{r.label}</th>
+              <td>{r.from}</td>
+              <td aria-hidden="true">→</td>
+              <td>{r.to}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="book-meta">
+        Title, authors, categories, subjects, publisher's series, edition note, reading and acquired stay as they are.
+        Change them on the book's page if they're wrong too.
+      </p>
+      {error && <p className="error">{error}</p>}
+      <div className="button-pair">
+        <button className="primary" onClick={save} disabled={busy}>
+          {busy ? 'Saving…' : 'Yes, update this copy'}
+        </button>
+        <button className="secondary" onClick={onCancel} disabled={busy}>
+          No, go back
+        </button>
+      </div>
+    </div>
+  )
 }
 
 // Books to pick from (copies with one ISBN, or titles found), each saying
