@@ -1053,6 +1053,12 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Under a scanned book you own: Open my copy and Add another copy. */
+.scan-owned-actions {
+  padding: 4px 0 12px;
+  border-bottom: 1px solid #e2ddd2;
+}
+
 /* A new book that was found: a bigger cover beside its details. */
 .scan-found {
   padding: 12px 0;

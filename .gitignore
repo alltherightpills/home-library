@@ -28,3 +28,6 @@ supabase/.temp/
 
 # Personal data (LibraryThing exports, backups). Never publish.
 data/
+
+# Temporary photos of the Yale Shakespeare pages (delete after the fix)
+yale-photos/

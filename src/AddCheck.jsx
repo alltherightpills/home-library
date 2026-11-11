@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { CategoryFields, Field, LabelRows, TitleField } from './EditBook.jsx'
 import { addProblem, authorMatches, authorsIn, formFromLookup, saveNewBook } from './addBook.js'
 import { nameParts } from './bookEdits.js'
-import { flagText, planShelfEdit, shelfText } from './categories/review.js'
+import { flagText, planShelfEdit, shelfChoices, shelfText } from './categories/review.js'
 import { copiesWithIsbn } from './isbn.js'
 import { listText, otherEditions } from './scanLookup.js'
 import { labelNames } from './series.js'
@@ -75,7 +75,13 @@ function VoteNote({ vote, categories, mainId, onUseGuess }) {
 // shows the edition's details to fill in. onSaved gets { id, warning } once the
 // book is in the database.
 export function CheckBook({ book, isbn, manual, copies, categories, acquired, wishlist, onSaved, onSkip, skipLabel = 'Skip' }) {
-  const others = useMemo(() => otherEditions(copies, book), [copies, book])
+  // Copies you own with this very ISBN (Add another copy) come first, so the
+  // new copy joins their work and starts with their categories and audience.
+  const twins = useMemo(() => (isbn ? copiesWithIsbn(copies, isbn) : []), [copies, isbn])
+  const others = useMemo(() => {
+    const editions = otherEditions(copies, book)
+    return [...twins, ...editions.filter((c) => !twins.includes(c))]
+  }, [copies, book, twins])
   // Wishes for this book in any edition, fixed when the form opens; with the
   // tick on (the default), saving takes them off the wishlist.
   // (The Shelf walk's adds pass no wishlist.)
@@ -93,7 +99,14 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, wi
     [copies],
   )
   // The vote runs once, on the book as it was looked up.
-  const [{ form: startForm, vote }] = useState(() => formFromLookup(book, acquired, others, seriesNames, categories))
+  const [{ form: startForm, vote }] = useState(() => {
+    const start = formFromLookup(book, acquired, others, seriesNames, categories)
+    const twin = twins[0]
+    if (!twin) return start
+    // The vote is still saved, as for any new book; the starting choices
+    // follow the copy you own, and saving them makes them the owner's.
+    return { ...start, form: { ...start.form, shelves: shelfChoices(twin, categories), audience: twin.audience ?? start.form.audience } }
+  })
   const [form, setForm] = useState(startForm)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -180,7 +193,7 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, wi
       {others.length > 0 && (
         <div className="scan-editions">
           <p>
-            <strong>You own another edition:</strong> {others[0].title}
+            <strong>{twins.length ? 'You own this edition already:' : 'You own another edition:'}</strong> {others[0].title}
             {others[0].byline && ` by ${others[0].byline}`}
           </p>
           <label className="edit-check">
@@ -189,8 +202,11 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, wi
               checked={Boolean(form.workId)}
               onChange={(e) => set('workId')(e.target.checked ? others[0].work.id : '')}
             />
-            Add as another edition of it (same authors and first published year)
+            {twins.length
+              ? 'Add as another copy of it (same authors and first published year)'
+              : 'Add as another edition of it (same authors and first published year)'}
           </label>
+          {twins.length > 0 && <p className="book-meta">Categories and audience start as your copy has them.</p>}
         </div>
       )}
 
@@ -198,7 +214,7 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, wi
       {form.originalTitle && <p className="diagnostic">Tidied from “{form.originalTitle}”</p>}
 
       {linkedTo ? (
-        <p className="book-meta">Authors: {linkedTo.byline || 'none listed'}, from your other edition.</p>
+        <p className="book-meta">Authors: {linkedTo.byline || 'none listed'}, from your {twins.includes(linkedTo) ? 'other copy' : 'other edition'}.</p>
       ) : (
         <>
           {form.people.map((person, i) => (
@@ -302,7 +318,8 @@ export function CheckBook({ book, isbn, manual, copies, categories, acquired, wi
 
 // Goes through the scanned books in the order they were scanned, one form at a
 // time. `queue` is their ISBNs, fixed when the screen opened.
-function AddCheck({ queue, scans, copies, categories, acquired, wishlist, onSkipped, onDone, addCopy }) {
+// A scan marked `extraCopy` (Add another copy on Scan) is a book you own, added again.
+function AddCheck({ queue, scans, copies, categories, acquired, wishlist, onSkipped, onAddByHand, onDone, addCopy }) {
   const [index, setIndex] = useState(0)
   const [results, setResults] = useState({ added: 0, skipped: 0 })
   // Books added on this screen, so a book just added isn't taken for one owned before.
@@ -371,10 +388,21 @@ function AddCheck({ queue, scans, copies, categories, acquired, wishlist, onSkip
   let body
   if (warning) {
     body = <p className="scan-hint">{warning}</p>
-  } else if (owned.length && !addedHere.has(isbn)) {
+  } else if (owned.length && !addedHere.has(isbn) && !scan?.extraCopy) {
     body = <p className="placeholder">You own this one already.</p>
   } else if (status === 'looking') {
     body = <p className="placeholder">Looking it up…</p>
+  } else if (scan?.extraCopy && status !== 'done') {
+    body = <p className="placeholder">Couldn't look it up: check your signal, then go back and tap Add another copy again.</p>
+  } else if (scan?.extraCopy && !book.found) {
+    body = (
+      <>
+        <p className="placeholder">No record was found online for ISBN {isbn}.</p>
+        <button className="primary" onClick={() => onAddByHand(isbn)}>
+          Add by hand
+        </button>
+      </>
+    )
   } else if (status !== 'done' || !book.found) {
     body = <p className="placeholder">No record was found for ISBN {isbn}. Use its Add by hand link on the Scan tab.</p>
   }

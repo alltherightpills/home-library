@@ -67,21 +67,40 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
         .filter((s) => s.lookup?.status === 'looking' || (s.lookup?.status === 'done' && s.lookup.book.found))
     : []
 
-  // A book's ISBN-13, from the camera or the typing box. A book you own
-  // opens straight away; with two copies, both are listed to pick from.
+  // A book's ISBN-13, from the camera or the typing box. A book you own goes
+  // to the top of the list with Open my copy and Add another copy (owner's
+  // choice, 2026-11-10: it used to open the book page straight away).
   function handleIsbn(isbn) {
     const earlier = scans.find((s) => s.isbn === isbn)
     setScans((prev) => [{ ...earlier, isbn, time: new Date() }, ...prev.filter((s) => s.isbn !== isbn)])
     const owned = copies ? copiesWithIsbn(copies, isbn) : []
-    if (owned.length === 1) {
-      onOpenBook(owned[0].id)
-    } else if (owned.length === 0 && !['looking', 'done'].includes(earlier?.lookup?.status)) {
-      lookUp(isbn)
-    }
+    if (owned.length === 0 && !['looking', 'done'].includes(earlier?.lookup?.status)) lookUp(isbn)
+  }
+
+  // Add another copy of a book you own: looked up like a new book (only now,
+  // so scanning your own books costs no lookups), then the check form, which
+  // starts from the copy you own. With no record found, Add by hand instead.
+  function addAnotherCopy(isbn) {
+    const scan = scans.find((s) => s.isbn === isbn)
+    setScans((prev) => prev.map((s) => (s.isbn === isbn ? { ...s, extraCopy: true } : s)))
+    const { status, book } = scan?.lookup ?? {}
+    if (status === 'done' && !book.found) return openByHand(isbn)
+    if (!['looking', 'done'].includes(status)) lookUp(isbn)
+    openCheck([isbn])
+  }
+
+  // From the check form when no record was found: Add by hand takes the check
+  // form's place in the history, so swiping back returns to the scan list.
+  function checkToByHand(isbn) {
+    history.replaceState({ tab: 'scan', byHand: true }, '')
+    setChecking(null)
+    setByHand({ isbn, initial: undefined })
+    window.scrollTo(0, 0)
   }
 
   // I bought it: scan the wished-for edition, then open its check form (which
-  // waits for the lookup). Owned already, it opens the book page instead.
+  // waits for the lookup). Owned already, it shows in the list with its
+  // Open my copy and Add another copy buttons instead.
   // (A wish with no ISBN only needs `buyingWish`, above.)
   // `started` stops a second run (React's development mode runs effects twice).
   const started = useRef(null)
@@ -150,6 +169,7 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
         wishlist={wishlist}
         addCopy={addCopy}
         onSkipped={markSkipped}
+        onAddByHand={checkToByHand}
         onDone={() => history.back()}
       />
     )
@@ -235,6 +255,7 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
               onRetry={() => lookUp(s.isbn)}
               onAdd={() => openCheck([s.isbn])}
               onAddByHand={() => openByHand(s.isbn)}
+              onAddAnother={() => addAnotherCopy(s.isbn)}
               onRemove={() => removeScan(s.isbn)}
             />
           ))}
@@ -246,12 +267,29 @@ function Scanner({ copies, lentTo, wishlist, categories, scans, setScans, onOpen
 
 // One scanned ISBN: the copies you own with it, or what the lookup found.
 // A queued scan (kept for want of signal) has Remove, until it's added.
-function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd, onAddByHand, onRemove }) {
+function ScanResult({ scan, copies, lentTo, wishlist, onOpenBook, onRetry, onAdd, onAddByHand, onAddAnother, onRemove }) {
   const owned = copies ? copiesWithIsbn(copies, scan.isbn) : []
   if (owned.length > 0) {
-    return owned.map((c) => (
-      <OwnedRow key={c.id} copy={c} lent={lentTo.get(c.id)} note={owned.length > 1 ? `You own ${owned.length} copies` : 'You own this'} onOpenBook={onOpenBook} />
-    ))
+    return (
+      <>
+        {owned.map((c) => (
+          <OwnedRow key={c.id} copy={c} lent={lentTo.get(c.id)} note={owned.length > 1 ? `You own ${owned.length} copies` : 'You own this'} onOpenBook={onOpenBook} />
+        ))}
+        <li className="scan-owned-actions">
+          {/* With two or more copies, tapping a row above opens that one. */}
+          <div className="button-pair">
+            {owned.length === 1 && (
+              <button className="primary" onClick={() => onOpenBook(owned[0].id)}>
+                Open my copy
+              </button>
+            )}
+            <button className="secondary" onClick={onAddAnother}>
+              Add another copy
+            </button>
+          </div>
+        </li>
+      </>
+    )
   }
   const remove = scan.queued && (
     <button className="link" onClick={onRemove}>
