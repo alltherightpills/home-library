@@ -40,7 +40,8 @@ draft; the owner's example books (below) and the 50-book trial will sharpen them
 Stories (fiction, comics, drama, myth, and story-like poetry):
 **Character** / **Both** / **Plot**.
 
-- Character: the pull is who the people are and how they change (Mrs Dalloway).
+- Character: the pull is who the people are and how they change (a quiet
+  literary novel about a marriage).
 - Plot: the pull is what happens next (a thriller, an adventure).
 - Both: neither clearly leads.
 
@@ -73,5 +74,9 @@ Most poetry collections: doesn't apply.
 
 ## Owner's example books
 
-*To fill in: 20–30 books the owner has read, rated on each question. These
-outweigh the definitions above when the two disagree.*
+20–30 books the owner has read, rated on each question, in
+`data/assessment-examples.md`. They name the owner's books, so they stay out
+of this public repo (`data/` is git-ignored). **They outweigh the definitions
+above when the two disagree;** read them before every pass. Once the
+assessments table exists, they're also saved there as the owner's answers,
+so they're in the database backups too.

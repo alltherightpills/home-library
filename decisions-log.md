@@ -335,3 +335,14 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - Lumberjanes has two labels per book: Lumberjanes, plus Lumberjanes Comics, Graphic Novels, or Novels, with the number belonging to the set (order from Wikipedia, at the owner's direction). The grouped view must sort by set, then number, with unnumbered books last: *Bonus Tracks* and *Campfire Songs* follow Vol. 20.
 - Grouping books by series in the catalog (any author or title) needs the new series field, so it comes after the cleanup is applied. Not built yet.
 - Edit a Book, the Needs checking switch, and the search fix were tested on the owner's iPhone and work. 
+
+**Pick for me plan (2026-11-18)**
+
+- **Menu, not a path.** The original design (section 5, screen 6) asked six questions one at a time. The owner replaced them with nine of their own triage questions, the ones they ask when recommending books to people. With nine, a one-screen menu of optional questions beats tapping through nine screens.
+- **Data checked on the 2026-11-18 backup** (982 unread home books): first-published year ~91%, pages ~97%, 176 unread books by an author already read, 592 with a bookplate year. Unread pages: a quarter under 170, half under 272, three-quarters under 384, so the owner chose under 200 / 200–399 / 400+.
+- **`works.original_language` is unreliable:** it holds the owned edition's language, so well-known translated novels show as English. It can't answer "international", hence the owner's rule (translated, or the author grew up outside the US) and Wikidata for nationality.
+- **Waited a long time is a sort:** 40% of unread books have no bookplate year (walked books with no bookplate never will), so a filter would hide them or muddy results under the keep-missing rule. `added_on` is the 2025 LibraryThing import date, not when a book arrived.
+- **No API account (the owner's point):** an API is for asking Claude while the app runs; the catalog barely changes, so Claude assesses once, in session batches, and the answers are stored. Costs session time, not per-use fees. Photo reading would still need an API, since every photo is new.
+- **Sources for assessments:** Claude's knowledge; saved publisher descriptions (1,285 books), LibraryThing genres (1,059), LC subjects (~650); Wikidata for authors; web reviews only for books still unsure. StoryGraph tags the same four things but has no public API; Goodreads closed its API in 2020.
+- **Rerunning enrich adds almost nothing:** every ISBN has already been looked up by every source (the app saves lookups when adding a book), and all but 2 LC records' subject headings are copied in. The gaps are what the sources lack: 214 books with no description, no LC record for about half, 83 with no ISBN.
+- **Tuning:** the owner's example ratings (they outweigh the written definitions), a 50-book trial on read books before the full pass, sure/unsure on every answer, and the owner's corrections never overwritten.
