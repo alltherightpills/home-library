@@ -45,7 +45,22 @@ export function ReadFilter({ filter, setFilter }) {
   )
 }
 
-const ReadMark = ({ copy }) => copy.read && <span className="read-mark" title="You've read this">✓ </span>
+// All / Home / Office, for every list of books, kept like the Read filter.
+// Library leaves `setFilter` out while no book is at the office.
+export function LocationFilter({ filter, setFilter }) {
+  if (!setFilter) return null
+  return (
+    <span className="view-toggle" role="group" aria-label="Location">
+      {['all', 'home', 'office'].map((f) => (
+        <button key={f} className={f === filter ? 'chip active' : 'chip'} onClick={() => setFilter(f)}>
+          {f === 'all' ? 'All' : f === 'home' ? 'Home' : 'Office'}
+        </button>
+      ))}
+    </span>
+  )
+}
+
+const ReadMark =({ copy }) => copy.read && <span className="read-mark" title="You've read this">✓ </span>
 
 // The sort key each A–Z order files a book under (the strip follows the sort).
 const LETTER_KEYS = { author: (c) => c.authorSort, title: (c) => c.titleSort }

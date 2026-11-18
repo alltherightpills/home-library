@@ -98,13 +98,32 @@ export function readCopyIds(list, copies) {
   return new Set(copies.filter((c) => works.has(workOf(c))).map((c) => c.id))
 }
 
-// The Read filter on book lists: 'all', 'unread' or 'read', by each copy's `read`.
-export const byRead = (copies, filter) =>
-  filter === 'all' ? copies : copies.filter((c) => c.read === (filter === 'read'))
+// Location: office books count in the library total and categories, but not
+// in reading stats, the Read filter, the shelf walk, or (Phase 3) Pick for me.
+export const atOffice = (c) => c.location === 'Office'
+export const atHome = (c) => !atOffice(c)
 
-// "12 books", or "12 unread books" with the Read filter on.
-export const countText = (n, readFilter = 'all') =>
-  `${n.toLocaleString()} ${readFilter === 'all' ? '' : `${readFilter} `}${n === 1 ? 'book' : 'books'}`
+// The Read filter on book lists: 'all', 'unread' or 'read', by each copy's
+// `read`. Unread and Read show home books only.
+export const byRead = (copies, filter) =>
+  filter === 'all' ? copies : copies.filter((c) => atHome(c) && c.read === (filter === 'read'))
+
+// The Location filter on book lists: 'all', 'home' or 'office'.
+export const byLocation = (copies, filter = 'all') =>
+  filter === 'all' ? copies : copies.filter((c) => atOffice(c) === (filter === 'office'))
+
+// Both filters at once.
+export const byFilters = (copies, readFilter, locationFilter) => byLocation(byRead(copies, readFilter), locationFilter)
+
+// The words the filters put before "books": "unread", "office", "read home".
+export const filterWords = (readFilter = 'all', locationFilter = 'all') =>
+  [readFilter, locationFilter].filter((f) => f !== 'all').join(' ')
+
+// "12 books", or "12 unread books" / "12 office books" with a filter on.
+export const countText = (n, readFilter = 'all', locationFilter = 'all') => {
+  const words = filterWords(readFilter, locationFilter)
+  return `${n.toLocaleString()} ${words ? `${words} ` : ''}${n === 1 ? 'book' : 'books'}`
+}
 
 // One line of a book's reading history.
 export function readingText(r) {

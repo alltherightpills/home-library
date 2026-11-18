@@ -44,21 +44,29 @@ export const yearOf = (copy) => tidy(copy.acquired_year)
 
 // The counts the dashboard and the Acquired screen show.
 //   years: [{ year, count }], newest first
+//   withYear: books with a year
 //   noYear: walked books with no year (no bookplate)
-//   unwalked: books not walked yet
+//   unwalked: home books not walked yet
+// Office books (never walked) count only once they have a year.
 export function yearCounts(copies) {
   const counts = new Map()
+  let withYear = 0
   let noYear = 0
   let unwalked = 0
   for (const c of copies) {
     const year = yearOf(c)
-    if (year) counts.set(year, (counts.get(year) ?? 0) + 1)
-    else if (c.shelf_walked_on) noYear++
-    else unwalked++
+    if (year) {
+      counts.set(year, (counts.get(year) ?? 0) + 1)
+      withYear++
+    } else if (c.shelf_walked_on) noYear++
+    else if (isUnwalked(c)) unwalked++
   }
   const years = [...counts].map(([year, count]) => ({ year, count })).sort((a, b) => b.year.localeCompare(a.year))
-  return { years, withYear: copies.length - noYear - unwalked, noYear, unwalked }
+  return { years, withYear, noYear, unwalked }
 }
+
+// A home book not walked yet (office books aren't walked).
+export const isUnwalked = (c) => !c.shelf_walked_on && c.location !== 'Office'
 
 // Most books first, then A–Z, with blanks last.
 const byCount = (a, b) => b.count - a.count || (a.name == null) - (b.name == null) || (a.name ?? '').localeCompare(b.name ?? '')

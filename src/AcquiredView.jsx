@@ -1,8 +1,8 @@
 import { Suspense, lazy, useMemo } from 'react'
-import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
-import { BackBar, Row } from './CategoryView.jsx'
-import { booksAcquiredIn, booksFrom, noPlace, placeOf, placeTitle, placeTree, regionName, topPlaces, yearCounts } from './acquired.js'
-import { byRead, countText } from './readings.js'
+import BookList, { SortSelect, ViewToggle } from './BookList.jsx'
+import { BackBar, Filters, Row } from './CategoryView.jsx'
+import { booksAcquiredIn, booksFrom, isUnwalked, noPlace, placeOf, placeTitle, placeTree, regionName, topPlaces, yearCounts } from './acquired.js'
+import { byFilters, countText } from './readings.js'
 import { SORTS } from './useCatalog.js'
 
 // The map brings its own shapes and drawing code, so it loads only when opened.
@@ -61,7 +61,7 @@ function ByYear({ copies, onOpenPlace }) {
 function ByPlace({ copies, onOpenPlace }) {
   const tree = useMemo(() => placeTree(copies), [copies])
   const missing = useMemo(() => noPlace(copies).length, [copies])
-  const unwalked = copies.filter((c) => !c.shelf_walked_on).length
+  const unwalked = copies.filter(isUnwalked).length
   const open = (where) => onOpenPlace('acquiredPlace', undefined, { where })
   return (
     <ul className="category-rows">
@@ -140,27 +140,27 @@ function AcquiredCounts({ by, map, region, copies, onOpenPlace, onReplacePlace, 
 }
 
 // The books from one year or one place, like a category's list.
-function AcquiredBooks({ title, books, sort, setSort, view, setView, readFilter, setReadFilter, onOpenBook, onBack }) {
+function AcquiredBooks({ title, books, sort, setSort, view, setView, onOpenBook, onBack, ...filters }) {
   const sorted = useMemo(() => [...books].sort(SORTS[sort]), [books, sort])
   return (
     <div className="series-view">
       <BackBar onBack={onBack} label="Acquired" />
       <h2>{title}</h2>
-      <p className="book-meta">{countText(books.length, readFilter)}</p>
+      <p className="book-meta">{countText(books.length, filters.readFilter, filters.locationFilter)}</p>
       <div className="controls">
         <SortSelect sort={sort} setSort={setSort} />
         <ViewToggle view={view} setView={setView} />
-        <ReadFilter filter={readFilter} setFilter={setReadFilter} />
+        <Filters {...filters} />
       </div>
       <BookList books={sorted} onOpenBook={onOpenBook} view={view} letters={sort} />
     </div>
   )
 }
 
-// A year's or place's book list has the Read filter; the counts screen doesn't
-// (it always shows the whole library).
+// A year's or place's book list has the Read and Location filters; the counts
+// screen doesn't (it always shows the whole library).
 function AcquiredView({ place, copies: all, ...rest }) {
-  const copies = useMemo(() => byRead(all, rest.readFilter), [all, rest.readFilter])
+  const copies = useMemo(() => byFilters(all, rest.readFilter, rest.locationFilter), [all, rest.readFilter, rest.locationFilter])
   const books = useMemo(() => {
     if (place.kind === 'acquiredYear') return booksAcquiredIn(copies, place.id)
     if (place.kind === 'acquiredPlace') return place.where ? booksFrom(copies, place.where) : noPlace(copies)

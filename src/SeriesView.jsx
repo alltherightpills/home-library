@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import BookList, { ReadFilter, ViewToggle } from './BookList.jsx'
-import { byRead } from './readings.js'
+import BookList, { ViewToggle } from './BookList.jsx'
+import { Filters } from './CategoryView.jsx'
+import { byFilters, filterWords } from './readings.js'
 import Lettered from './LetterIndex.jsx'
 import { letterStarts } from './letters.js'
 import { labelBooks, labelIndex, withoutArticle } from './series.js'
@@ -39,11 +40,15 @@ function LabelIndex({ kind, copies, onOpenLabel, onBack }) {
 }
 
 // The books in one series, in order; with the Read filter on, only those it lets through.
-function LabelBooks({ kind, id, copies, view, setView, readFilter, setReadFilter, onOpenBook, onBack }) {
+function LabelBooks({ kind, id, copies, view, setView, onOpenBook, onBack, ...filters }) {
+  const { readFilter, locationFilter } = filters
   const { name, sets: allSets } = useMemo(() => labelBooks(copies, kind, id), [copies, kind, id])
   const total = allSets.reduce((sum, set) => sum + set.books.length, 0)
-  const sets = allSets.map((set) => ({ ...set, books: byRead(set.books, readFilter) })).filter((set) => set.books.length)
+  const sets = allSets
+    .map((set) => ({ ...set, books: byFilters(set.books, readFilter, locationFilter) }))
+    .filter((set) => set.books.length)
   const shown = sets.reduce((sum, set) => sum + set.books.length, 0)
+  const words = filterWords(readFilter, locationFilter)
   return (
     <div className="series-view">
       <div className="pinned-back">
@@ -57,11 +62,11 @@ function LabelBooks({ kind, id, copies, view, setView, readFilter, setReadFilter
         <>
           <h2>{name}</h2>
           <div className="controls">
-            <span className="book-meta">{readFilter === 'all' ? countText(total) : `${shown} of ${countText(total)} ${readFilter}`}</span>
+            <span className="book-meta">{words ? `${shown} of ${countText(total)} ${words}` : countText(total)}</span>
             <ViewToggle view={view} setView={setView} />
-            <ReadFilter filter={readFilter} setFilter={setReadFilter} />
+            <Filters {...filters} />
           </div>
-          {shown === 0 && <p className="placeholder">None {readFilter} in this series.</p>}
+          {shown === 0 && <p className="placeholder">None {words} in this series.</p>}
           {sets.map((set) => (
             <section key={set.id}>
               {allSets.length > 1 && <h3>{set.name}</h3>}
@@ -74,7 +79,7 @@ function LabelBooks({ kind, id, copies, view, setView, readFilter, setReadFilter
   )
 }
 
-function SeriesView({ place, copies, view, setView, readFilter, setReadFilter, onOpenLabel, onOpenBook, onBack }) {
+function SeriesView({ place, copies, view, setView, onOpenLabel, onOpenBook, onBack, ...filters }) {
   return place.id ? (
     <LabelBooks
       kind={place.kind}
@@ -82,8 +87,7 @@ function SeriesView({ place, copies, view, setView, readFilter, setReadFilter, o
       copies={copies}
       view={view}
       setView={setView}
-      readFilter={readFilter}
-      setReadFilter={setReadFilter}
+      {...filters}
       onOpenBook={onOpenBook}
       onBack={onBack}
     />

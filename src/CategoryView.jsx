@@ -1,7 +1,17 @@
 import { useMemo } from 'react'
-import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
+import BookList, { LocationFilter, ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import { booksOn, shelfCounts } from './categories/browse.js'
-import { byRead, countText } from './readings.js'
+import { atHome, byFilters, countText } from './readings.js'
+
+// The Read and Location filters' buttons, side by side.
+export function Filters({ readFilter, setReadFilter, locationFilter, setLocationFilter }) {
+  return (
+    <>
+      <ReadFilter filter={readFilter} setFilter={setReadFilter} />
+      <LocationFilter filter={locationFilter} setFilter={setLocationFilter} />
+    </>
+  )
+}
 import { SORTS } from './useCatalog.js'
 
 export function BackBar({ onBack, label = 'Back' }) {
@@ -52,7 +62,7 @@ export function CategoryRows({ copies, categories, onOpenPlace }) {
 }
 
 // A list of books on a shelf, with the sort control.
-function ShelfList({ entries, sort, setSort, view, setView, readFilter, setReadFilter, onOpenBook, alsoInName }) {
+function ShelfList({ entries, sort, setSort, view, setView, onOpenBook, alsoInName, ...filters }) {
   const alsoIn = new Set(entries.filter((e) => e.alsoIn).map((e) => e.copy.id))
   const books = entries.map((e) => e.copy).sort(SORTS[sort])
   return (
@@ -60,7 +70,7 @@ function ShelfList({ entries, sort, setSort, view, setView, readFilter, setReadF
       <div className="controls">
         <SortSelect sort={sort} setSort={setSort} />
         <ViewToggle view={view} setView={setView} />
-        <ReadFilter filter={readFilter} setFilter={setReadFilter} />
+        <Filters {...filters} />
       </div>
       <BookList books={books} onOpenBook={onOpenBook} view={view} letters={sort} noteFor={(c) => alsoIn.has(c.id) && `Also in ${alsoInName}`} />
     </>
@@ -69,7 +79,7 @@ function ShelfList({ entries, sort, setSort, view, setView, readFilter, setReadF
 
 // A main category: its count, Browse all, and its subcategories, most books
 // first. A category with no subcategories goes straight to its books.
-function CategoryPage({ id, copies, categories, sort, setSort, view, setView, readFilter, setReadFilter, onOpenPlace, onOpenBook, onBack }) {
+function CategoryPage({ id, copies, categories, sort, setSort, view, setView, onOpenPlace, onOpenBook, onBack, ...filters }) {
   const counts = useMemo(() => shelfCounts(copies, categories), [copies, categories])
   const category = categories.find((c) => c.id === id)
   const subs = categories
@@ -86,13 +96,13 @@ function CategoryPage({ id, copies, categories, sort, setSort, view, setView, re
       <BackBar onBack={onBack} label="My Library" />
       <h2>{category.name}</h2>
       <p className="book-meta">
-        {countText(main, readFilter)}
+        {countText(main, filters.readFilter, filters.locationFilter)}
         {also > 0 && ` · plus ${also} also in ${category.name}`}
       </p>
       {hasSubs ? (
         <>
           <div className="controls">
-            <ReadFilter filter={readFilter} setFilter={setReadFilter} />
+            <Filters {...filters} />
           </div>
           <button className="primary browse-all" onClick={() => onOpenPlace('shelf', id)}>
             Browse all {(main + also).toLocaleString()} ›
@@ -115,8 +125,7 @@ function CategoryPage({ id, copies, categories, sort, setSort, view, setView, re
           setSort={setSort}
           view={view}
           setView={setView}
-          readFilter={readFilter}
-          setReadFilter={setReadFilter}
+          {...filters}
           onOpenBook={onOpenBook}
           alsoInName={category.name}
         />
@@ -127,7 +136,7 @@ function CategoryPage({ id, copies, categories, sort, setSort, view, setView, re
 
 // The books on one shelf: a main category (with its "also in" books), a
 // subcategory, or (noSub) a main category's books with no subcategory.
-function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setView, readFilter, setReadFilter, onOpenBook, onBack }) {
+function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setView, onOpenBook, onBack, ...filters }) {
   const entries = useMemo(() => booksOn(copies, categories, id, { noSub }), [copies, categories, id, noSub])
   const category = categories.find((c) => c.id === id)
   if (!category) return <BackBar onBack={onBack} />
@@ -139,7 +148,7 @@ function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setVie
       {parent && <p className="book-meta">{parent.name} ›</p>}
       <h2>{noSub ? `${category.name}: no subcategory` : category.name}</h2>
       <p className="book-meta">
-        {countText(entries.length - also, readFilter)}
+        {countText(entries.length - also, filters.readFilter, filters.locationFilter)}
         {also > 0 && (parent ? ` · plus ${also} whose main shelf is elsewhere` : ` · plus ${also} also in ${category.name}`)}
       </p>
       <ShelfList
@@ -148,8 +157,7 @@ function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setVie
         setSort={setSort}
         view={view}
         setView={setView}
-        readFilter={readFilter}
-        setReadFilter={setReadFilter}
+        {...filters}
         onOpenBook={onOpenBook}
         alsoInName={parent ? `${parent.name} › ${category.name}` : category.name}
       />
@@ -161,21 +169,22 @@ function ShelfBooks({ id, noSub, copies, categories, sort, setSort, view, setVie
 // (kept in the place, so it's still on after visiting a book).
 const ALL_FILTERS = {
   flagged: { label: 'Needs checking', keep: (c) => c.needs_review },
-  unwalked: { label: 'Not walked yet', keep: (c) => !c.shelf_walked_on },
+  // Office books have no bookplates and aren't walked.
+  unwalked: { label: 'Not walked yet', keep: (c) => !c.shelf_walked_on && atHome(c) },
 }
 
-function AllBooks({ filter, copies, sort, setSort, view, setView, readFilter, setReadFilter, onOpenBook, onReplacePlace, onBack }) {
+function AllBooks({ filter, copies, sort, setSort, view, setView, onOpenBook, onReplacePlace, onBack, ...filters }) {
   const keep = ALL_FILTERS[filter]?.keep
   const books = useMemo(() => (keep ? copies.filter(keep) : [...copies]).sort(SORTS[sort]), [copies, keep, sort])
   return (
     <div className="series-view">
       <BackBar onBack={onBack} label="My Library" />
       <h2>{ALL_FILTERS[filter] ? `All books: ${ALL_FILTERS[filter].label.toLowerCase()}` : 'All books'}</h2>
-      <p className="book-meta">{countText(books.length, readFilter)}</p>
+      <p className="book-meta">{countText(books.length, filters.readFilter, filters.locationFilter)}</p>
       <div className="controls">
         <SortSelect sort={sort} setSort={setSort} />
         <ViewToggle view={view} setView={setView} />
-        <ReadFilter filter={readFilter} setFilter={setReadFilter} />
+        <Filters {...filters} />
         {Object.entries(ALL_FILTERS).map(([id, { label, keep: test }]) => {
           const count = copies.filter(test).length
           if (!count && filter !== id) return null
@@ -196,9 +205,9 @@ function AllBooks({ filter, copies, sort, setSort, view, setView, readFilter, se
 }
 
 // The category and browsing screens, by place: { kind, id }, with a kind from BROWSE_KINDS.
-// With the Read filter on, every screen counts and lists only the books it lets through.
+// With the Read or Location filter on, every screen counts and lists only the books it lets through.
 function CategoryView({ place, copies: all, ...rest }) {
-  const copies = useMemo(() => byRead(all, rest.readFilter), [all, rest.readFilter])
+  const copies = useMemo(() => byFilters(all, rest.readFilter, rest.locationFilter), [all, rest.readFilter, rest.locationFilter])
   const props = { copies, ...rest }
   if (place.kind === 'all') return <AllBooks filter={place.id} {...props} />
   if (place.kind === 'category') return <CategoryPage id={place.id} {...props} />

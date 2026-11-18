@@ -2,7 +2,7 @@ import { useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useSt
 import AcquiredView, { AcquiredPanel } from './AcquiredView.jsx'
 import { ACQUIRED_KINDS } from './acquired.js'
 import BookDetail from './BookDetail.jsx'
-import BookList, { ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
+import BookList, { LocationFilter, ReadFilter, SortSelect, ViewToggle } from './BookList.jsx'
 import CategoryReview from './CategoryReview.jsx'
 import CategoryView, { CategoryRows } from './CategoryView.jsx'
 import { BorrowerPage, BorrowersList, LentOutView } from './LendingViews.jsx'
@@ -10,7 +10,7 @@ import Manage from './Manage.jsx'
 import { AuthorsList, DuplicatesList, MergePick, MergeScreen, PersonPage } from './ManageAuthors.jsx'
 import { PlacePage, PlacesList } from './ManagePlaces.jsx'
 import { BROWSE_KINDS } from './categories/browse.js'
-import { byRead, readCopyIds } from './readings.js'
+import { atHome, byFilters, filterWords, readCopyIds } from './readings.js'
 import SeriesView from './SeriesView.jsx'
 import ShelfWalk from './ShelfWalk.jsx'
 import WishlistView, { WishAdd } from './WishlistView.jsx'
@@ -29,12 +29,23 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
     const read = readCopyIds(readings.list, catalog)
     return catalog.map((c) => ({ ...c, read: read.has(c.id), lentTo: lentTo.get(c.id)?.name }))
   }, [catalog, readings.list, lentTo])
-  const readCount = useMemo(() => copies?.filter((c) => c.read).length ?? 0, [copies])
+  // Reading stats and the shelf walk count home books only.
+  const homeCopies = useMemo(() => copies?.filter(atHome) ?? [], [copies])
+  const readCount = useMemo(() => homeCopies.filter((c) => c.read).length, [homeCopies])
+  const officeCount = (copies?.length ?? 0) - homeCopies.length
   const [sort, setSort] = useState('author')
   // All / Unread / Read, offered once the reading history has loaded.
   const [readFilterChoice, setReadFilter] = useState('all')
   const readFilter = readings.list ? readFilterChoice : 'all'
-  const filterProps = { readFilter, setReadFilter: readings.list ? setReadFilter : null }
+  // All / Home / Office, offered once any book is at the office.
+  const [locationChoice, setLocationFilter] = useState('all')
+  const locationFilter = officeCount ? locationChoice : 'all'
+  const filterProps = {
+    readFilter,
+    setReadFilter: readings.list ? setReadFilter : null,
+    locationFilter,
+    setLocationFilter: officeCount ? setLocationFilter : null,
+  }
   // List or Gallery, for every list of books, remembered on the phone.
   const [view, setViewState] = useState(() => localStorage.getItem(VIEW_KEY) ?? 'list')
   const setView = (v) => {
@@ -107,7 +118,7 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
   }
 
   const reviewCount = copies?.filter((c) => c.category_review).length ?? 0
-  const walkedCount = copies?.filter((c) => c.shelf_walked_on).length ?? 0
+  const walkedCount = homeCopies.filter((c) => c.shelf_walked_on).length
   const lentCount = copies?.filter((c) => c.lentTo).length ?? 0
   const seriesCount = useMemo(() => (copies ? labelIndex(copies, 'series').length : 0), [copies])
   const publisherSeriesCount = useMemo(() => (copies ? labelIndex(copies, 'publisherSeries').length : 0), [copies])
@@ -116,10 +127,10 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
     if (!copies) return []
     const words = searchWords(query)
     if (!words.length) return []
-    return byRead(copies, readFilter)
+    return byFilters(copies, readFilter, locationFilter)
       .filter((c) => words.every((w) => c.searchText.includes(w)))
       .sort(SORTS[sort])
-  }, [copies, query, sort, readFilter])
+  }, [copies, query, sort, readFilter, locationFilter])
 
   if (error) return <p className="error">Couldn't load the catalog: {error}</p>
   if (!copies) return <p className="placeholder">Loading your books…</p>
@@ -287,6 +298,7 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
                   className="link"
                   onClick={() => {
                     setReadFilter('read')
+                    setLocationFilter('all')
                     openPlace('all')
                   }}
                 >
@@ -295,6 +307,22 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
               ) : (
                 'none read yet'
               )}
+            </>
+          )}
+          {officeCount > 0 && (
+            <>
+              {' · '}
+              {/* Opens All books showing only the office ones. */}
+              <button
+                className="link"
+                onClick={() => {
+                  setLocationFilter('office')
+                  setReadFilter('all')
+                  openPlace('all')
+                }}
+              >
+                {officeCount.toLocaleString()} at the office
+              </button>
             </>
           )}
           </span>
@@ -316,9 +344,10 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
               <SortSelect sort={sort} setSort={setSort} />
               <ViewToggle view={view} setView={setView} />
               <ReadFilter filter={readFilter} setFilter={filterProps.setReadFilter} />
+              <LocationFilter filter={locationFilter} setFilter={filterProps.setLocationFilter} />
             </div>
             <p className="diagnostic">
-              {shown.length} matching{readFilter !== 'all' && ` (${readFilter} only)`}
+              {shown.length} matching{filterWords(readFilter, locationFilter) && ` (${filterWords(readFilter, locationFilter)} only)`}
             </p>
             <BookList books={shown} onOpenBook={openBook} view={view} letters={sort} />
           </>
@@ -352,7 +381,7 @@ function Library({ copies: catalog, categories, readings, loans, lentTo, wishlis
               {wishlist.list && ` · ${wishlist.list.length} ${wishlist.list.length === 1 ? 'book' : 'books'}`} ›
             </button>
             <button className="review-banner walk-banner" onClick={() => openPlace('walk')}>
-              <strong>Shelf walk</strong> · {walkedCount.toLocaleString()} of {copies.length.toLocaleString()} walked ›
+              <strong>Shelf walk</strong> · {walkedCount.toLocaleString()} of {homeCopies.length.toLocaleString()} walked ›
             </button>
             <div className="controls">
               {seriesCount > 0 && (

@@ -5,7 +5,7 @@ import { Field } from './EditBook.jsx'
 import IsbnReader from './IsbnReader.jsx'
 import { changeRows, editionChanges } from './editionFix.js'
 import { copiesWithIsbn } from './isbn.js'
-import { dateText, readingsOf } from './readings.js'
+import { atHome, dateText, readingsOf } from './readings.js'
 import { lookUpNewBook, otherEditions } from './scanLookup.js'
 import {
   acquiredFrom,
@@ -49,7 +49,9 @@ function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPl
   const [notice, setNotice] = useState('')
   const suggestions = useMemo(() => walkSuggestions(copies), [copies])
 
-  const walked = copies.filter((c) => c.shelf_walked_on).length
+  // Progress counts home books only: office books aren't walked.
+  const homeCount = copies.filter(atHome).length
+  const walked = copies.filter((c) => c.shelf_walked_on && atHome(c)).length
   const card = copies.find((c) => c.id === cardId)
   const last = copies.find((c) => c.id === lastId)
 
@@ -200,8 +202,8 @@ function ShelfWalk({ copies, categories, readings, updateCopy, addCopy, onOpenPl
       </div>
       <h2>Shelf walk</h2>
       <p className="book-meta">
-        {walked.toLocaleString()} of {copies.length.toLocaleString()} books walked
-        {walked < copies.length && (
+        {walked.toLocaleString()} of {homeCount.toLocaleString()} books walked
+        {walked < homeCount && (
           <>
             {' · '}
             <button className="link" onClick={() => onOpenPlace('all', 'unwalked')}>
