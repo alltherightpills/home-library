@@ -4,8 +4,9 @@ The standard every assessment pass follows, so a pass next year judges books
 the same way as this one. **Change this file first** whenever a question or
 its answers change, then reassess only what the change affects.
 
-Answer choices settled by the owner on 2026-11-18. Definitions are a first
-draft; the owner's example books (below) and the 50-book trial will sharpen them.
+Answer choices settled by the owner on 2026-11-18. Definitions revised
+2026-11-19 from the owner's 30 example ratings; the 50-book trial will sharpen
+them further.
 
 ## Rules for every question
 
@@ -22,18 +23,24 @@ draft; the owner's example books (below) and the 50-book trial will sharpen them
 
 ## 6. International
 
-**International** or **Domestic**.
+**International** or **Domestic**. The question is **whose eyes the book
+looks through**, not the author's passport (owner's rule, 2026-11-19; it
+replaced "the author grew up outside the US").
 
-- International: the book is **translated**, or the author **grew up outside
-  the US**. Either one is enough.
-- Domestic: written in English by an author who grew up in the US.
-- Where the author grew up, not citizenship or birthplace: Jhumpa Lahiri
-  (born in London, raised in the US) is domestic; Nabokov (grew up in Russia)
-  is international. Wikidata gives birthplace and citizenship, which usually
-  settle it; immigrant authors are judged and marked unsure.
+- International: the book takes the reader outside the mainstream American
+  view. Any one of these is enough:
+  - it's **translated**;
+  - it's **set mainly outside the US**, among people from there;
+  - it looks at the US **from outside** (a foreign writer's take on America);
+  - it's about living **between cultures**: immigrant or diaspora life, one
+    foot in two worlds, even by an American-raised author (Lahiri).
+- Domestic: it reads as **American from the inside**, whoever wrote it. A
+  Canadian's Western that nothing marks as written by an outsider is domestic.
+- Nonfiction: where the **subject** is. A book by a foreign-born author whose
+  research and cases are mostly American is domestic.
+- The author's background is a clue, not the answer. Judge per book, not per
+  author, and mark it unsure unless the book's view is plain.
 - Several authors (anthologies): international if most of the book is.
-- Judged per author where possible (one answer covers all their books), but a
-  translated book is international whoever wrote it.
 
 ## 7. Character- or plot-driven
 
@@ -58,19 +65,32 @@ Most poetry collections: doesn't apply.
 
 **Quick** / **Steady** / **Slow**.
 
-- Quick: pulls you along; short chapters, momentum, easy prose.
-- Slow: rewards patience; dense prose, long reflection, little happening.
-- Steady: everything between.
+Pace is **how fast the story moves**, not how hard the reading is.
+
+- Quick: pulls you along; momentum, a page turner. Story collections usually
+  land here (each story is short and moves).
+- Slow: little happens; meditative, reflective, or ambling ("the speed of a
+  horse walking a trail").
+- Steady: everything between, including a deliberate, unrelenting march, and
+  books that are dense or demanding but keep moving. **Dense is not slow.**
 - Reference books and similar: doesn't apply.
 
 ## 9. Mood
 
-**Light** / **In between** / **Heavy**.
+**Light** / **In between** / **Heavy**. Mood is **how the book feels to read**
+(its tone), not what it's about (owner's pattern, 2026-11-19).
 
-- Light: comforting, funny or easygoing, even if it has sad moments.
-- Heavy: grief, violence, cruelty or despair at its center, or emotionally
-  demanding throughout, however well written.
-- In between: real weight, but not oppressive (most literary fiction lands here).
+- Light: fun to read, even with a dark subject: funny, comforting, brisk, or
+  stylish enough that the darkness reads as play (classic noir can be light).
+- Heavy: serious all the way through, with little relief from humor, action
+  or distance. It needn't be depressing: a quiet, meditative book can be heavy.
+- In between: heavy subjects lightened by humor, action, strangeness or
+  distance (a dark story told with levity, or from a cool, factual remove),
+  and books that are simply neither heavy nor light.
+
+In Pick for me the buttons are **Light · Not heavy · Heavy**: "Not heavy"
+means Light or In between (owner's choice, 2026-11-19), since nobody asks for
+"something in between."
 
 ## Owner's example books
 
