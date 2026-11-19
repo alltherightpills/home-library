@@ -5,8 +5,8 @@ the same way as this one. **Change this file first** whenever a question or
 its answers change, then reassess only what the change affects.
 
 Answer choices settled by the owner on 2026-11-18. Definitions revised
-2026-11-19 from the owner's 30 example ratings; the 50-book trial will sharpen
-them further.
+2026-11-19 from the owner's 30 example ratings, then again the same day from
+the owner's check of a 50-book trial.
 
 ## Rules for every question
 
@@ -17,6 +17,10 @@ them further.
   owner set.
 - **Doesn't apply** is an answer too (for example, pace for a reference book).
   In Pick for me, it lets the book through, like a missing answer.
+- **Not assessed:** reference books (Pick for me leaves out the Nonfiction ›
+  Reference subcategory entirely), and mixed anthologies whose pieces vary too
+  much to judge as one book (literary magazines like McSweeney's). An
+  unassessed book still passes the judged questions, like a missing answer.
 - Sources, in order: what I know of the book; its saved publisher description,
   LibraryThing genres and LC subject headings; Wikidata for authors; a web
   search of reviews only for books still unsure.
@@ -36,6 +40,11 @@ replaced "the author grew up outside the US").
     foot in two worlds, even by an American-raised author (Lahiri).
 - Domestic: it reads as **American from the inside**, whoever wrote it. A
   Canadian's Western that nothing marks as written by an outsider is domestic.
+- **Real places abroad count, whoever wrote it:** an American's novel set in
+  ancient Greece, or about Americans in Paris and Spain, is international.
+- **Invented worlds** (fantasy and science fiction not set in a real version
+  of the world, including pulp jungles): go by the **author's nationality**.
+- **Native American authors** are domestic.
 - Nonfiction: where the **subject** is. A book by a foreign-born author whose
   research and cases are mostly American is domestic.
 - The author's background is a clue, not the answer. Judge per book, not per
@@ -72,7 +81,8 @@ Pace is **how fast the story moves**, not how hard the reading is.
 - Slow: little happens; meditative, reflective, or ambling ("the speed of a
   horse walking a trail").
 - Steady: everything between, including a deliberate, unrelenting march, and
-  books that are dense or demanding but keep moving. **Dense is not slow.**
+  books that are dense or demanding but keep moving. **Dense is not slow**
+  for stories; long scholarly nonfiction (a cultural biography) leans slow.
 - Reference books and similar: doesn't apply.
 
 ## 9. Mood
@@ -81,7 +91,10 @@ Pace is **how fast the story moves**, not how hard the reading is.
 (its tone), not what it's about (owner's pattern, 2026-11-19).
 
 - Light: fun to read, even with a dark subject: funny, comforting, brisk, or
-  stylish enough that the darkness reads as play (classic noir can be light).
+  stylish enough that the darkness reads as play (classic noir can be light;
+  so can breezy, funny history that covers dark events).
+- Not Light, even when playful: horror (body horror, monsters) or sustained
+  peril and battles, even in children's adventure, is at least In between.
 - Heavy: serious all the way through, with little relief from humor, action
   or distance. It needn't be depressing: a quiet, meditative book can be heavy.
 - In between: heavy subjects lightened by humor, action, strangeness or
