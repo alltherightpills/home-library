@@ -362,3 +362,19 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - **Mood spread** in Claude's trial ratings (before the owner's 3 changes): Light 17, In between 20, Heavy 11, doesn't apply 2. With Light · Not heavy · Heavy buttons, each narrows the list usefully, which eased the owner's worry about the middle answer.
 - **International rules settled:** real places abroad are international whoever wrote it (an American's Greek myth retelling, Americans in Paris); invented worlds go by the author's nationality (they aren't a real version of the world, which also makes pulp Tarzan domestic); Native American authors are domestic.
 - **Left out:** reference books are excluded from Pick for me entirely, by the Nonfiction › Reference subcategory (added to rather than replacing other categories), which the owner will sort out first. Literary magazines like McSweeney's aren't assessed: their pieces vary too much.
+
+**Pick for me slices (2026-11-20)**
+
+- **Order A → B → C → D** (table, screen with catalog questions, judged questions on the screen, full pass), agreed by the owner. B before D so the screen is useful right away; C before D so the judged buttons are built and tested on the ~80 books already rated, though they narrow little until the pass is done (unanswered books pass every filter).
+- **The old columns go.** `works.origin` and `works.driven_by` (from the original six-question design) are empty in all 1,481 works and unused by the code; the new table replaces them, so the answers aren't kept in two places.
+- **Reference re-sorted** by the owner on 2026-11-19, checked on the 2026-11-20 backup: 90 books (the largest Nonfiction subcategory), 77 unread. Claude named about a dozen unread ones that read like read-through books (color histories, art history, cemetery archaeology, Enneagram and self-help, tarot and folk magic) for the owner to reconsider; leaving them is the owner's call.
+- **Pass size:** about 980 unread home books less the 77 in Reference, so roughly 900; at ~75 per session, 12–15 sessions.
+- **New books after the pass:** the owner asks in a session; the app shows how many unread books aren't assessed yet (slice C). A scheduled cloud agent was rejected (database password in the cloud, no access to the private examples).
+
+**Pick for me slice A (2026-11-20)**
+
+- **One row per work per question, no fixed list in the database:** answers are short codes checked by the loader against `src/assessments.js`, so a new question needs no migration. The owner's answers are protected by a database trigger as well as the loader, so a script mistake can't overwrite them.
+- **Trial answers:** the owner's 7 changes are saved as the owner's; the rest as Claude's but **sure**, since the owner said an unchanged line meant agreement. Fixes that only repeated Claude's answer count as agreement. The owner's "?" and blanks in the examples save nothing.
+- **McSweeney's:** the owner's "we can skip them" covers every issue, so all 19 are saved "not_assessed" as the owner's, which keeps the 7 unread ones off the not-yet-assessed count.
+- **Notes stay in the private files:** the owner's notes are per book and long; the `note` column is for a few words on a close call.
+- **A converter bug was caught by recounting:** a blank "Driven:" line read the next line as its answer. The loader now checks every answer against the shared list before signing in.

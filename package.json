@@ -13,6 +13,7 @@
     "backup": "node scripts/backup.mjs",
     "restore": "node scripts/restore.mjs",
     "export": "node scripts/export.mjs",
+    "assessments:save": "node scripts/assessments-save.mjs",
     "categories:report": "node scripts/categories-report.mjs",
     "categories:vote": "node scripts/categories-vote.mjs",
     "categories:setup": "node scripts/categories-setup.mjs",

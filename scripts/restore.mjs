@@ -85,6 +85,7 @@ function copyIntoLibrary(tables, libraryId, userId) {
     borrowers: tables.borrowers.map((r) => moved(r, { id: newId(r.id) })),
     loans: tables.loans.map((r) => moved(r, { id: newId(r.id), copy_id: newId(r.copy_id), borrower_id: newId(r.borrower_id) })),
     wishlist: tables.wishlist.map((r) => moved(r, { id: newId(r.id) })),
+    assessments: tables.assessments.map((r) => moved(r, { work_id: newId(r.work_id) })),
   }
 }
 
@@ -111,6 +112,11 @@ for (const copy of backup.copies) for (const column of ADDED_COPY_COLUMNS) copy[
 // Location came later still, and every book was at home before it.
 for (const copy of backup.copies) copy.location ??= 'Home'
 for (const row of backup.book_categories) row.tentative ??= false
+// Two never-filled columns from the original design, dropped 2026-11-20.
+for (const work of backup.works) {
+  delete work.origin
+  delete work.driven_by
+}
 for (const row of backup.readings) {
   row.cover_url ??= null
   row.borrowed_from ??= null
@@ -217,12 +223,12 @@ async function removeRows({ name, key }, rows) {
   }
 }
 
-for (const name of ['loans', 'readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'authors_not_same', 'copies', 'lookups', 'places', 'wishlist']) await removeRows(byName[name], plan[name].remove)
+for (const name of ['loans', 'readings', 'book_categories', 'copy_series', 'copy_publisher_series', 'work_authors', 'authors_not_same', 'copies', 'lookups', 'places', 'wishlist', 'assessments']) await removeRows(byName[name], plan[name].remove)
 for (const { local, path } of photosToUpload) {
   const { error } = await bucket.upload(path, await readFile(local), { contentType: 'image/jpeg', upsert: true })
   if (error) throw new Error(`Uploading photo ${path}: ${error.message}`)
 }
-for (const name of ['authors', 'authors_not_same', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings', 'places', 'borrowers', 'loans', 'wishlist']) {
+for (const name of ['authors', 'authors_not_same', 'works', 'work_authors', 'copies', 'lookups', 'categories', 'book_categories', 'series', 'publisher_series', 'copy_series', 'copy_publisher_series', 'readings', 'places', 'borrowers', 'loans', 'wishlist', 'assessments']) {
   await putRows(byName[name], plan[name].put)
   console.log(`${name}: done`)
 }

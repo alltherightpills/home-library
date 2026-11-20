@@ -28,6 +28,8 @@ export const BOOK_TABLES = [
   { name: 'loans', key: ['id'], primaryKey: 'id' },
   // Books wanted but not owned: their own list, not part of the library.
   { name: 'wishlist', key: ['id'], primaryKey: 'id' },
+  // Pick for me's judged answers, one per work per question (src/assessments.js).
+  { name: 'assessments', key: ['work_id', 'question'], primaryKey: 'work_id,question' },
 ]
 
 // What the spreadsheet needs: every book table except lookups (the saved

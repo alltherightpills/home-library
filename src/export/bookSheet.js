@@ -3,6 +3,7 @@
 // later; `npm run export` uses it from the terminal now. The backup's books.csv
 // shares the author and series wording.
 
+import { QUESTIONS, answerWords, assessmentsByWork } from '../assessments.js'
 import { flagText, shelfText } from '../categories/review.js'
 import { lentOut } from '../lending.js'
 
@@ -61,6 +62,8 @@ const COLUMNS = [
   { header: 'Country acquired', width: 14, get: (b) => b.copy.acquired_country },
   { header: 'Lent to', width: 16, get: (b) => b.lent?.name },
   { header: 'Lent on', width: 11, ...asText, get: (b) => b.lent?.lent_on },
+  // Pick for me's judged answers: "Steady", or "Steady?" when Claude was unsure.
+  ...QUESTIONS.map((q) => ({ header: q.label, width: 12, get: (b) => answerCell(b.answers[q.id]) })),
   { header: 'Original title', width: 30, get: (b) => b.copy.original_title },
   { header: 'Edition note', width: 20, get: (b) => b.copy.edition_note },
   { header: 'Notes', width: 30, get: (b) => b.copy.notes },
@@ -78,11 +81,14 @@ const COLUMNS = [
 const coverLink = (copy) =>
   copy.cover_url ?? (copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}-L.jpg` : null)
 
+const answerCell = (row) => row && answerWords(row.answer) + (row.sure ? '' : '?')
+
 // Rows for write-excel-file: a bold heading row, then one row per book sorted by
 // title, then authors. Returns { sheetData, columns } (columns carries the widths).
-// Lending is blank for a backup made before it existed.
-export function bookSheet({ works, authors, work_authors, copies, categories, book_categories, series, publisher_series, copy_series, copy_publisher_series, borrowers = [], loans = [] }) {
+// Lending and the judged answers are blank for a backup made before they existed.
+export function bookSheet({ works, authors, work_authors, copies, categories, book_categories, series, publisher_series, copy_series, copy_publisher_series, borrowers = [], loans = [], assessments = [] }) {
   const lent = lentOut(loans, borrowers)
+  const answers = assessmentsByWork(assessments)
   const workById = new Map(works.map((w) => [w.id, w]))
   const credits = creditsByWork(authors, work_authors)
   const seriesByCopy = labelsByCopy(copy_series, series, 'series_id')
@@ -104,6 +110,7 @@ export function bookSheet({ works, authors, work_authors, copies, categories, bo
       subcategories,
       alsoIn: shelved.alsoIn.join('; '),
       lent: lent.get(copy.id),
+      answers: answers.get(copy.work_id) ?? {},
     }
   })
   const byWords = (a, b) => a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true })
