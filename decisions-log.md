@@ -378,3 +378,10 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - **McSweeney's:** the owner's "we can skip them" covers every issue, so all 19 are saved "not_assessed" as the owner's, which keeps the 7 unread ones off the not-yet-assessed count.
 - **Notes stay in the private files:** the owner's notes are per book and long; the `note` column is for a few words on a close call.
 - **A converter bug was caught by recounting:** a blank "Driven:" line read the next line as its answer. The loader now checks every answer against the shared list before signing in.
+
+**Pick for me screen design (2026-11-20, owner)**
+
+- **Audience row:** of 986 unread home books, 710 are Adult, 240 Kids, 29 Teen, 7 unset; the owner almost never wants kids' or teen books, so Adult only is the default, remembered on the phone. Audience was mostly set by the category vote (13 by the owner), so a few may be wrong; fix them on Edit a Book.
+- **3 picks, Shuffle, Replace one, synopsis, why picked.** "Why" is assembled by the app from the matching answers: always accurate, no AI. Without an API the app can't write a synopsis on the spot, so Claude writes one per book during the pass, alongside the four answers (one visit per book).
+- **Blank until written** (owner's choice): the first sentence of saved Google descriptions (588 of 710 unread adult books have one) was useful in about half of an 8-book sample; the rest were marketing ("Now in a fully corrected edition…").
+- **Pass order: adult first, kids and teen last**, then decide whether those are worth assessing; unanswered books still pass the judged questions.
