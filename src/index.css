@@ -1449,3 +1449,20 @@ body {
 .pick-shuffle {
   margin-top: 14px;
 }
+
+/* Edit a Book: each person's role and Remove, under their name boxes. */
+.edit-person {
+  margin-bottom: 10px;
+}
+
+.edit-person-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.edit-person-actions select {
+  font: inherit;
+}

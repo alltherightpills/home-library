@@ -138,12 +138,16 @@ export const SORTS = {
 
 // Main roles shown as "by ..." on a book; others (Editor, Illustrator...) show on the book page.
 const MAIN_ROLES = ['Author', 'Creator', 'Primary Contributor', 'Original Author']
+const EDITOR_ROLES = ['Editor', 'Compiler']
 
 // Adds ready-to-use author text and a search key to each copy.
 function withDisplayFields(copy) {
   const people = [...(copy.work?.contributors ?? [])].sort((a, b) => a.position - b.position)
   const main = people.filter((p) => MAIN_ROLES.includes(p.role))
-  const shown = main.length ? main : people
+  // No author: the editors (an anthology shows "Mike Ashley", not every story's
+  // writer; owner, 2026-11-20); with no editors either, everyone credited.
+  const editors = people.filter((p) => EDITOR_ROLES.includes(p.role))
+  const shown = main.length ? main : editors.length ? editors : people
   const headings = subjectHeadings(copy)
   const series = labelsInOrder(copy.series_links)
   const publisherSeries = labelsInOrder(copy.publisher_series_links)

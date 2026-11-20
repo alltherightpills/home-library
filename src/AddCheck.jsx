@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { CategoryFields, Field, LabelRows, TitleField } from './EditBook.jsx'
-import { addProblem, authorMatches, authorsIn, formFromLookup, saveNewBook } from './addBook.js'
-import { nameParts } from './bookEdits.js'
+import { AuthorNote, CategoryFields, Field, LabelRows, TitleField } from './EditBook.jsx'
+import { addProblem, authorsIn, formFromLookup, saveNewBook } from './addBook.js'
 import { flagText, planShelfEdit, shelfChoices, shelfText } from './categories/review.js'
 import { copiesWithIsbn } from './isbn.js'
 import { listText, otherEditions } from './scanLookup.js'
@@ -9,27 +8,6 @@ import { labelNames } from './series.js'
 import { wishesForBook } from './wishlist.js'
 
 const distinct = (values) => [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b))
-
-// Under a typed name: whether that person is already in the library, and others
-// with the same last name to pick instead.
-function AuthorNote({ authors, person, onUse }) {
-  const { exact, similar } = authorMatches(authors, person)
-  if (!person.last.trim()) return null
-  return (
-    <div className="add-author-note">
-      {exact ? <span>✓ Already in your library</span> : <span>New to your library</span>}
-      {similar.map((a) => (
-        <span key={a.id}>
-          {' '}
-          · You have <strong>{a.sort_name}</strong>.{' '}
-          <button type="button" className="link" onClick={() => onUse(nameParts(a.sort_name))}>
-            Same person
-          </button>
-        </span>
-      ))}
-    </div>
-  )
-}
 
 // What the category vote picked and how sure it is, above the Categories fields.
 function VoteNote({ vote, categories, mainId, onUseGuess }) {

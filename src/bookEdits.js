@@ -13,6 +13,7 @@ import {
   seriesProblem,
   titleProblem,
 } from './formChecks.js'
+import { duplicatePerson, formPeople, planPeople } from './peopleEdits.js'
 import { supabase } from './supabase.js'
 import { SHELF_COLUMNS } from './useCatalog.js'
 
@@ -25,10 +26,8 @@ const labelRows = (labels) => (labels.length ? labels.map(({ name, number }) => 
 // The form's starting values. Everything is text, as typed in a field.
 export function formFromCopy(copy, categories) {
   const text = (value) => (value === null || value === undefined ? '' : String(value))
-  // A book with no author yet gets one blank row to fill in.
-  const people = copy.people.length
-    ? copy.people.map((p) => ({ ...nameParts(p.author.sort_name), role: p.role }))
-    : [{ last: '', first: '', role: 'Author' }]
+  // A book with no one credited yet gets one blank Author row to fill in.
+  const people = copy.people.length ? formPeople(copy.people) : [blankPerson()]
   return {
     title: copy.title,
     people,
@@ -62,7 +61,8 @@ export function formFromCopy(copy, categories) {
 export function formProblem(form, copy) {
   return firstProblem(
     titleProblem(form.title),
-    peopleProblem(form.people, (i) => Boolean(copy.people[i])),
+    peopleProblem(form.people, (i) => Boolean(form.people[i].saved)),
+    duplicatePerson(form.people),
     firstPublishedProblem(form.firstPublished),
     pagesProblem(form.pages),
     editionYearProblem(form.editionYear, copy.edition_year),
@@ -159,38 +159,47 @@ export async function removeAuthorIfUnused(authorId) {
 // alone. Renaming a person everywhere belongs to Manage › Authors (Phase 2).
 // Each change is shown as soon as it's saved, so a failure partway leaves the
 // screen matching the database and Save can simply be tapped again.
+//
+// Removed people go first (freeing their place), then changed names and roles,
+// then new people, added after the others.
 async function saveAuthors(copy, form, onWork) {
+  const { remove, change, add } = planPeople(copy.people, form.people)
   let contributors = copy.work.contributors
-  for (const [i, person] of form.people.entries()) {
-    const last = person.last.trim()
-    const first = person.first.trim()
-    const current = copy.people[i]
-    if (!last) continue
-    if (current) {
-      const was = nameParts(current.author.sort_name)
-      if (was.last === last && was.first === first) continue
-    }
+  const same = (p, { authorId, role }) => p.author.id === authorId && p.role === role
+  const show = () => onWork(copy.work.id, { contributors })
 
+  for (const credit of remove) {
+    const { error } = await supabase.from('work_authors').delete().match({ work_id: copy.work.id, author_id: credit.authorId, role: credit.role })
+    check(error, 'Removing the person')
+    await removeAuthorIfUnused(credit.authorId)
+    contributors = contributors.filter((p) => !same(p, credit))
+    show()
+  }
+
+  for (const { saved, last, first, role, renamed } of change) {
+    const current = contributors.find((p) => same(p, saved)).author
+    const author = renamed ? await findOrAddAuthor(copy.library_id, last, first) : current
+    const { error } = await supabase
+      .from('work_authors')
+      .update({ author_id: author.id, role })
+      .match({ work_id: copy.work.id, author_id: saved.authorId, role: saved.role })
+    check(error, 'Changing the person')
+    if (renamed) await removeAuthorIfUnused(saved.authorId)
+    contributors = contributors.map((p) => (same(p, saved) ? { ...p, author, role } : p))
+    show()
+  }
+
+  for (const { last, first, role, position } of add) {
     const author = await findOrAddAuthor(copy.library_id, last, first)
-    if (current) {
-      const { error } = await supabase
-        .from('work_authors')
-        .update({ author_id: author.id })
-        .match({ work_id: copy.work.id, author_id: current.author.id, role: current.role })
-      check(error, 'Changing the author')
-      await removeAuthorIfUnused(current.author.id)
-      contributors = contributors.map((p) =>
-        p.author.id === current.author.id && p.role === current.role ? { ...p, author } : p,
-      )
-    } else {
-      const link = { library_id: copy.library_id, work_id: copy.work.id, author_id: author.id, role: person.role, position: i }
-      const { error } = await supabase.from('work_authors').insert(link)
-      check(error, 'Adding the author')
-      contributors = [...contributors, { role: person.role, position: i, author }]
-    }
-    onWork(copy.work.id, { contributors })
+    const link = { library_id: copy.library_id, work_id: copy.work.id, author_id: author.id, role, position }
+    const { error } = await supabase.from('work_authors').insert(link)
+    check(error, 'Adding the person')
+    contributors = [...contributors, { role, position, author }]
+    show()
   }
 }
+
+export const blankPerson = () => ({ last: '', first: '', role: 'Author', saved: null })
 
 const SERIES = { list: 'series', links: 'copy_series', idColumn: 'series_id', onCopy: 'series_links', shown: 'series' }
 const PUBLISHER_SERIES = {

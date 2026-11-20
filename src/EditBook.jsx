@@ -1,5 +1,7 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { formFromCopy, formProblem, removeBook, saveBookEdits } from './bookEdits.js'
+import { authorMatches, authorsIn } from './addBook.js'
+import { blankPerson, formFromCopy, formProblem, nameParts, removeBook, saveBookEdits } from './bookEdits.js'
+import { nameChanged, rolesFor } from './peopleEdits.js'
 import { labelNames } from './series.js'
 
 // iPhones ignore autoComplete="off" on boxes labeled like a contact form, but
@@ -55,6 +57,28 @@ export function TitleField({ label, value, onChange }) {
         }}
       />
     </label>
+  )
+}
+
+// Under a typed name (the check form, and Edit a Book): whether that person is
+// already in the library, and others with the same last name to pick instead,
+// so a misspelling doesn't add a second copy of someone.
+export function AuthorNote({ authors, person, onUse }) {
+  const { exact, similar } = authorMatches(authors, person)
+  if (!person.last.trim()) return null
+  return (
+    <div className="add-author-note">
+      {exact ? <span>✓ Already in your library</span> : <span>New to your library</span>}
+      {similar.map((a) => (
+        <span key={a.id}>
+          {' '}
+          · You have <strong>{a.sort_name}</strong>.{' '}
+          <button type="button" className="link" onClick={() => onUse(nameParts(a.sort_name))}>
+            Same person
+          </button>
+        </span>
+      ))}
+    </div>
   )
 }
 
@@ -155,11 +179,14 @@ function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onR
   const [confirmingRemove, setConfirmingRemove] = useState(false)
 
   const seriesNames = useMemo(() => labelNames(copies, 'series'), [copies])
+  const authors = useMemo(() => authorsIn(copies), [copies])
   const publisherSeriesNames = useMemo(() => labelNames(copies, 'publisherSeries'), [copies])
 
   const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
   const setPerson = (i, key) => (value) =>
     setForm((f) => ({ ...f, people: f.people.map((p, n) => (n === i ? { ...p, [key]: value } : p)) }))
+  // Taken off this book when saved (the person stays on any other books).
+  const removePerson = (i) => setForm((f) => ({ ...f, people: f.people.filter((_, n) => n !== i) }))
 
   async function save(e) {
     e.preventDefault()
@@ -208,15 +235,36 @@ function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onR
       <h3>Details</h3>
       <TitleField label="Title" value={form.title} onChange={set('title')} />
       {form.people.map((person, i) => (
-        <div className="edit-pair" key={i}>
-          <Field
-            label={person.role === 'Author' ? 'Author last name' : `${person.role} last name`}
-            value={person.last}
-            onChange={setPerson(i, 'last')}
-          />
-          <Field label="First name" value={person.first} onChange={setPerson(i, 'first')} />
+        <div className="edit-person" key={i}>
+          <div className="edit-pair">
+            <Field
+              label={person.role === 'Author' ? 'Author last name' : `${person.role} last name`}
+              value={person.last}
+              onChange={setPerson(i, 'last')}
+            />
+            <Field label="First name" value={person.first} onChange={setPerson(i, 'first')} />
+          </div>
+          {nameChanged(person) && (
+            <AuthorNote authors={authors} person={person} onUse={(name) => setForm((f) => ({ ...f, people: f.people.map((p, n) => (n === i ? { ...p, ...name } : p)) }))} />
+          )}
+          <div className="edit-person-actions">
+            <label>
+              Role{' '}
+              <select value={person.role} onChange={(e) => setPerson(i, 'role')(e.target.value)}>
+                {rolesFor(person.role).map((role) => (
+                  <option key={role}>{role}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="link" onClick={() => removePerson(i)}>
+              Remove
+            </button>
+          </div>
         </div>
       ))}
+      <button type="button" className="link edit-add" onClick={() => setForm((f) => ({ ...f, people: [...f.people, blankPerson()] }))}>
+        + Add a person
+      </button>
       <div className="edit-pair">
         <Field label="First published" value={form.firstPublished} onChange={set('firstPublished')} numeric />
         <Field label="Pages" value={form.pages} onChange={set('pages')} numeric />

@@ -13,7 +13,7 @@ describe('Edit a Book (formProblem)', () => {
   const copy = { people: [{ author: { sort_name: 'Morrison, Toni' } }], edition_year: 87, isbn13: '9781400033416', isbn10: 'BAD' }
   const form = {
     title: 'Beloved',
-    people: [{ last: 'Morrison', first: 'Toni', role: 'Author' }],
+    people: [{ last: 'Morrison', first: 'Toni', role: 'Author', saved: { authorId: 'm', role: 'Author', position: 0 } }],
     firstPublished: '1987',
     pages: '324',
     editionYear: '87',
@@ -31,10 +31,10 @@ describe('Edit a Book (formProblem)', () => {
     assert.equal(problem({ people: [{ last: '', first: 'Toni', role: 'Author' }] }), 'Each person needs a last name (or a single name, like Homer).')
   })
   test('emptying an existing person', () => {
-    assert.equal(problem({ people: [{ last: '', first: '', role: 'Author' }] }), 'Each person needs a last name (or a single name, like Homer).')
+    assert.equal(problem({ people: [{ ...form.people[0], last: '', first: '' }] }), 'Each person needs a last name (or a single name, like Homer).')
   })
   test('a new blank person row is ignored', () => {
-    assert.equal(problem({ people: [...form.people, { last: '', first: '', role: 'Author' }] }), '')
+    assert.equal(problem({ people: [...form.people, { last: '', first: '', role: 'Author', saved: null }] }), '')
   })
   test('first published', () => {
     assert.equal(problem({ firstPublished: '-750' }), '')
