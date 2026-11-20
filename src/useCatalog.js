@@ -4,6 +4,8 @@ import { normalize } from './normalize.js'
 import { useSaved } from './useSaved.js'
 
 export const SHELF_COLUMNS = 'category_id, is_main, set_by, removed, tentative, reasons'
+// Pick for me's judged answers (assessments.js), on each work.
+export const ASSESSMENT_COLUMNS = 'assessments ( question, answer, sure, set_by )'
 
 // The columns the app needs for each copy, plus its work and the people on it.
 // (Leaves out lt_record, the large original LibraryThing data.)
@@ -17,7 +19,8 @@ const COLUMNS = `
   series_links:copy_series ( number, position, label:series ( id, name, aliases ) ),
   publisher_series_links:copy_publisher_series ( number, position, label:publisher_series ( id, name, aliases ) ),
   work:works ( id, title, first_published_year, first_published_source, original_language, synopsis, synopsis_set_by,
-    contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ) )
+    contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ),
+    ${ASSESSMENT_COLUMNS} )
 `
 
 const PAGE = 1000 // the most rows the server returns per request

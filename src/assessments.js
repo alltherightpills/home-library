@@ -31,6 +31,24 @@ export function answerCode(questionId, text) {
   return question && [...question.answers, ...EVERY_QUESTION_ANSWERS].includes(code) ? code : null
 }
 
+// Edit a Book: a work's stored answers as the form's menus, question → answer
+// code, '' for none.
+export function answerForm(rows = []) {
+  return Object.fromEntries(QUESTIONS.map((q) => [q.id, rows.find((r) => r.question === q.id)?.answer ?? '']))
+}
+
+// What Edit a Book saves: only the menus that changed. A changed answer
+// becomes the owner's (and sure), which no assessment pass replaces; a menu
+// set back to "Not answered" removes the answer.
+export function planAnswerEdits(rows = [], form) {
+  const before = answerForm(rows)
+  const changed = QUESTIONS.map((q) => q.id).filter((id) => form[id] !== before[id])
+  return {
+    save: changed.filter((id) => form[id]).map((id) => ({ question: id, answer: form[id], sure: true, set_by: 'owner' })),
+    clear: changed.filter((id) => !form[id]),
+  }
+}
+
 // work id → { international: row, pace: row, … }
 export function assessmentsByWork(rows) {
   const byWork = new Map()

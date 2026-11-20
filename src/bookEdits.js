@@ -1,3 +1,4 @@
+import { answerForm, planAnswerEdits } from './assessments.js'
 import { nameForms, nameParts } from './authors.js'
 import { planShelfDecision, planShelfEdit, shelfChoices } from './categories/review.js'
 import {
@@ -48,6 +49,7 @@ export function formFromCopy(copy, categories) {
     editionNote: text(copy.edition_note),
     notes: text(copy.notes),
     synopsis: text(copy.work?.synopsis),
+    judged: answerForm(copy.work?.assessments),
     needsReview: copy.needs_review,
     reviewNote: text(copy.review_note),
     audience: text(copy.audience),
@@ -199,6 +201,28 @@ async function saveAuthors(copy, form, onWork) {
   }
 }
 
+// Pick for me's judged answers (plan in assessments.js). Each change is shown
+// once saved, so after a failure partway Save can simply be tapped again.
+async function saveAnswers(copy, judged, onWork) {
+  if (!copy.work) return
+  const { save, clear } = planAnswerEdits(copy.work.assessments, judged)
+  let rows = copy.work.assessments ?? []
+  if (save.length) {
+    const toSave = save.map((a) => ({ library_id: copy.library_id, work_id: copy.work.id, note: null, ...a }))
+    const { error } = await supabase.from('assessments').upsert(toSave, { onConflict: 'work_id,question' })
+    check(error, 'Saving the Pick for me answers')
+    const saved = new Set(save.map((a) => a.question))
+    rows = [...rows.filter((r) => !saved.has(r.question)), ...save]
+    onWork(copy.work.id, { assessments: rows })
+  }
+  if (clear.length) {
+    const { error } = await supabase.from('assessments').delete().eq('work_id', copy.work.id).in('question', clear)
+    check(error, 'Clearing the Pick for me answers')
+    rows = rows.filter((r) => !clear.includes(r.question))
+    onWork(copy.work.id, { assessments: rows })
+  }
+}
+
 export const blankPerson = () => ({ last: '', first: '', role: 'Author', saved: null })
 
 const SERIES = { list: 'series', links: 'copy_series', idColumn: 'series_id', onCopy: 'series_links', shown: 'series' }
@@ -333,6 +357,7 @@ export async function saveBookEdits(copy, form, sharedWork, categories, { onCopy
   }
 
   await saveAuthors(copy, form, onWork)
+  await saveAnswers(copy, form.judged, onWork)
   await saveLabels(copy, form.series, SERIES, onCopy)
   await saveLabels(copy, form.publisherSeries, PUBLISHER_SERIES, onCopy)
 

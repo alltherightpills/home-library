@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { BLANK_ANSWERS, isNew, matches, pickOrder, pickPool, readAuthorIds, surprising, whyText } from '../src/pick.js'
+import { BLANK_ANSWERS, drivenOptions, isNew, matches, notYetAssessed, pickOrder, pickPool, readAuthorIds, surprising, whyText } from '../src/pick.js'
 
 const categories = [
   { id: 'F', name: 'Fiction', parent_id: null, position: 1 },
@@ -175,4 +175,87 @@ test('why it was picked', () => {
   const kidsNoYear = book({ audience: 'Kids', acquired_year: null, pages: null })
   assert.equal(whyText(kidsNoYear, { ...BLANK_ANSWERS, length: 'short' }, ctx), 'Fiction · Kids · page count unknown')
   assert.equal(whyText(kidsNoYear, { ...BLANK_ANSWERS, waited: true }, ctx), 'Fiction · Kids · year acquired unknown')
+})
+
+// A book with judged answers: { pace: 'quick', mood: ['heavy', false] } (false: unsure).
+function judged(answers, fields) {
+  const b = book(fields)
+  b.work.assessments = Object.entries(answers).map(([question, a]) => {
+    const [answer, sure = true] = Array.isArray(a) ? a : [a]
+    return { question, answer, sure, set_by: 'claude' }
+  })
+  return b
+}
+
+test('judged questions: the other answers rule a book out; no answer, doesn’t apply and not assessed pass', () => {
+  const quick = judged({ pace: 'quick' })
+  const slow = judged({ pace: ['slow', false] })
+  const none = judged({})
+  const skipped = judged({ pace: 'doesnt_apply' })
+  const magazine = judged({ pace: 'not_assessed' })
+  const ctx = context([])
+  const want = (pace) => [quick, slow, none, skipped, magazine].filter((c) => matches(c, { ...BLANK_ANSWERS, pace }, ctx))
+  assert.deepEqual(want('quick'), [quick, none, skipped, magazine])
+  // Unsure answers count like sure ones.
+  assert.deepEqual(want('slow'), [slow, none, skipped, magazine])
+  assert.deepEqual(want('steady'), [none, skipped, magazine])
+})
+
+test('mood: Not heavy is Light or In between', () => {
+  const books = ['light', 'in_between', 'heavy'].map((mood) => judged({ mood }))
+  const ctx = context([])
+  const want = (mood) => books.filter((c) => matches(c, { ...BLANK_ANSWERS, mood }, ctx)).map((c) => c.work.assessments[0].answer)
+  assert.deepEqual(want('light'), ['light'])
+  assert.deepEqual(want('not_heavy'), ['light', 'in_between'])
+  assert.deepEqual(want('heavy'), ['heavy'])
+})
+
+test('driven: Both always passes, and the other pair’s answers pass', () => {
+  const books = ['character', 'both', 'plot', 'narrative', 'ideas'].map((driven) => judged({ driven }))
+  const ctx = context([])
+  const want = (driven) => books.filter((c) => matches(c, { ...BLANK_ANSWERS, driven }, ctx)).map((c) => c.work.assessments[0].answer)
+  assert.deepEqual(want('character'), ['character', 'both', 'narrative', 'ideas'])
+  assert.deepEqual(want('ideas'), ['character', 'both', 'plot', 'ideas'])
+})
+
+test('driven buttons follow Kind', () => {
+  const ids = (main) => drivenOptions(main, categories).map((o) => o.id)
+  assert.deepEqual(ids(null), ['character', 'plot'])
+  assert.deepEqual(ids('F'), ['character', 'plot'])
+  assert.deepEqual(ids('N'), ['narrative', 'ideas'])
+})
+
+test('international', () => {
+  const abroad = judged({ international: 'international' })
+  const home = judged({ international: 'domestic' })
+  const ctx = context([])
+  assert.deepEqual([abroad, home].filter((c) => matches(c, { ...BLANK_ANSWERS, international: 'domestic' }, ctx)), [home])
+})
+
+test('why it was picked, with judged answers', () => {
+  const pick = judged({ international: 'international', driven: 'both', pace: ['quick', false], mood: 'doesnt_apply' })
+  const ctx = context([pick])
+  const answers = { ...BLANK_ANSWERS, international: 'international', driven: 'character', pace: 'quick', mood: 'not_heavy' }
+  assert.equal(whyText(pick, answers, ctx), 'Fiction · international · character and plot · quick pace? · on your shelf since 2014')
+  const none = judged({ pace: 'not_assessed' })
+  assert.equal(whyText(none, answers, ctx), 'Fiction · view, driven, pace, mood not yet assessed · on your shelf since 2014')
+  // Only the questions answered on screen are mentioned.
+  assert.equal(whyText(pick, BLANK_ANSWERS, ctx), 'Fiction · on your shelf since 2014')
+})
+
+test('not yet assessed: unread home books outside Reference missing any answer, lent and being read included', () => {
+  const all = { international: 'domestic', driven: 'plot', pace: 'quick', mood: 'light' }
+  const done = judged(all)
+  const partly = judged({ pace: 'quick' })
+  const lent = book()
+  const reading = book()
+  const read = book()
+  const office = book({ location: 'Office' })
+  const reference = book({ shelves: [['N', true], ['NR', false]] })
+  const readings = [
+    { copy_id: read.id, status: 'finished' },
+    { copy_id: reading.id, status: 'reading' },
+  ]
+  const left = notYetAssessed([done, partly, lent, reading, read, office, reference], { readings, categories })
+  assert.deepEqual(left, [partly, lent, reading])
 })

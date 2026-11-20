@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { answerCode, answerWords, assessmentsByWork } from '../src/assessments.js'
+import { answerCode, answerForm, answerWords, assessmentsByWork, planAnswerEdits } from '../src/assessments.js'
 
 test('answers read as words', () => {
   assert.equal(answerWords('in_between'), 'In between')
@@ -32,4 +32,22 @@ test('answers group by work', () => {
   assert.equal(byWork.get('a').mood.answer, 'light')
   assert.equal(byWork.get('b').pace.answer, 'slow')
   assert.equal(byWork.get('c'), undefined)
+})
+
+test('Edit a Book saves only changed answers, as the owner’s; a blank menu clears', () => {
+  const rows = [
+    { question: 'pace', answer: 'quick', sure: false, set_by: 'claude' },
+    { question: 'mood', answer: 'heavy', sure: true, set_by: 'claude' },
+    { question: 'driven', answer: 'plot', sure: true, set_by: 'claude' },
+  ]
+  const form = answerForm(rows)
+  assert.deepEqual(form, { international: '', driven: 'plot', pace: 'quick', mood: 'heavy' })
+  assert.deepEqual(planAnswerEdits(rows, form), { save: [], clear: [] })
+  assert.deepEqual(planAnswerEdits(rows, { ...form, pace: 'slow', international: 'domestic', mood: '' }), {
+    save: [
+      { question: 'international', answer: 'domestic', sure: true, set_by: 'owner' },
+      { question: 'pace', answer: 'slow', sure: true, set_by: 'owner' },
+    ],
+    clear: ['mood'],
+  })
 })

@@ -20,7 +20,83 @@ export const isNew = (year, thisYear) => year >= thisYear - NEW_YEARS
 export const AUDIENCES = ['Adult', 'Teen', 'Kids']
 
 // No question answered yet: Adult only (owner's choice, 2026-11-20).
-export const BLANK_ANSWERS = { audience: ['Adult'], main: null, sub: null, length: null, published: null, author: null, waited: false }
+export const BLANK_ANSWERS = {
+  audience: ['Adult'],
+  main: null,
+  sub: null,
+  length: null,
+  published: null,
+  author: null,
+  international: null,
+  driven: null,
+  pace: null,
+  mood: null,
+  waited: false,
+}
+
+// Questions 6–9, judged by Claude (assessment-guide.md) and stored in the
+// assessments table; the stored answers are in assessments.js. Each button
+// says which stored answers rule a book out; any other answer, "doesn't
+// apply", "not assessed" or no answer at all lets the book through. Unsure
+// answers count like sure ones. (Owner, 2026-11-20.)
+//
+// Driven's buttons follow Kind: Narrative · Ideas for the nonfiction main
+// categories, Character · Plot otherwise. "Both" never rules a book out, so
+// Character means Character or Both, as Mood's Not heavy means Light or In
+// between.
+export const NONFICTION_MAINS = ['Nonfiction', 'Biography & Memoir', 'Essays, Letters & Criticism']
+export const JUDGED = [
+  {
+    id: 'international',
+    label: 'View',
+    options: [
+      { id: 'international', label: 'International', rulesOut: ['domestic'] },
+      { id: 'domestic', label: 'Domestic', rulesOut: ['international'] },
+    ],
+  },
+  {
+    id: 'driven',
+    label: 'Driven',
+    options: [
+      { id: 'character', label: 'Character', rulesOut: ['plot'], stories: true },
+      { id: 'plot', label: 'Plot', rulesOut: ['character'], stories: true },
+      { id: 'narrative', label: 'Narrative', rulesOut: ['ideas'], stories: false },
+      { id: 'ideas', label: 'Ideas', rulesOut: ['narrative'], stories: false },
+    ],
+  },
+  {
+    id: 'pace',
+    label: 'Pace',
+    options: [
+      { id: 'quick', label: 'Quick', rulesOut: ['steady', 'slow'] },
+      { id: 'steady', label: 'Steady', rulesOut: ['quick', 'slow'] },
+      { id: 'slow', label: 'Slow', rulesOut: ['quick', 'steady'] },
+    ],
+  },
+  {
+    id: 'mood',
+    label: 'Mood',
+    options: [
+      { id: 'light', label: 'Light', rulesOut: ['in_between', 'heavy'] },
+      { id: 'not_heavy', label: 'Not heavy', rulesOut: ['heavy'] },
+      { id: 'heavy', label: 'Heavy', rulesOut: ['light', 'in_between'] },
+    ],
+  },
+]
+
+// Is the chosen main category a nonfiction one (Driven shows Narrative · Ideas)?
+export const isNonfictionMain = (mainId, categories) => NONFICTION_MAINS.includes(categories.find((c) => c.id === mainId)?.name)
+
+// The Driven buttons for the chosen Kind.
+export const drivenOptions = (mainId, categories) => {
+  const stories = !isNonfictionMain(mainId, categories)
+  return JUDGED.find((q) => q.id === 'driven').options.filter((o) => o.stories === stories)
+}
+
+// A book's stored answer to a judged question: { answer, sure, set_by } or undefined.
+export const judgedAnswer = (copy, question) => copy.work?.assessments?.find((a) => a.question === question)
+
+const optionFor = (question, id) => JUDGED.find((q) => q.id === question).options.find((o) => o.id === id)
 
 const mainOf = (copy) => activeShelves(copy).find((s) => s.is_main)?.category_id ?? null
 const workOf = (copy) => copy.work?.id ?? `copy:${copy.id}`
@@ -92,7 +168,41 @@ export function matches(copy, answers, { categories, readAuthors, thisYear }) {
   if (answers.author && authors.length) {
     if (authors.some((id) => readAuthors.has(id)) !== (answers.author === 'known')) return false
   }
+  for (const { id } of JUDGED) {
+    if (!answers[id]) continue
+    const stored = judgedAnswer(copy, id)?.answer
+    if (stored && optionFor(id, answers[id]).rulesOut.includes(stored)) return false
+  }
   return true
+}
+
+// The books an assessment pass should look at, and haven't all four answers
+// yet: unread, at home, not reference, one copy per work. Unlike the pool,
+// this keeps books lent out or being read, which are unread too.
+export function notYetAssessed(copies, { readings, categories }) {
+  const unread = pickPool(copies, { readings: (readings ?? []).filter((r) => r.status !== 'reading'), lentTo: new Map(), categories })
+  return unread.filter((copy) => JUDGED.some(({ id }) => !judgedAnswer(copy, id)))
+}
+
+// How a judged answer reads in the why line; "?" when Claude was unsure.
+const JUDGED_WORDS = {
+  international: 'international',
+  domestic: 'domestic',
+  character: 'character-driven',
+  plot: 'plot-driven',
+  narrative: 'reads like a story',
+  ideas: 'about ideas',
+  quick: 'quick pace',
+  steady: 'steady pace',
+  slow: 'slow pace',
+  light: 'light',
+  in_between: 'between light and heavy',
+  heavy: 'heavy',
+}
+function judgedWords(question, stored, chosen) {
+  if (stored.answer === 'both') return optionFor(question, chosen).stories ? 'character and plot' : 'story and ideas'
+  const words = JUDGED_WORDS[stored.answer]
+  return words && (stored.sure ? words : `${words}?`)
 }
 
 // Surprise me: every question ignored, adult books only (owner, 2026-11-20).
@@ -127,6 +237,19 @@ export function whyText(copy, answers, { categories, readAuthors, surprise = fal
       else if (edited) parts.push(known ? 'edited by someone you’ve read' : 'an editor new to you')
       else parts.push(known ? 'by an author you’ve read' : 'an author new to you')
     }
+    // The judged answers, then one note for the questions this book has no
+    // answer to yet. "Doesn't apply" says nothing.
+    const unanswered = []
+    for (const { id, label } of JUDGED) {
+      if (!answers[id]) continue
+      const stored = judgedAnswer(copy, id)
+      if (!stored || stored.answer === 'not_assessed') unanswered.push(label.toLowerCase())
+      else if (stored.answer !== 'doesnt_apply') {
+        const words = judgedWords(id, stored, answers[id])
+        if (words) parts.push(words)
+      }
+    }
+    if (unanswered.length) parts.push(`${unanswered.join(', ')} not yet assessed`)
   }
   if (copy.acquired_year) parts.push(`on your shelf since ${copy.acquired_year}`)
   else if (answers.waited && !surprise) parts.push('year acquired unknown')

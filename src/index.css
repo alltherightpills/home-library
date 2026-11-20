@@ -860,6 +860,24 @@ body {
   font-size: 14px;
 }
 
+/* The book page's section headings, styled like Edit a Book's. */
+.book-detail .detail-section {
+  margin: 24px 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.book-detail h4 {
+  margin: 16px 0 4px;
+  font-size: 14px;
+}
+
+.book-detail dl {
+  margin: 0;
+}
+
 .book-detail dt {
   color: var(--muted);
 }
@@ -1398,6 +1416,18 @@ body {
 .pick-count {
   margin: 18px 0 10px;
   font-weight: 600;
+}
+
+/* "N unread books aren't assessed yet…", between the count and the buttons. */
+.pick-unassessed {
+  margin: -4px 0 12px;
+  font-size: 13px;
+}
+
+/* Edit a Book: "Claude's answer" under a Pick for me menu. */
+.edit-judged-note {
+  margin: 6px 0 12px;
+  font-size: 13px;
 }
 
 .picks {

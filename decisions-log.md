@@ -394,6 +394,20 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - **Translations (owner):** First published is the original's year (BCE as a minus); the translation's year is the copy's Edition year. Retellings and graphic adaptations are new works with their own year.
 - **Year check:** with no author birth years in the catalog, only years on the wrong side of the 10-year line were checked: 15 books plus 3 translations (list in `data/reports/`, private).
 
+**Pick for me slice C (2026-11-20)**
+
+- **Driven's buttons follow Kind** (owner's choice of three: follow Kind, all four always, or two rows). The nonfiction main categories (Nonfiction, Biography & Memoir, Essays, Letters & Criticism) show Narrative · Ideas; the rest, and no Kind, show Character · Plot, and nonfiction books pass them. Changing Kind clears a Driven answer that isn't offered any more, so nothing filters out of sight.
+- **Both never rules a book out** (owner): Character means Character or Both, the way Not heavy means Light or In between. No Both button: nobody asks for "something both".
+- **Unsure answers count like sure ones** (Claude's call): Claude's unsure answers were mostly confirmed in the trial, and leaving them out would make the judged questions narrow even less. The why line marks them with "?", as the spreadsheet does.
+- **The not-yet-assessed count** uses the assessment batch's definition (handoff, slice C), so it includes lent-out books and the one being read, which Pick for me itself leaves out. A book missing any of the four answers counts.
+- **On Edit a Book** a changed menu becomes the owner's answer, marked sure; "Not answered" deletes the row, so a later pass would answer it again. Untouched menus aren't saved, so opening and saving a book never turns Claude's answers into the owner's.
+
+**Book page sections (2026-11-20, owner)**
+
+- **Four headed sections** in the owner's grouping: About the book, In your library, Subject & genre (where the Pick for me answers went, with "(Claude)" or "(Claude, unsure)" after Claude's), Record details. Rows the owner didn't place were put by Claude: series and edition note with the book, also in and notes with the library, LC call number and cover source with the record.
+- **Repeats dropped (owner):** Work (the title again); Contributors when the only credit is one Author (the byline; any other role shows only there, so it stays); Edition year when it equals First published; Original language when it's the book's only language (that field mostly holds the edition's language anyway, see "Pick for me plan").
+- **Two LC call numbers:** "LibraryThing call number" (`lcc`) is LibraryThing's copy of an LC call number. On the 2026-11-20 backup, 685 of 1,500 copies have both it and the Library of Congress record's, 703 only LibraryThing's, 40 only the record's. Usually LibraryThing's is the record's shortened (no year), but 125 truly differ, some in LibraryThing's favor (*The City & The City*: PR6113 against PR6063) and some record "call numbers" are shelving labels ("CPB Box no. 3145"). So both stay, labeled by source, and LibraryThing's shows only when it isn't the same or a shortened form. Not on the cleanup list (owner's call).
+
 **Edit a Book's people (2026-11-20)**
 
 - **Why now:** the author cleanup Pick for me needs (wrong roles, missing people, anthologies crediting every story writer as Author) couldn't be done: Edit a Book could only rename people. Claude had wrongly told the owner it had a role menu; checking the code before the cleanup caught it.

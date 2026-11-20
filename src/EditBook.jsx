@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { authorMatches, authorsIn } from './addBook.js'
+import { EVERY_QUESTION_ANSWERS, QUESTIONS, answerWords } from './assessments.js'
 import { blankPerson, formFromCopy, formProblem, nameParts, removeBook, saveBookEdits } from './bookEdits.js'
 import { nameChanged, rolesFor } from './peopleEdits.js'
 import { labelNames } from './series.js'
@@ -171,6 +172,41 @@ export function CategoryFields({ shelves, categories, onChange }) {
   )
 }
 
+// Pick for me's judged questions (assessment-guide.md), one menu each. Under
+// Claude's answers, a note says whose they are; changing one makes it the
+// owner's, which no assessment pass replaces.
+const JUDGED_LABELS = {
+  international: 'View (international or domestic)',
+  driven: 'Driven (stories: character or plot; nonfiction: narrative or ideas)',
+  pace: 'Pace',
+  mood: 'Mood',
+}
+
+function JudgedFields({ rows = [], judged, onChange }) {
+  return QUESTIONS.map((q) => {
+    const stored = rows.find((r) => r.question === q.id)
+    const untouched = stored && judged[q.id] === stored.answer
+    return (
+      <div className="edit-judged" key={q.id}>
+        <label>
+          {JUDGED_LABELS[q.id]}
+          <select value={judged[q.id]} onChange={(e) => onChange({ ...judged, [q.id]: e.target.value })}>
+            <option value="">Not answered</option>
+            {[...q.answers, ...EVERY_QUESTION_ANSWERS].map((a) => (
+              <option key={a} value={a}>
+                {answerWords(a)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {untouched && stored.set_by === 'claude' && (
+          <p className="book-meta edit-judged-note">{stored.sure ? 'Claude’s answer' : 'Claude’s guess (unsure)'}</p>
+        )}
+      </div>
+    )
+  })
+}
+
 // Edit one copy (mockup screen 8). Use my location comes later.
 function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onRemoved, updateCopy, updateWork }) {
   const [form, setForm] = useState(() => formFromCopy(copy, categories))
@@ -290,6 +326,10 @@ function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onR
         </select>
       </label>
 
+      <h3>Pick for me</h3>
+      <TitleField label="Synopsis (one sentence)" value={form.synopsis} onChange={set('synopsis')} />
+      <JudgedFields rows={copy.work?.assessments} judged={form.judged} onChange={set('judged')} />
+
       <h3>This edition</h3>
       <Field label="Publisher" value={form.publisher} onChange={set('publisher')} />
       <div className="edit-pair">
@@ -324,7 +364,6 @@ function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onR
 
       <h3>Notes</h3>
       <TitleField label="Notes (a box set's contents, for example)" value={form.notes} onChange={set('notes')} />
-      <TitleField label="Synopsis (one sentence, shown on Pick for me)" value={form.synopsis} onChange={set('synopsis')} />
 
       <h3>Needs checking</h3>
       <label className="edit-check">

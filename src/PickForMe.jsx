@@ -1,6 +1,20 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { coverUrl } from './useCatalog.js'
-import { AUDIENCES, BLANK_ANSWERS, LENGTHS, matches, pickOrder, pickPool, readAuthorIds, referenceId, surprising, whyText } from './pick.js'
+import {
+  AUDIENCES,
+  BLANK_ANSWERS,
+  JUDGED,
+  LENGTHS,
+  drivenOptions,
+  matches,
+  notYetAssessed,
+  pickOrder,
+  pickPool,
+  readAuthorIds,
+  referenceId,
+  surprising,
+  whyText,
+} from './pick.js'
 
 // The Pick for me tab (handoff.md, "Pick for me"): every question on one
 // screen, each optional, the count of matching books as you tap, then three
@@ -75,6 +89,10 @@ function PickForMe({ copies, categories, readings, lentTo, onOpenBook, memory })
     [categories, copies, readings.list, thisYear],
   )
   const matching = useMemo(() => (pool ? pool.filter((c) => matches(c, answers, context)) : []), [pool, answers, context])
+  const unassessed = useMemo(
+    () => (copies && readings.list ? notYetAssessed(copies, { readings: readings.list, categories }).length : 0),
+    [copies, readings.list, categories],
+  )
   const byId = useMemo(() => new Map((copies ?? []).map((c) => [c.id, c])), [copies])
   const ready = Boolean(pool)
 
@@ -95,6 +113,13 @@ function PickForMe({ copies, categories, readings, lentTo, onOpenBook, memory })
   function answer(changes) {
     setAnswers((a) => ({ ...a, ...changes }))
     setPicks(null)
+  }
+
+  // Driven's buttons follow Kind, so a Driven answer the new Kind doesn't
+  // offer is cleared rather than left filtering out of sight.
+  function chooseMain(main) {
+    const keep = drivenOptions(main, categories).some((o) => o.id === answers.driven)
+    answer({ main, sub: null, ...(keep ? {} : { driven: null }) })
   }
 
   function toggleAudience(audience) {
@@ -161,7 +186,7 @@ function PickForMe({ copies, categories, readings, lentTo, onOpenBook, memory })
         <span className="pick-options" role="group" aria-label="Kind">
           {answers.main ? (
             <>
-              <button className="chip active" aria-pressed="true" onClick={() => answer({ main: null, sub: null })}>
+              <button className="chip active" aria-pressed="true" onClick={() => chooseMain(null)}>
                 {mains.find((c) => c.id === answers.main)?.name}
               </button>
               {subs.map((c) => (
@@ -172,7 +197,7 @@ function PickForMe({ copies, categories, readings, lentTo, onOpenBook, memory })
             </>
           ) : (
             mains.map((c) => (
-              <button key={c.id} className="chip" aria-pressed="false" onClick={() => answer({ main: c.id, sub: null })}>
+              <button key={c.id} className="chip" aria-pressed="false" onClick={() => chooseMain(c.id)}>
                 {c.name}
               </button>
             ))
@@ -198,6 +223,15 @@ function PickForMe({ copies, categories, readings, lentTo, onOpenBook, memory })
         value={answers.author}
         onChange={(author) => answer({ author })}
       />
+      {JUDGED.map((q) => (
+        <Question
+          key={q.id}
+          label={q.label}
+          options={q.id === 'driven' ? drivenOptions(answers.main, categories) : q.options}
+          value={answers[q.id]}
+          onChange={(value) => answer({ [q.id]: value })}
+        />
+      ))}
       <Question
         label="Order"
         options={[{ id: 'waited', label: 'Longest waiting first' }]}
@@ -208,6 +242,14 @@ function PickForMe({ copies, categories, readings, lentTo, onOpenBook, memory })
       <p className="pick-count">
         {matching.length.toLocaleString()} {matching.length === 1 ? 'book matches' : 'books match'}
       </p>
+      {/* Until the assessment pass reaches them, these books pass View, Driven,
+          Pace and Mood, so those narrow the list less than they will. */}
+      {unassessed > 0 && (
+        <p className="book-meta pick-unassessed">
+          {unassessed.toLocaleString()} unread {unassessed === 1 ? 'book isn’t' : 'books aren’t'} assessed yet for View, Driven, Pace and Mood, so{' '}
+          {unassessed === 1 ? 'it passes' : 'they pass'} those questions.
+        </p>
+      )}
       <div className="button-pair">
         <button className="primary" disabled={!matching.length} onClick={() => start(false)}>
           Show picks
