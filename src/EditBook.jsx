@@ -276,6 +276,7 @@ function EditBook({ copy, copies, categories, sharedWork, onCancel, onSaved, onR
 
       <h3>Notes</h3>
       <TitleField label="Notes (a box set's contents, for example)" value={form.notes} onChange={set('notes')} />
+      <TitleField label="Synopsis (one sentence, shown on Pick for me)" value={form.synopsis} onChange={set('synopsis')} />
 
       <h3>Needs checking</h3>
       <label className="edit-check">

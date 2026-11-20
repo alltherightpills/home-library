@@ -385,3 +385,11 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - **3 picks, Shuffle, Replace one, synopsis, why picked.** "Why" is assembled by the app from the matching answers: always accurate, no AI. Without an API the app can't write a synopsis on the spot, so Claude writes one per book during the pass, alongside the four answers (one visit per book).
 - **Blank until written** (owner's choice): the first sentence of saved Google descriptions (588 of 710 unread adult books have one) was useful in about half of an 8-book sample; the rest were marketing ("Now in a fully corrected edition…").
 - **Pass order: adult first, kids and teen last**, then decide whether those are worth assessing; unanswered books still pass the judged questions.
+
+**Pick for me slice B testing (2026-11-20)**
+
+- **Tested on the Mac** (`npm run dev` in Safari's Responsive Design Mode), away from the home network. Owner's changes: Kind locks to the chosen main category (tap it to start over) to cut clutter; length buttons Short / Medium / Long, with page ranges in the why line; Back from a pick's book page keeps the answers, picks and scroll (App holds them; tapping the tab starts over, like every tab); Replace starts over like Shuffle once every match has been shown.
+- **"Last 10 years" moves with the calendar year** (2016 on, in 2026), read when the screen opens.
+- **Who a book is "by":** Author credits; with none, Editors (so an anthology's Contributors don't count); with neither, Creator and LibraryThing's other main credits. Introductions, translators and illustrators never count. The general rule stays (owner): a book crediting nobody passes the Author question; the owner fixes the few such books instead (cleanup.md). Edit a Book can't change roles or add people yet, which that cleanup needs.
+- **Translations (owner):** First published is the original's year (BCE as a minus); the translation's year is the copy's Edition year. Retellings and graphic adaptations are new works with their own year.
+- **Year check:** with no author birth years in the catalog, only years on the wrong side of the 10-year line were checked: 15 books plus 3 translations (list in `data/reports/`, private).

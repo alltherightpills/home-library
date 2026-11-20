@@ -48,6 +48,7 @@ export function formFromCopy(copy, categories) {
     publisherSeries: labelRows(copy.publisherSeries),
     editionNote: text(copy.edition_note),
     notes: text(copy.notes),
+    synopsis: text(copy.work?.synopsis),
     needsReview: copy.needs_review,
     reviewNote: text(copy.review_note),
     audience: text(copy.audience),
@@ -308,9 +309,11 @@ export async function saveBookEdits(copy, form, sharedWork, categories, { onCopy
   }
 
   // First published belongs to the work, so every copy of it shows the new year.
-  const workChanges = differences({ first_published_year: numberOrNull(form.firstPublished) }, copy.work)
+  const workChanges = differences({ first_published_year: numberOrNull(form.firstPublished), synopsis: textOrNull(form.synopsis) }, copy.work)
   // A blank source is what the book page shows as "entered by hand".
   if ('first_published_year' in workChanges) workChanges.first_published_source = null
+  // A synopsis changed here becomes the owner's, which an assessment pass leaves alone.
+  if ('synopsis' in workChanges) workChanges.synopsis_set_by = workChanges.synopsis ? 'owner' : null
   // With only one copy, the work's title is this book's title. A second copy
   // may have a different title, so the shared one stays as it is.
   if (!sharedWork && copy.work.title === copy.title && title !== copy.title) workChanges.title = title

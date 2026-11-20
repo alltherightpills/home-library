@@ -174,6 +174,7 @@ function BookDetail({ copy, copies, categories, readings, loans, onBack, onOpenB
       </div>
       <h2>{copy.title}</h2>
       <p className="book-meta">{copy.byline}</p>
+      {copy.work?.synopsis && <p className="synopsis">{copy.work.synopsis}</p>}
 
       {alsoOwn.length > 0 && (
         <p className="also-own">

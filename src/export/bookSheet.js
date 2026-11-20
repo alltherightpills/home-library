@@ -64,6 +64,7 @@ const COLUMNS = [
   { header: 'Lent on', width: 11, ...asText, get: (b) => b.lent?.lent_on },
   // Pick for me's judged answers: "Steady", or "Steady?" when Claude was unsure.
   ...QUESTIONS.map((q) => ({ header: q.label, width: 12, get: (b) => answerCell(b.answers[q.id]) })),
+  { header: 'Synopsis', width: 40, get: (b) => b.work?.synopsis },
   { header: 'Original title', width: 30, get: (b) => b.copy.original_title },
   { header: 'Edition note', width: 20, get: (b) => b.copy.edition_note },
   { header: 'Notes', width: 30, get: (b) => b.copy.notes },

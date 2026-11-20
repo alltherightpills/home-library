@@ -116,6 +116,9 @@ for (const row of backup.book_categories) row.tentative ??= false
 for (const work of backup.works) {
   delete work.origin
   delete work.driven_by
+  // Synopses came later (2026-11-20): none before.
+  work.synopsis ??= null
+  work.synopsis_set_by ??= null
 }
 for (const row of backup.readings) {
   row.cover_url ??= null

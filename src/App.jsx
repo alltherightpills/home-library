@@ -2,6 +2,7 @@ import { isAuthRetryableFetchError } from '@supabase/supabase-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Library from './Library.jsx'
 import PasswordForm from './PasswordForm.jsx'
+import PickForMe from './PickForMe.jsx'
 import ReadingTab from './ReadingTab.jsx'
 import Scanner from './Scanner.jsx'
 import SearchBox from './SearchBox.jsx'
@@ -138,6 +139,16 @@ function SignedInApp({ session, notice, setNotice }) {
   const [query, setQuery] = useState('')
   // The Library tab's own ways of moving between its screens (while it's showing).
   const libraryNav = useRef(null)
+  // Pick for me's answers, picks and scroll, kept while a pick's book page is
+  // open so Back returns to them. Tapping the tab starts it over.
+  const pickMemory = useRef(null)
+  const pickMemoryAccess = useMemo(
+    () => ({
+      recall: () => pickMemory.current,
+      remember: (changes) => (pickMemory.current = { ...pickMemory.current, ...changes }),
+    }),
+    [],
+  )
 
   // Swiping back from the Library tab, after leaving another tab for it, returns there.
   useEffect(() => {
@@ -220,7 +231,17 @@ function SignedInApp({ session, notice, setNotice }) {
           />
         )}
         {tab === 'reading' && <ReadingTab key={restarts.reading} copies={copies} readings={readings} onOpenBook={(id) => goToLibrary({ book: id })} />}
-        {tab === 'pick' && <p className="placeholder">Coming soon.</p>}
+        {tab === 'pick' && (
+          <PickForMe
+            key={restarts.pick}
+            copies={copies}
+            categories={categories}
+            readings={readings}
+            lentTo={lentTo}
+            onOpenBook={(id) => goToLibrary({ book: id })}
+            memory={pickMemoryAccess}
+          />
+        )}
         {tab === 'library' && changingPassword && (
           <PasswordForm
             email={session.user.email}
@@ -268,6 +289,7 @@ function SignedInApp({ session, notice, setNotice }) {
                 if (history.state?.book || history.state?.place) history.pushState({}, '')
                 setChangingPassword(false)
               }
+              if (t.id === 'pick') pickMemory.current = null
               setRestarts((r) => ({ ...r, [t.id]: (r[t.id] ?? 0) + 1 }))
               setTab(t.id)
               window.scrollTo(0, 0)

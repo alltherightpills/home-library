@@ -1373,3 +1373,79 @@ body {
   padding: 4px 6px 4px 0;
   overflow-wrap: anywhere;
 }
+
+/* Pick for me: each question is a label and a wrapping row of chips. */
+.pick-question {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 8px;
+  align-items: start;
+  margin: 10px 0;
+}
+
+.pick-label {
+  padding-top: 7px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.pick-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pick-count {
+  margin: 18px 0 10px;
+  font-weight: 600;
+}
+
+.picks {
+  margin-top: 20px;
+}
+
+/* A pick: a taller cover beside title, author, synopsis and why, then Replace.
+   The row's line moves from the button to the item, so it falls under Replace. */
+.book-list .pick {
+  border-bottom: 1px solid #e2ddd2;
+}
+
+.book-list .pick > button:first-child {
+  grid-template-columns: 48px 1fr;
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.pick .thumb {
+  grid-row: span 4;
+  width: 48px;
+  height: 72px;
+}
+
+.pick-synopsis,
+.synopsis {
+  font-size: 15px;
+}
+
+.pick-why {
+  font-size: 13px;
+}
+
+/* Replace sits under the text, lined up with it (past the cover). */
+.book-list .pick-replace {
+  display: inline;
+  width: auto;
+  margin: 0 0 10px 60px;
+  padding: 0;
+  border: none;
+  font-size: 14px;
+}
+
+.pick-replace:disabled {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.pick-shuffle {
+  margin-top: 14px;
+}
