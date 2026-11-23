@@ -236,7 +236,8 @@ test('why it was picked, with judged answers', () => {
   const pick = judged({ international: 'international', driven: 'both', pace: ['quick', false], mood: 'doesnt_apply' })
   const ctx = context([pick])
   const answers = { ...BLANK_ANSWERS, international: 'international', driven: 'character', pace: 'quick', mood: 'not_heavy' }
-  assert.equal(whyText(pick, answers, ctx), 'Fiction · international · character and plot · quick pace? · on your shelf since 2014')
+  // An unsure answer reads as a plain best guess, no "?" (owner, 2026-11-23).
+  assert.equal(whyText(pick, answers, ctx), 'Fiction · international · character and plot · quick pace · on your shelf since 2014')
   const none = judged({ pace: 'not_assessed' })
   assert.equal(whyText(none, answers, ctx), 'Fiction · view, driven, pace, mood not yet assessed · on your shelf since 2014')
   // Only the questions answered on screen are mentioned.

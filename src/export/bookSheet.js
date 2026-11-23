@@ -62,7 +62,8 @@ const COLUMNS = [
   { header: 'Country acquired', width: 14, get: (b) => b.copy.acquired_country },
   { header: 'Lent to', width: 16, get: (b) => b.lent?.name },
   { header: 'Lent on', width: 11, ...asText, get: (b) => b.lent?.lent_on },
-  // Pick for me's judged answers: "Steady", or "Steady?" when Claude was unsure.
+  // Pick for me's judged answers: "Steady", whether or not Claude was sure
+  // (owner, 2026-11-23: unsure answers are best guesses).
   ...QUESTIONS.map((q) => ({ header: q.label, width: 12, get: (b) => answerCell(b.answers[q.id]) })),
   { header: 'Synopsis', width: 40, get: (b) => b.work?.synopsis },
   { header: 'Original title', width: 30, get: (b) => b.copy.original_title },
@@ -82,7 +83,7 @@ const COLUMNS = [
 const coverLink = (copy) =>
   copy.cover_url ?? (copy.cover_id ? `https://covers.openlibrary.org/b/id/${copy.cover_id}-L.jpg` : null)
 
-const answerCell = (row) => row && answerWords(row.answer) + (row.sure ? '' : '?')
+const answerCell = (row) => row && answerWords(row.answer)
 
 // Rows for write-excel-file: a bold heading row, then one row per book sorted by
 // title, then authors. Returns { sheetData, columns } (columns carries the widths).

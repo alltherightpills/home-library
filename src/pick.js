@@ -184,7 +184,9 @@ export function notYetAssessed(copies, { readings, categories }) {
   return unread.filter((copy) => JUDGED.some(({ id }) => !judgedAnswer(copy, id)))
 }
 
-// How a judged answer reads in the why line; "?" when Claude was unsure.
+// How a judged answer reads in the why line. Claude's unsure answers read as
+// plain best guesses, with no "?" (owner, 2026-11-23); only Edit a Book says
+// "unsure".
 const JUDGED_WORDS = {
   international: 'international',
   domestic: 'domestic',
@@ -201,8 +203,7 @@ const JUDGED_WORDS = {
 }
 function judgedWords(question, stored, chosen) {
   if (stored.answer === 'both') return optionFor(question, chosen).stories ? 'character and plot' : 'story and ideas'
-  const words = JUDGED_WORDS[stored.answer]
-  return words && (stored.sure ? words : `${words}?`)
+  return JUDGED_WORDS[stored.answer]
 }
 
 // Surprise me: every question ignored, adult books only (owner, 2026-11-20).

@@ -14,14 +14,15 @@ function formatMarcField({ tag, ind1, ind2, sub }) {
   return `${tag} ${ind} ${text}`
 }
 
-// Pick for me's judged answers, labeled as on its screen. "Steady (Claude,
-// unsure)"; the owner's own answers need no note.
+// Pick for me's judged answers, labeled as on its screen. "Steady (Claude)",
+// unsure or not (owner, 2026-11-23: unsure answers are best guesses; only
+// Edit a Book says "unsure"); the owner's own answers need no note.
 const JUDGED_LABELS = { international: 'View', driven: 'Driven', pace: 'Pace', mood: 'Mood' }
 function judgedRows(work) {
   return QUESTIONS.map((q) => {
     const stored = work?.assessments?.find((a) => a.question === q.id)
     if (!stored) return [JUDGED_LABELS[q.id], null]
-    const whose = stored.set_by === 'claude' ? (stored.sure ? ' (Claude)' : ' (Claude, unsure)') : ''
+    const whose = stored.set_by === 'claude' ? ' (Claude)' : ''
     return [JUDGED_LABELS[q.id], `${answerWords(stored.answer)}${whose}`]
   })
 }
