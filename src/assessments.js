@@ -49,6 +49,14 @@ export function planAnswerEdits(rows = [], form) {
   }
 }
 
+// The book page's "Reading notes (Claude)": they explain Claude's answers, so
+// once the owner has set all four, they're left out (owner, 2026-11-23).
+export function showReadingNotes(work) {
+  if (!work?.reading_notes) return false
+  const owners = new Set((work.assessments ?? []).filter((a) => a.set_by === 'owner').map((a) => a.question))
+  return !QUESTIONS.every((q) => owners.has(q.id))
+}
+
 // work id → { international: row, pace: row, … }
 export function assessmentsByWork(rows) {
   const byWork = new Map()

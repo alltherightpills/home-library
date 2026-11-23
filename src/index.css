@@ -1457,6 +1457,18 @@ body {
   font-size: 15px;
 }
 
+/* Claude's notes on what reading the book is like, under the synopsis: a
+   smaller, quieter line, labeled so it's never mistaken for the synopsis. */
+.reading-notes {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.reading-notes-label {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
 .pick-why {
   font-size: 13px;
 }

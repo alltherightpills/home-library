@@ -133,6 +133,26 @@ long letter to his young son about faith, fathers and forgiveness."
 *The Body Keeps the Score*: "A psychiatrist explains how trauma changes the
 brain and body, and which treatments help people recover."
 
+## Reading notes
+
+The Why line written beside each book's answers is saved as its reading
+notes and shown on the book page under the synopsis, labeled "Reading notes
+(Claude)", until the owner has set all four answers (owner's choices,
+2026-11-23). Write it for someone deciding whether to read the book:
+
+- **What reading it is like:** pace, tone, humor or grimness, structure,
+  whose eyes it looks through. One or two short sentences, at most about 250
+  characters.
+- **Describe the book, not the buttons.** "Long, digressive chapters" rather
+  than "so Slow"; the answers are already on the page, and the owner may
+  change them.
+- **Sources by name are fine** ("reviews note its dry humor (Kirkus)").
+- **Leave out:** record problems (wrong descriptions, years, categories: those
+  go on cleanup.md), the owner's example books (private), and search
+  bookkeeping ("second search", "moved from Heavy").
+- **Unsure? Say what's uncertain** about the book ("few reviews; the stories
+  likely vary in tone"), not about the answer.
+
 ## Owner's example books
 
 20–30 books the owner has read, rated on each question, in

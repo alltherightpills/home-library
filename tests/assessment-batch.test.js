@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { bookFacts, catalogCopies, descriptionsByKey, parseReview, planSynopses, plainText, remainingBooks, reviewText } from '../src/assessmentBatch.js'
+import { bookFacts, catalogCopies, descriptionsByKey, parseReview, planNotes, planSynopses, plainText, remainingBooks, reviewText } from '../src/assessmentBatch.js'
 
 const categories = [
   { id: 'F', name: 'Fiction', parent_id: null, position: 1 },
@@ -126,5 +126,44 @@ test("a synopsis never replaces the owner's, and one saved as it is is skipped",
   assert.deepEqual(plan.save.map((s) => s.work_id), ['w3', 'w4'])
   assert.equal(plan.same, 1)
   assert.deepEqual(plan.keptOwners, ['Mine'])
+  assert.deepEqual(plan.missing, ['Gone'])
+})
+
+test('a Why line becomes the reading notes; an empty one gives none', () => {
+  const text = filled('Answers: Domestic · Plot · Quick · Light')
+  assert.deepEqual(parseReview(text).notes, [])
+  const { notes, problems } = parseReview(text.replace('Why:', 'Why: Dreamlike and quiet; short chapters.'))
+  assert.deepEqual(problems, [])
+  assert.deepEqual(notes.map((n) => [n.work_id, n.notes]), [[workId(1), 'Dreamlike and quiet; short chapters.']])
+})
+
+test('notes only: Why lines, no Answers or Synopsis needed, a missing Why refused', () => {
+  const notesFile = (why) => `# Notes\n\n### 1. Piranesi (Susanna Clarke)\n<!-- work ${workId(1)} -->\n${why}\n`
+  const { answers, synopses, notes, problems } = parseReview(notesFile('Why: Dreamlike and quiet.'), { notesOnly: true })
+  assert.deepEqual(problems, [])
+  assert.deepEqual([answers, synopses], [[], []])
+  assert.deepEqual(notes.map((n) => n.notes), ['Dreamlike and quiet.'])
+  assert.match(parseReview(notesFile(''), { notesOnly: true }).problems[0], /no Why line/)
+  // A full review file read notes-only ignores its unfinished answers.
+  assert.deepEqual(parseReview(filled('Answers: TODO').replace('Why:', 'Why: Quiet.'), { notesOnly: true }).problems, [])
+})
+
+test('reading notes: new and changed ones save, one saved as it is is skipped', () => {
+  const works = new Map([
+    ['w1', { title: 'Same', reading_notes: 'Quiet.' }],
+    ['w2', { title: 'Older', reading_notes: 'Old words.' }],
+    ['w3', { title: 'New', reading_notes: null }],
+  ])
+  const plan = planNotes(
+    [
+      { work_id: 'w1', notes: 'Quiet.' },
+      { work_id: 'w2', notes: 'New words.' },
+      { work_id: 'w3', notes: 'Fresh.' },
+      { work_id: 'gone', notes: 'Lost.', title: 'Gone' },
+    ],
+    works,
+  )
+  assert.deepEqual(plan.save.map((n) => n.work_id), ['w2', 'w3'])
+  assert.equal(plan.same, 1)
   assert.deepEqual(plan.missing, ['Gone'])
 })

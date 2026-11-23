@@ -119,6 +119,8 @@ for (const work of backup.works) {
   // Synopses came later (2026-11-20): none before.
   work.synopsis ??= null
   work.synopsis_set_by ??= null
+  // Reading notes came later still (2026-11-23).
+  work.reading_notes ??= null
 }
 for (const row of backup.readings) {
   row.cover_url ??= null

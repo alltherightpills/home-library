@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { QUESTIONS, answerWords } from './assessments.js'
+import { QUESTIONS, answerWords, showReadingNotes } from './assessments.js'
 import BookLending from './BookLending.jsx'
 import BookReading from './BookReading.jsx'
 import { shelfText } from './categories/review.js'
@@ -223,6 +223,11 @@ function BookDetail({ copy, copies, categories, readings, loans, onBack, onOpenB
       <h2>{copy.title}</h2>
       <p className="book-meta">{copy.byline}</p>
       {copy.work?.synopsis && <p className="synopsis">{copy.work.synopsis}</p>}
+      {showReadingNotes(copy.work) && (
+        <p className="reading-notes">
+          <span className="reading-notes-label">Reading notes (Claude)</span> {copy.work.reading_notes}
+        </p>
+      )}
 
       {alsoOwn.length > 0 && (
         <p className="also-own">

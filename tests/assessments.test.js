@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { answerCode, answerForm, answerWords, assessmentsByWork, planAnswerEdits } from '../src/assessments.js'
+import { answerCode, answerForm, answerWords, assessmentsByWork, planAnswerEdits, showReadingNotes } from '../src/assessments.js'
 
 test('answers read as words', () => {
   assert.equal(answerWords('in_between'), 'In between')
@@ -50,4 +50,14 @@ test('Edit a Book saves only changed answers, as the owner’s; a blank menu cle
     ],
     clear: ['mood'],
   })
+})
+
+test("reading notes show until the owner has set all four answers", () => {
+  const row = (question, set_by) => ({ question, answer: 'x', sure: true, set_by })
+  const four = ['international', 'driven', 'pace', 'mood']
+  assert.equal(showReadingNotes({ reading_notes: null, assessments: [] }), false)
+  assert.equal(showReadingNotes({ reading_notes: 'Quiet.' }), true)
+  assert.equal(showReadingNotes({ reading_notes: 'Quiet.', assessments: four.map((q) => row(q, 'claude')) }), true)
+  assert.equal(showReadingNotes({ reading_notes: 'Quiet.', assessments: [...four.slice(0, 3).map((q) => row(q, 'owner')), row('mood', 'claude')] }), true)
+  assert.equal(showReadingNotes({ reading_notes: 'Quiet.', assessments: four.map((q) => row(q, 'owner')) }), false)
 })

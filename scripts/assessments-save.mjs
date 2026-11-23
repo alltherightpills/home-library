@@ -5,8 +5,14 @@
 //   npm run assessments:save -- data/assessments/batch-01-2026-11-23.md
 //   npm run assessments:save -- data/assessments/2026-11-20-examples-and-trial.json
 //
+//   npm run assessments:save -- data/assessments/batch-01-2026-11-23-notes.md --notes-only
+//
 // A batch's review file (.md, made by `npm run assessments:batch`, read by
-// parseReview in src/assessmentBatch.js) holds answers and synopses. An older
+// parseReview in src/assessmentBatch.js) holds answers, synopses and each
+// book's Why line, saved as its reading notes (works.reading_notes, shown on
+// the book page). --notes-only saves the Why lines and nothing else, from a
+// notes file (title, work id and Why line per book): for backfilling notes
+// without touching answers the owner may have changed since. An older
 // .json file is a list of answers only:
 //   { "work_id": "…", "question": "pace", "answer": "steady", "sure": true,
 //     "set_by": "claude", "note": "…" (optional), "title": "…" (for reading only) }
@@ -18,21 +24,25 @@
 
 import { readFile } from 'node:fs/promises'
 import { EVERY_QUESTION_ANSWERS, QUESTIONS } from '../src/assessments.js'
-import { parseReview, planSynopses } from '../src/assessmentBatch.js'
+import { parseReview, planNotes, planSynopses } from '../src/assessmentBatch.js'
 import { BOOK_TABLES, fetchTable } from './lib/catalog.mjs'
 import { ask, signIn } from './lib/session.mjs'
 
-const file = process.argv[2]
+const args = process.argv.slice(2)
+const notesOnly = args.includes('--notes-only')
+const file = args.find((a) => !a.startsWith('--'))
 if (!file) throw new Error('Name the file: npm run assessments:save -- data/assessments/<file>.md')
+if (notesOnly && !file.endsWith('.md')) throw new Error('--notes-only reads a .md notes file.')
 const text = await readFile(file, 'utf8')
 let answers = []
 let synopses = []
+let notes = []
 if (file.endsWith('.md')) {
-  const review = parseReview(text)
+  const review = parseReview(text, { notesOnly })
   if (review.problems.length) {
     throw new Error(`The file has ${review.problems.length} problems. Nothing was saved.\n  ${review.problems.join('\n  ')}`)
   }
-  ;({ answers, synopses } = review)
+  ;({ answers, synopses, notes } = review)
 } else answers = JSON.parse(text)
 
 // --- Check the file before anything else
@@ -55,7 +65,11 @@ for (const [i, row] of answers.entries()) {
 if (problems.length) {
   throw new Error(`The file has ${problems.length} problems. Nothing was saved.\n  ${problems.join('\n  ')}`)
 }
-console.log(`${file}: ${answers.length} answers${file.endsWith('.md') ? ` and ${synopses.length} synopses` : ''}, all valid.\n`)
+console.log(
+  notesOnly
+    ? `${file}: ${notes.length} reading notes, all valid (notes only: answers and synopses are left as they are).\n`
+    : `${file}: ${answers.length} answers${file.endsWith('.md') ? `, ${synopses.length} synopses and ${notes.length} reading notes` : ''}, all valid.\n`,
+)
 
 // --- Compare with what's saved
 const { supabase, libraryId } = await signIn()
@@ -91,13 +105,19 @@ for (const row of answers) {
 
 const synopsisPlan = planSynopses(synopses, works)
 missingWorks.push(...synopsisPlan.missing)
+const notesPlan = planNotes(notes, works)
+missingWorks.push(...notesPlan.missing)
 
-console.log(`\nSaving would add ${counts.added} answers and change ${counts.changed}; ${counts.same} are already saved as they are.`)
+if (!notesOnly) console.log(`\nSaving would add ${counts.added} answers and change ${counts.changed}; ${counts.same} are already saved as they are.`)
 if (synopses.length) console.log(`Synopses: ${synopsisPlan.save.length} to save; ${synopsisPlan.same} already saved as they are.`)
+if (notes.length) {
+  const replacing = notesPlan.save.filter((n) => works.get(n.work_id).reading_notes).length
+  console.log(`Reading notes: ${notesPlan.save.length} to save (${replacing} replacing older ones); ${notesPlan.same} already saved as they are.`)
+}
 if (keptOwners.length) console.log(`\nYour answers kept, where Claude's differ (${keptOwners.length}):\n  ${keptOwners.join('\n  ')}`)
 if (synopsisPlan.keptOwners.length) console.log(`\nYour synopses kept, where Claude's differ (${synopsisPlan.keptOwners.length}):\n  ${synopsisPlan.keptOwners.join('\n  ')}`)
 if (missingWorks.length) console.log(`\nBooks no longer in the catalog, skipped (${missingWorks.length}):\n  ${[...new Set(missingWorks)].join('\n  ')}`)
-if (!toSave.length && !synopsisPlan.save.length) {
+if (!toSave.length && !synopsisPlan.save.length && !notesPlan.save.length) {
   console.log('\nNothing to save.')
   process.exit(0)
 }
@@ -116,6 +136,14 @@ for (const [i, s] of synopsisPlan.save.entries()) {
   if (error) throw new Error(`Saving the synopsis of ${s.title}: ${error.message} (${i} of ${synopsisPlan.save.length} synopses were saved; running again finishes the job)`)
 }
 
+for (const [i, n] of notesPlan.save.entries()) {
+  const { error } = await supabase.from('works').update({ reading_notes: n.notes }).eq('id', n.work_id)
+  if (error) {
+    const hint = /reading_notes/.test(error.message) ? '\nRun supabase/migrations/20261123_01_reading_notes.sql first.' : ''
+    throw new Error(`Saving the reading notes of ${n.title}: ${error.message} (${i} of ${notesPlan.save.length} notes were saved; running again finishes the job)${hint}`)
+  }
+}
+
 // --- Read back and check
 const after = new Map((await fetchTable(supabase, table('assessments'), libraryId)).map((r) => [`${r.work_id}|${r.question}`, r]))
 const wrong = toSave.filter((w) => after.get(`${w.work_id}|${w.question}`)?.answer !== w.answer)
@@ -123,6 +151,9 @@ if (wrong.length) throw new Error(`${wrong.length} answers didn't save as expect
 const worksAfter = new Map((await fetchTable(supabase, table('works'), libraryId)).map((w) => [w.id, w]))
 const wrongSynopses = synopsisPlan.save.filter((s) => worksAfter.get(s.work_id)?.synopsis !== s.synopsis)
 if (wrongSynopses.length) throw new Error(`${wrongSynopses.length} synopses didn't save as expected. Running again may finish the job.`)
+const wrongNotes = notesPlan.save.filter((n) => worksAfter.get(n.work_id)?.reading_notes !== n.notes)
+if (wrongNotes.length) throw new Error(`${wrongNotes.length} reading notes didn't save as expected. Running again may finish the job.`)
 const books = new Set([...after.values()].map((r) => r.work_id)).size
 const withSynopsis = [...worksAfter.values()].filter((w) => w.synopsis).length
-console.log(`\nSaved and checked. The library now has ${after.size} answers for ${books} books, and ${withSynopsis} synopses.`)
+const withNotes = [...worksAfter.values()].filter((w) => w.reading_notes).length
+console.log(`\nSaved and checked. The library now has ${after.size} answers for ${books} books, ${withSynopsis} synopses and ${withNotes} reading notes.`)

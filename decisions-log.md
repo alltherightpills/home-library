@@ -454,3 +454,11 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - **Web permission:** the blanket `WebFetch` allow became a review-site allow list (handoff).
 - **Reading notes (owner):** the Why lines are worth keeping. Show them on the book page under the synopsis, as separate data, not merged into the synopsis (which stays short for Pick for me) and not editable. Built as a slice before batch 4, with a notes-only backfill for batches 1–3 (cleanup.md).
 - **Records found (batch 3)** are on cleanup.md: *Ulysses Annotated* category and author, wrong descriptions on *Lila* and *Jonah's Gourd Vine*, four credits, nine wrong and six missing first-published years.
+
+**Pick for me reading notes (2026-11-23)**
+
+- **Built:** `works.reading_notes`, one text column (no "set by": only Claude writes it, and it isn't editable in the app). The loader saves each book's Why line as its note; `--notes-only` saves notes and nothing else, so the batch 1–3 backfill can't touch answers or synopses the owner may have changed since.
+- **Book page:** "Reading notes (Claude)" under the synopsis, in a smaller gray line with a bold label so it's never mistaken for the synopsis; hidden once all four answers are the owner's.
+- **Backfill:** the 225 Why lines from batches 1–3 rewritten for a reader in separate notes files (the review files stay as the record of what the owner reviewed; `data/` isn't in git, so editing them in place would have lost the originals). Removed: answer-button talk ("so moved from Heavy", "Light vs In between"), the owner's private example books (*Piranesi*, *The Namesake* and others used as comparisons), record problems, and search bookkeeping. About 25 notes were only bookkeeping ("batch 1's standard", "English collection") and were replaced with a plain description matching the saved answers, without adding details Claude wasn't sure of. A small script matched each new note to its book by batch number and checked the title too (batch 2's numbering mix-up).
+- **Guide:** a "Reading notes" section says how to write Why lines from batch 4 on.
+

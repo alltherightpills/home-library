@@ -205,6 +205,9 @@ export function reviewText(facts, { batch, snapshot }) {
     'answer means unsure. Mood is the stored value: In between shows as "Not heavy"',
     'in Pick for me, together with Light.',
     '',
+    'Each **Why** line is saved as the book\'s reading notes, shown on its book page as',
+    '"Reading notes (Claude)" (assessment-guide.md, "Reading notes").',
+    '',
     '**How to check:** if anything is wrong, write the fix on the "Your fix" line',
     '(e.g. "pace steady, mood heavy", or a better synopsis). Leave it blank if it\'s',
     'right. Claude applies the fixes (marked "(owner)") before the file is saved;',
@@ -235,12 +238,18 @@ function readAnswer(question, token) {
   return { answer: code, sure: !unsure, set_by: owner ? 'owner' : 'claude' }
 }
 
-// A finished review file → the loader's answers and synopses, or the problems
-// that stop it. Every book needs an Answers and a Synopsis line, no TODO left,
-// and an empty "Your fix" line.
-export function parseReview(text) {
+// A finished review file → the loader's answers, synopses and reading notes
+// (each book's Why line), or the problems that stop it. Every book needs an
+// Answers and a Synopsis line, no TODO left, and an empty "Your fix" line.
+//
+// notesOnly reads just the Why lines, for a notes file: the same "### " and
+// "<!-- work … -->" lines with a Why line each, and no Answers or Synopsis
+// (used to backfill batches 1–3, whose answers the owner may have changed
+// since; 2026-11-23).
+export function parseReview(text, { notesOnly = false } = {}) {
   const answers = []
   const synopses = []
+  const notes = []
   const problems = []
   const seen = new Set()
   const blocks = text.split(/^(?=### )/m).filter((b) => b.startsWith('### '))
@@ -256,6 +265,12 @@ export function parseReview(text) {
     }
     if (seen.has(workId)) problems.push(`${where}: this book is in the file twice`)
     seen.add(workId)
+
+    const why = lines.find((l) => l.startsWith('Why:'))?.slice('Why:'.length).trim()
+    if (notesOnly && why == null) problems.push(`${where}: no Why line`)
+    else if (why === TODO) problems.push(`${where}: Why not written yet`)
+    else if (why) notes.push({ work_id: workId, notes: why, title })
+    if (notesOnly) continue
 
     const answerLine = lines.find((l) => l.startsWith('Answers:'))?.slice('Answers:'.length).trim()
     if (answerLine == null) problems.push(`${where}: no Answers line`)
@@ -282,7 +297,21 @@ export function parseReview(text) {
     const fix = lines.find((l) => l.startsWith('- Your fix:'))?.slice('- Your fix:'.length).trim()
     if (fix) problems.push(`${where}: a fix is still on the "Your fix" line ("${fix}")`)
   }
-  return { answers, synopses, problems }
+  return { answers, synopses, notes, problems }
+}
+
+// What the loader does with each reading note: save new and changed ones,
+// skip one already saved as it is. Notes are Claude's alone (not editable in
+// the app), so a newer note simply replaces the old.
+export function planNotes(notes, works) {
+  const plan = { save: [], same: 0, missing: [] }
+  for (const n of notes) {
+    const work = works.get(n.work_id)
+    if (!work) plan.missing.push(n.title ?? n.work_id)
+    else if (work.reading_notes === n.notes) plan.same++
+    else plan.save.push(n)
+  }
+  return plan
 }
 
 // What the loader does with each synopsis: never replace the owner's with

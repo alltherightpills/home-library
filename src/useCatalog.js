@@ -19,7 +19,7 @@ const COLUMNS = `
   shelves:book_categories ( ${SHELF_COLUMNS} ),
   series_links:copy_series ( number, position, label:series ( id, name, aliases ) ),
   publisher_series_links:copy_publisher_series ( number, position, label:publisher_series ( id, name, aliases ) ),
-  work:works ( id, title, first_published_year, first_published_source, original_language, synopsis, synopsis_set_by,
+  work:works ( id, title, first_published_year, first_published_source, original_language, synopsis, synopsis_set_by, reading_notes,
     contributors:work_authors ( role, position, author:authors ( id, sort_name, display_name ) ),
     ${ASSESSMENT_COLUMNS} )
 `

@@ -259,3 +259,17 @@ describe('location', () => {
     })
   })
 })
+
+describe('reading notes', () => {
+  test('a book starts with none; tidy notes save; blank or untidy ones are refused', async () => {
+    await as(ROBIN, async () => {
+      const copy = await addBook('Moby-Dick')
+      const { work_id: id } = await one('select work_id from public.copies where id = $1', [copy])
+      assert.equal((await one('select reading_notes from public.works where id = $1', [id])).reading_notes, null)
+      await db.query(`update public.works set reading_notes = 'Long, digressive and often funny.' where id = $1`, [id])
+      assert.equal((await one('select reading_notes from public.works where id = $1', [id])).reading_notes, 'Long, digressive and often funny.')
+      await assert.rejects(db.query(`update public.works set reading_notes = '' where id = $1`, [id]), /works_reading_notes_tidy/)
+      await assert.rejects(db.query(`update public.works set reading_notes = ' Untidy.' where id = $1`, [id]), /works_reading_notes_tidy/)
+    })
+  })
+})
