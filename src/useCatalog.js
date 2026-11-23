@@ -1,6 +1,7 @@
 import { supabase } from './supabase.js'
 import { mergedContributors } from './authors.js'
 import { normalize } from './normalize.js'
+import { subjectHeadings } from './subjectHeadings.js'
 import { useSaved } from './useSaved.js'
 
 export const SHELF_COLUMNS = 'category_id, is_main, set_by, removed, tentative, reasons'
@@ -186,25 +187,6 @@ const labelsInOrder = (links) =>
 
 // "Penguin Classics", or "Narnia #3" with a number.
 export const labelText = ({ name, number }) => (number ? `${name} #${number}` : name)
-
-// LC and LibraryThing subject headings as "Tales -- Japan" text, without repeats.
-function subjectHeadings(copy) {
-  // Drop end punctuation, but keep the period of an initial like "J. R. R."
-  const tidy = (part) => part.trim().replace(/[,;:]+$/, '').replace(/(?<!\b\p{Lu})\.$/u, '')
-  const lc = copy.lc_subjects.map((f) => {
-    // ‡v ‡x ‡y ‡z are subdivisions and get "--"; other parts (name, dates, title) run together.
-    const chunks = []
-    for (const [code, value] of f.sub) {
-      if (!/[a-z]/.test(code)) continue // skip ‡0 / ‡2 source codes
-      if (chunks.length === 0 || 'vxyz'.includes(code)) chunks.push(value)
-      else chunks[chunks.length - 1] += ` ${value}`
-    }
-    return chunks.map(tidy).join(' -- ')
-  })
-  const lt = copy.subjects.map((parts) => parts.map(tidy).join(' -- '))
-  const seen = new Set()
-  return [...lc, ...lt].filter((h) => h && !seen.has(normalize(h)) && seen.add(normalize(h)))
-}
 
 // Leading articles to skip when sorting by title, by the book's language
 // (like MARC nonfiling characters). "Die Hard" keeps its "Die"; a German "Die ..." doesn't.
