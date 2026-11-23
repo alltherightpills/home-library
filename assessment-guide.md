@@ -86,6 +86,12 @@ Pace is **how fast the story moves**, not how hard the reading is.
 - **Torn between two paces? Pick the slower** (2026-11-23: in batches 1
   and 2, reviews moved nearly every changed pace answer toward slower). A
   quiet, reflective story collection isn't automatically Quick.
+- **Academic texts are Slow** (owner, 2026-11-23): books written for
+  scholars, like a university-press monograph or literary theory (*The
+  Puritan Origins of the American Self*). Well-researched books written for
+  general readers, even with copious endnotes, are judged by how they read
+  and can be Steady or Quick. Mark it unsure when it isn't plain which
+  audience a book was written for.
 - Reference books and similar: doesn't apply.
 
 ## 9. Mood
@@ -107,6 +113,10 @@ Pace is **how fast the story moves**, not how hard the reading is.
   (2026-11-23: in batch 2, reviews moved six Heavy guesses to In between
   for their humor, like *Waiting*'s "sad, funny" tone). Heavy is for books
   with little relief, like *Beloved* or *The Road*.
+- **Academic texts are Heavy** (owner, 2026-11-23), for the same books as
+  the pace rule above: a scholarly study's cool remove doesn't count as
+  relief. Popular history and science for general readers go by their tone,
+  so a brisk, well-researched book on a dark subject can be In between.
 
 In Pick for me the buttons are **Light · Not heavy · Heavy**: "Not heavy"
 means Light or In between (owner's choice, 2026-11-19), since nobody asks for
