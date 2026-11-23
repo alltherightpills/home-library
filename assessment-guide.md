@@ -83,6 +83,9 @@ Pace is **how fast the story moves**, not how hard the reading is.
 - Steady: everything between, including a deliberate, unrelenting march, and
   books that are dense or demanding but keep moving. **Dense is not slow**
   for stories; long scholarly nonfiction (a cultural biography) leans slow.
+- **Torn between two paces? Pick the slower** (2026-11-23: in batches 1
+  and 2, reviews moved nearly every changed pace answer toward slower). A
+  quiet, reflective story collection isn't automatically Quick.
 - Reference books and similar: doesn't apply.
 
 ## 9. Mood
@@ -100,6 +103,10 @@ Pace is **how fast the story moves**, not how hard the reading is.
 - In between: heavy subjects lightened by humor, action, strangeness or
   distance (a dark story told with levity, or from a cool, factual remove),
   and books that are simply neither heavy nor light.
+- **A dark book with real humor or wryness is In between, not Heavy**
+  (2026-11-23: in batch 2, reviews moved six Heavy guesses to In between
+  for their humor, like *Waiting*'s "sad, funny" tone). Heavy is for books
+  with little relief, like *Beloved* or *The Road*.
 
 In Pick for me the buttons are **Light · Not heavy · Heavy**: "Not heavy"
 means Light or In between (owner's choice, 2026-11-19), since nobody asks for
