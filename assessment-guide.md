@@ -105,6 +105,27 @@ In Pick for me the buttons are **Light · Not heavy · Heavy**: "Not heavy"
 means Light or In between (owner's choice, 2026-11-19), since nobody asks for
 "something in between."
 
+## Synopsis
+
+One sentence per book, written in the same visit as the four answers and
+shown under each pick in Pick for me (owner's choices, 2026-11-23).
+
+- **Short:** about 15–20 words, two lines on a phone. Premise only: what the
+  book is about, not what reading it is like (the why line already says that).
+- **No spoilers:** the setup only, nothing past the first act.
+- **No praise or marketing words** ("masterful", "beloved", "bestselling").
+- **Present tense; start with the story or subject**, not "This book…".
+- **Unsure? Stay general** rather than guess a detail: "a family saga set in
+  postwar Japan" beats an invented plot point.
+- The saved publisher description is the main source; rewrite it, never copy
+  it (half of them open with marketing, and the words are the publisher's).
+- **The owner's synopsis is final**, like the owner's answers.
+
+Examples (owner-approved style): *Gilead*: "An aging Iowa preacher writes a
+long letter to his young son about faith, fathers and forgiveness."
+*The Body Keeps the Score*: "A psychiatrist explains how trauma changes the
+brain and body, and which treatments help people recover."
+
 ## Owner's example books
 
 20–30 books the owner has read, rated on each question, in

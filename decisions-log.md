@@ -416,3 +416,12 @@ Deferred to later ideas: the Category rules editor (screen 13).
 - **Editors in the byline:** an anthology with no author listed all its contributors under the title. The byline now goes Author (and the other main roles) → Editors → everyone, matching Pick for me's Author question. It also sets Author A–Z, so edited books file under the editor.
 - **Tested on the owner's real books** (after a backup): *Mariel of Redwall* (Narrator → Author), Grimm (people added), *Queens of the Abyss* (a duplicate credit removed, story writers to Contributor).
 - **Book page, later (cleanup.md):** author names as links to their books, and perhaps renaming the Contributors row "Credits", now that Contributor is also a role.
+
+**Pick for me slice D process (2026-11-23)**
+
+- **Two gaps found before starting:** the loader saved only the four answers, not synopses, and nothing built a batch (the trial's 50 books were gathered by hand). Both go into a short D0 build.
+- **Synopses come from the saved descriptions, rewritten.** Google Books has no synopsis field; its description is the publisher's blurb, already saved for 588 of 710 unread adult books, so asking the API again adds nothing. Piranesi's, for one, is marketing for its whole opening. About 120 adult books have none; Claude writes those from what it knows, staying general when unsure.
+- **Style A, short (owner):** about 15–20 words, premise only, chosen over a 30–40 word version after seven samples on read books. It fits under a pick on the phone, and the why line already covers what kind of read it is. Rules (no spoilers, no praise words, present tense, stay general when unsure) are in the guide.
+- **Category batches, one per fresh session:** judging like books together keeps the standard steadier than random order; a fresh session per batch avoids a long conversation being summarized mid-batch.
+- **Subagents for web searches, on trial:** they'd gather facts (setting, translation, how reviews describe pace and tone) on unsure books only, while Claude does the judging, since they can't see the private examples. They cost more than searching directly, and the 50-book trial confirmed most unsure answers, so the gain may be small: tried on batch 1's unsure books and kept only if it changes a meaningful number of answers.
+- **Owner's review tapers:** full on batch 1, lighter on batch 2, then unsure answers and a synopsis skim.
